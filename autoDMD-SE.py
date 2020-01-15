@@ -46,7 +46,7 @@ class DeepMD(object):
             "_comment": " model parameters",
             "use_smooth": True,
             "sel_a": [46, 92],
-            "rcut_smth": 5.80,
+            "rcut_smth": 2.00,
             "rcut": 6.00, #6.00
             "filter_neuron": [25, 50, 100],
             "filter_resnet_dt": False,
@@ -56,9 +56,9 @@ class DeepMD(object):
             "coord_norm": True,
             "type_fitting_net": False,
 
-            "systems": ["../data/AuO/"],  # different system: water, ice, ...
+            "systems": ["../data"],  # different system: water, ice, ...
             "set_prefix": "set",
-            "stop_batch": 1000000,
+            "stop_batch": 400000,
             "batch_size": 1,
             "start_lr": 0.005,
             "decay_steps": 5000,
@@ -88,8 +88,8 @@ class DeepMD(object):
     def analyze_neighbours(self, Rcut=6.1, n_nearest=2):
         self.sel_a = np.ones([len(self.symbol_set)]).astype('int')
         self.sel_max = np.ones([len(self.symbol_set)]).astype('int')
-        self.train_json['rcut'] = float("%.1f" % np.amax(self.struct.distance_matrix)) + 0.2
-        self.train_json['rcut_smth'] = self.train_json['rcut'] - 0.2
+        # self.train_json['rcut'] = float("%.1f" % np.amax(self.struct.distance_matrix)) + 0.2
+        # self.train_json['rcut_smth'] = self.train_json['rcut'] - 0.2
         Rcut = self.train_json['rcut'] + 0.1
         modified_dm = self.struct.distance_matrix + \
             np.identity(self.struct.num_sites) * Rcut
@@ -112,14 +112,14 @@ class DeepMD(object):
         n_set = len(Etrain)//set_size
         ## train
         for i in range(n_set):
-            set_path = 'data/' + 'AuO/' + 'set.' + str(i).zfill(3)
+            set_path = 'data/set.' + str(i).zfill(3)
             os.makedirs(set_path, exist_ok=True)
             np.save(set_path+'/energy.npy', Etrain[set_size*i:set_size*(i+1)])
             np.save(set_path+'/coord.npy', Coordtrain[set_size*i:set_size*(i+1)])
             np.save(set_path+'/force.npy', Forcetrain[set_size*i:set_size*(i+1)])
             np.save(set_path+'/box.npy', self.box[set_size*i:set_size*(i+1)])
         ## test
-        test_path = 'data/' + 'AuO/' + 'set.' + str(n_set).zfill(3)
+        test_path = 'data/set.' + str(n_set).zfill(3)
         os.makedirs(test_path, exist_ok=True)
         np.save(test_path+'/energy.npy', Etest)
         np.save(test_path+'/coord.npy', Coordtest)
@@ -135,7 +135,7 @@ class DeepMD(object):
         # type.raw
         type_raw = [str(self.sym_dict[specie.name])
                     for specie in self.struct.species]
-        with open('data/AuO/type.raw', 'w+') as f:
+        with open('data/type.raw', 'w+') as f:
             f.write(' '.join(type_raw))
             
 lattice = Lattice.from_lengths_and_angles((15, 15, 15), (90, 90, 90))
