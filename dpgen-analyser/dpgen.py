@@ -2,6 +2,7 @@ import os
 import json
 import numpy as np
 import pandas as pd
+from ase.io import read
 from matplotlib import pyplot as plt
 from glob import glob
 
@@ -12,6 +13,13 @@ class DPTask(object):
     """
 
     def __init__(self, path, param_file, machine_file, record_file):
+        """
+        Generate a class of dpgen task.
+        :param path: The path of the dpgen task.
+        :param param_file: The param json file name.
+        :param machine_file: The machine json file name.
+        :param record_file: The record file name.
+        """
         self.path = path
         self.param_file = param_file
         self.machine_file = machine_file
@@ -104,7 +112,7 @@ class DPTask(object):
         :param xlimit: Choose the limit of x axis.
         :param ylimit: Choose the limit of y axis.
         :param log: Choose whether log scale used. Default: False.
-        :return:
+        :return: A plot for different temperatures
         """
         location = os.path.join(self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
         if os.path.exists(location):
@@ -121,7 +129,7 @@ class DPTask(object):
             temps = [str(temps)]
         else:
             raise TypeError("temps should be a value or a list of value.")
-        fig = plt.figure(figsize=[24, 8 * num_temp], constrained_layout=True)
+        fig = plt.figure(figsize=[12, 4 * num_temp], constrained_layout=True)
         gs = fig.add_gridspec(num_temp, 3)
         for i, temp in enumerate(temps):
             partdata = df[df['temp'] == temp]
@@ -144,7 +152,7 @@ class DPTask(object):
             fig_left.hlines(f_trust_hi, 0, xlimit, linestyles='dashed')
             fig_left.set_xlabel('Simulation time (fs)')
             fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
-            fig_left.legend(fontsize=24)
+            fig_left.legend()
             fig_left.set_title(f'Iteration {iteration}')
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
@@ -176,17 +184,17 @@ class DPTask(object):
             y_log=False
     ):
         """
-
-        :param iterations:
-        :param temps:
-        :param f_trust_lo:
-        :param f_trust_hi:
-        :param x_lower_limit:
-        :param x_higher_limit:
-        :param y_limit:
-        :param x_log:
-        :param y_log:
-        :return:
+        Analyse trajectories for different temperatures.
+        :param iterations: Iterations selected, which should be iterable.
+        :param temps: Temp(s) selected.
+        :param f_trust_lo: The lower limit of max_deviation_force.
+        :param f_trust_hi: The higher limit of max_deviation_force.
+        :param x_lower_limit: The lower limit of x scale.
+        :param x_higher_limit: The higher limit of x scale.
+        :param y_limit: The limit of y.
+        :param x_log: Choose whether use log scale for x axis.
+        :param y_log: Choose whether use log scale for y axis.
+        :return: A plot for different iterations.
         """
         frames = []
         for it in iterations:
@@ -235,6 +243,73 @@ class DPTask(object):
             plt.title(f'{temp} K', fontsize=24)
         plt.tight_layout()
         return plt
+
+    def fp_group_distance(self, iteration, atom_group):
+        """
+        Analyse the distance of selected structures.
+        :param iteration: The iteration selected.
+        :param atom_group:A tuple contains the index number of two selcted atoms.
+        :return: A plot of distance distribution.
+        """
+        dis_loc = []
+        dis = []
+        place = os.path.join(self.path, 'iter.'+str(iteration).zfill(6), '02.fp')
+        _output_name = self._fp_style()
+        for i in os.listdir(place):
+            if os.path.exists(os.path.join(place, i, _output_name)):
+                dis_loc.append(i)
+                stc = read(os.path.join(place, i, _output_name))
+                dis.append(stc.get_distance(atom_group[0], atom_group[1], mic=True))
+        diss = np.array(dis)
+        plt.figure()
+        plt.hist(diss, bins=np.arange(1, 1.5, 0.01), label=f'iter {int(it)}', density=True)
+        plt.legend(fontsize=16)
+        plt.xlabel("d(Å)", fontsize=16)
+        plt.xticks(np.arange(1, 1.51, step=0.1), fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.title("Distibution of distance", fontsize=16)
+        return plt
+
+    def fp_element_distance(self, iteration, ele_group):
+        """
+        Analyse the distance of selected structures.
+        :param iteration: The iteration selected.
+        :param ele_group:A tuple contains the index number of two selcted elements.
+        :return: A plot of distance distribution.
+        """
+        dis = []
+        dis_loc = []
+        place = os.path.join(self.path, 'iter.'+str(iteration).zfill(6), '02.fp')
+        _output_name = self._fp_style()
+        for i in os.listdir(place):
+            if os.path.exists(os.path.join(place, i, _output_name)):
+                dis_loc.append(i)
+                stc = read(os.path.join(place, i, _output_name))
+                symbol_list = stc.get_chemical_symbols()
+                ele_list_1 = [i for i in range(len(symbol_list)) if symbol_list[i] == ele_group[0]]
+                ele_list_2 = [i for i in range(len(symbol_list)) if symbol_list[i] == ele_group[0]]
+                min_dis = min([stc.get_distance(ii, jj, mic=True) for ii in ele_list_1 for jj in ele_list_2])
+                dis.append(min_dis)
+        diss = np.array(dis)
+        plt.figure(figsize=[16, 8], dpi=144)
+        plt.hist(diss, bins=np.arange(1, 6, 0.01), label=f'iter {int(iteration)}')
+        plt.legend(fontsize=16)
+        plt.xlabel("d(Å)", fontsize=16)
+        plt.xticks(np.arange(0, 6, step=0.5), fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.title(f"Distibution of {ele_group[0]}-{ele_group[1]} distance", fontsize=16)
+        return plt
+
+    def _fp_style(self):
+        styles = {
+            "vasp": "OUTCAR",
+            "cp2k": "output",
+            "qe": "output",
+            "siesta": "output",
+            "gaussian": "output",
+            "pwmat": "REPORT",
+        }
+        return styles.get(self.jdata['fp_style'], None)
 
     def _load_task(self):
         self._read_record()
