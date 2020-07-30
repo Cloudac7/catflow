@@ -2,9 +2,11 @@ import os
 import json
 import numpy as np
 import pandas as pd
-from ase.io import read
-from matplotlib import pyplot as plt
 from glob import glob
+from ase.io import read, write
+from matplotlib import pyplot as plt
+from dpgen.dispatcher.Dispatcher import Dispatcher
+from dpgen.dispatcher.Dispatcher import make_dispatcher
 
 
 class DPTask(object):
@@ -244,6 +246,44 @@ class DPTask(object):
         plt.tight_layout()
         return plt
 
+    def md_single_task(self, work_path, model_path, numb_models=4, **kwargs):
+        """
+        Submit your own md task with the help of dpgen.
+        :param work_path: The dir contains your md tasks. The tasks must start from "task.".
+        :param model_path: The path of models contained for calculation.
+        :param numb_models: The number of models selected.
+        :return:
+        """
+        mdata = self.machine_data['model_devi'][0]
+        all_task = glob(os.path.join(work_path, "task.*"))
+        all_task.sort()
+        lmp_exec = mdata['command']
+        command = lmp_exec + " -i input.lammps"
+        commands = [command]
+        run_tasks_ = all_task
+        run_tasks = [os.path.basename(ii) for ii in run_tasks_]
+
+        model_names = kwargs.get('model_names', [f'graph.{str(i).zfill(3)}.pb' for i in range(numb_models)])
+        for ii in model_names:
+            if not os.path.exists(os.path.join(work_path, ii)):
+                os.symlink(os.path.join(model_path, ii), os.path.join(work_path, ii))
+        forward_files = kwargs.get('forward_files', ['conf.lmp', 'input.lammps', 'traj'])
+        backward_files = kwargs.get('backward_files', ['model_devi.out', 'model_devi.log', 'traj'])
+
+        dispatcher = make_dispatcher(mdata['machine'], mdata['resources'], work_path, run_tasks, 1)
+        dispatcher.run_jobs(
+            resources=mdata['resources'],
+            command=commands,
+            work_path=work_path,
+            tasks=run_tasks,
+            group_size=1,
+            forward_common_files=model_names,
+            forward_task_files=forward_files,
+            backward_task_files=backward_files,
+            outlog=kwargs.get('outlog', 'model_devi.log'),
+            errlog=kwargs.get('errlog', 'model_devi.log'))
+        return dispatcher
+
     def fp_group_distance(self, iteration, atom_group):
         """
         Analyse the distance of selected structures.
@@ -254,11 +294,11 @@ class DPTask(object):
         dis_loc = []
         dis = []
         place = os.path.join(self.path, 'iter.'+str(iteration).zfill(6), '02.fp')
-        _output_name = self._fp_style()
+        _stc_name = self._fp_style()
         for i in os.listdir(place):
-            if os.path.exists(os.path.join(place, i, _output_name)):
+            if os.path.exists(os.path.join(place, i, _stc_name)):
                 dis_loc.append(i)
-                stc = read(os.path.join(place, i, _output_name))
+                stc = read(os.path.join(place, i, _stc_name))
                 dis.append(stc.get_distance(atom_group[0], atom_group[1], mic=True))
         diss = np.array(dis)
         plt.figure()
@@ -300,22 +340,93 @@ class DPTask(object):
         plt.title(f"Distibution of {ele_group[0]}-{ele_group[1]} distance", fontsize=16)
         return plt
 
+    def fp_error_test(self, iteration=None, test_model=None):
+        location = self.path
+        if iteration is None:
+            if self.step_code < 7:
+                iteration = self.iteration - 1
+            else:
+                iteration = self.iteration
+        n_iter = 'iter.' + str(iteration).zfill(6)
+        quick_test_dir = os.path.join(location, n_iter, '03.quick_test')
+        os.makedirs(os.path.join(quick_test_dir, 'task.md'), exist_ok=True)
+        task_list = glob(os.path.join(location, n_iter, '02.fp', 'task*'))
+        task_list.sort()
+        _stc_file = self._fp_output_style()
+        stcs = [read(os.path.join(tt, _stc_file)) for tt in task_list ]
+        write(os.path.join(quick_test_dir, 'task.md/validate.xyz'), stcs, format='extxyz')
+        if test_model is None:
+            test_model = iteration
+        model_iter = 'iter.' + str(test_model).zfill(6)
+        model_dir = os.path.join(location, model_iter, '00.train')
+        self._fp_generate_error_test(work_path=quick_test_dir, model_dir=model_dir)
+        if not os.path.exists(os.path.join(quick_test_dir, 'task.md/conf.lmp')):
+            _lmp_data = glob(os.path.join(location, n_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
+            os.symlink(_lmp_data, os.path.join(quick_test_dir, 'task.md/conf.lmp'))
+        self.md_single_task(
+            work_path=quick_test_dir,
+            model_path=model_dir,
+            numb_models=self.param_data['numb_models'],
+            forward_files=['conf.lmp', 'input.lammps', 'validate.xyz'],
+            backward_files=['model_devi.out', 'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
+            outlog='quick_test.log',
+            errlog='quick_test.err'
+        )
+
+    def _fp_generate_error_test(self, work_path, model_dir):
+        model_list = glob(os.path.join(model_dir, 'graph*pb'))
+        model_list.sort()
+        model_names = [os.path.basename(i) for i in model_list]
+        input = "units           metal\n"
+        input += "boundary        p p p\n"
+        input += "atom_style      atomic\n"
+        input += "\n"
+        input += "neighbor        2.0 bin\n"
+        input += "neigh_modify    every 10 delay 0 check no\n"
+        input += "read_data       conf.lmp\n"
+        _masses = self.param_data['mass_map']
+        # change the masses of atoms
+        for ii, jj in enumerate(_masses):
+            input += f"mass            {ii + 1} {jj}\n"
+        # change the file name of graphs
+        input += "pair_style deepmd "
+        for kk in model_names:
+            input += f"../{kk} "
+        input += "out_freq 1 out_file model_devi.out\n"
+        input += "pair_coeff\n"
+        input += "velocity        all create 330.0 23456789\n"
+        input += "fix             1 all nvt temp 330.0 330.0 0.05\n"
+        input += "timestep        0.0005\n"
+        input += "thermo_style    custom step pe ke etotal temp press vol\n"
+        input += "thermo          1\n"
+        input += "dump            1 all custom 1 dump.lammpstrj id type x y z fx fy fz\n"
+        input += "rerun validate.xyz dump x y z box no format xyz\n"
+        with open(os.path.join(work_path, 'task.md/input.lammps'), 'w') as f:
+            f.write(input)
+        return input
+
     def _fp_style(self):
         styles = {
-            "vasp": "OUTCAR",
-            "cp2k": "output",
-            "qe": "output",
-            "siesta": "output",
-            "gaussian": "output",
-            "pwmat": "REPORT",
+            "vasp": "POSCAR",
+            "cp2k": "coord.xyz",
         }
-        return styles.get(self.jdata['fp_style'], None)
+        return styles.get(self.param_data['fp_style'], None)
+
+    def _fp_output_style(self):
+        styles = {
+            "vasp": "OUTCAR",
+            "cp2k": "coord.xyz",
+        }
+        return styles.get(self.param_data['fp_style'], None)
 
     def _load_task(self):
         self._read_record()
-        self._read_jdata()
+        self._read_param_data()
+        self._read_machine_data()
         if self.step_code in [0, 3, 6]:
             self.state = 'Waiting'
+        elif self.step_code in [1, 4, 7]:
+            self.state = 'Parsing'
         else:
             self.state = 'Stopped'
         if self.step_code < 3:
@@ -335,10 +446,12 @@ class DPTask(object):
         except:
             raise FileNotFoundError('Record file record.dpgen not found')
 
-    def _read_jdata(self):
-        try:
-            _param_path = os.path.join(self.path, self.param_file)
-            with open(_param_path) as f:
-                self.jdata = json.load(f)
-        except:
-            raise FileNotFoundError('Record file param.json not found')
+    def _read_param_data(self):
+        _param_path = os.path.join(self.path, self.param_file)
+        with open(_param_path) as f:
+            self.param_data = json.load(f)
+
+    def _read_machine_data(self):
+        _param_path = os.path.join(self.path, self.machine_file)
+        with open(_param_path) as f:
+            self.machine_data = json.load(f)
