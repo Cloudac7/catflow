@@ -1,5 +1,7 @@
 import os
 import json
+
+import dpdata
 import numpy as np
 import pandas as pd
 from glob import glob
@@ -293,7 +295,7 @@ class DPTask(object):
         """
         dis_loc = []
         dis = []
-        place = os.path.join(self.path, 'iter.'+str(iteration).zfill(6), '02.fp')
+        place = os.path.join(self.path, 'iter.' + str(iteration).zfill(6), '02.fp')
         _stc_name = self._fp_style()
         for i in os.listdir(place):
             if os.path.exists(os.path.join(place, i, _stc_name)):
@@ -302,7 +304,7 @@ class DPTask(object):
                 dis.append(stc.get_distance(atom_group[0], atom_group[1], mic=True))
         diss = np.array(dis)
         plt.figure()
-        plt.hist(diss, bins=np.arange(1, 1.5, 0.01), label=f'iter {int(it)}', density=True)
+        plt.hist(diss, bins=np.arange(1, 1.5, 0.01), label=f'iter {int(iteration)}', density=True)
         plt.legend(fontsize=16)
         plt.xlabel("d(Å)", fontsize=16)
         plt.xticks(np.arange(1, 1.51, step=0.1), fontsize=16)
@@ -319,7 +321,7 @@ class DPTask(object):
         """
         dis = []
         dis_loc = []
-        place = os.path.join(self.path, 'iter.'+str(iteration).zfill(6), '02.fp')
+        place = os.path.join(self.path, 'iter.' + str(iteration).zfill(6), '02.fp')
         _output_name = self._fp_style()
         for i in os.listdir(place):
             if os.path.exists(os.path.join(place, i, _output_name)):
@@ -353,8 +355,22 @@ class DPTask(object):
         task_list = glob(os.path.join(location, n_iter, '02.fp', 'task*'))
         task_list.sort()
         _stc_file = self._fp_output_style()
-        stcs = [read(os.path.join(tt, _stc_file)) for tt in task_list ]
+        stcs = [read(os.path.join(tt, _stc_file)) for tt in task_list]
         write(os.path.join(quick_test_dir, 'task.md/validate.xyz'), stcs, format='extxyz')
+        _dpgen_output = self._fp_output_dpgen()
+        _dpdata_format = self._fp_output_format()
+        all_sys = None
+        for idx, oo in enumerate(task_list):
+            sys = dpdata.LabeledSystem(os.path.join(oo, _dpgen_output), fmt=_dpdata_format)
+            if len(sys) > 0:
+                sys.check_type_map(type_map=self.param_data['type_map'])
+            if idx == 0:
+                all_sys = sys
+            else:
+                all_sys.append(sys)
+        atom_numb = np.sum(all_sys['atom_numbs'])
+        dft_energy = all_sys['energies']
+        dft_force = all_sys['forces']
         if test_model is None:
             test_model = iteration
         model_iter = 'iter.' + str(test_model).zfill(6)
@@ -363,6 +379,7 @@ class DPTask(object):
         if not os.path.exists(os.path.join(quick_test_dir, 'task.md/conf.lmp')):
             _lmp_data = glob(os.path.join(location, n_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
             os.symlink(_lmp_data, os.path.join(quick_test_dir, 'task.md/conf.lmp'))
+        print("Quick test task submitting...")
         self.md_single_task(
             work_path=quick_test_dir,
             model_path=model_dir,
@@ -372,6 +389,48 @@ class DPTask(object):
             outlog='quick_test.log',
             errlog='quick_test.err'
         )
+        print("Finished")
+        start, final = 0, 0
+        with open(os.path.join(quick_test_dir, 'task.md/quick_test.log'), 'r') as f:
+            for i, line in enumerate(f):
+                key_line = line.strip()
+                if 'Step ' in key_line:
+                    start = i + 1
+                elif 'Loop time of' in key_line:
+                    final = i
+        with open(os.path.join(quick_test_dir, 'task.md/quick_test.log'), 'r') as f:
+            lines = f.readlines()[start:final]
+        md_energy = np.array([p.split()[1] for p in lines]).astype('float')
+        _md_stc = read(os.path.join(quick_test_dir, 'task.md/dump.lammpstrj'), index=':', format='lammps-dump-text')
+        md_force = np.array([ss.get_forces() for ss in _md_stc])
+        energy_rmse = np.sqrt(np.mean((md_energy - dft_energy) ** 2)) / atom_numb
+        md_force_r = np.ravel(md_force)
+        dft_force_r = np.ravel(dft_force)
+        force_rmse = np.sqrt(np.mean((md_force_r - dft_force_r) ** 2))
+        fig = plt.figure(figsize=[16, 8], dpi=96)
+        # Plot of energy error
+        plt.subplot(1, 2, 1)
+        plt.scatter(dft_energy / atom_numb, md_energy / atom_numb, s=5, label=f'Iter. {iteration}')
+        _x = np.linspace(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05, 10)
+        plt.plot(_x, _x, 'r--')
+        plt.text(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05,
+                 f'RMSE={energy_rmse} (eV/atom)',
+                 fontsize=14)
+        plt.title(f'Energy error', fontsize=14)
+        plt.xlabel(r'$e_{DFT}$ (eV/atom)', fontsize=14)
+        plt.ylabel(r'$e_{DPMD}$ (eV/atom)', fontsize=14)
+        # Plot of force error
+        plt.subplot(1, 2, 2)
+        plt.scatter(md_force_r, dft_force_r, s=5, label=f'Iter. {iteration}')
+        _y = np.linspace(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, 10)
+        plt.plot(_y, _y, 'r--')
+        plt.text(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
+        plt.title(f'Force error', fontsize=14)
+        plt.xlabel(r'$f_{DFT}$ (eV/Å)', fontsize=14)
+        plt.ylabel(r'$f_{DPMD}$ (eV/Å)', fontsize=14)
+        f, ax = plt.subplots()
+        ax.set_aspect('equal')
+        return fig
 
     def _fp_generate_error_test(self, work_path, model_dir):
         model_list = glob(os.path.join(model_dir, 'graph*pb'))
@@ -416,6 +475,24 @@ class DPTask(object):
         styles = {
             "vasp": "OUTCAR",
             "cp2k": "coord.xyz",
+        }
+        return styles.get(self.param_data['fp_style'], None)
+
+    def _fp_output_dpgen(self):
+        styles = {
+            "vasp": "OUTCAR",
+            "cp2k": "output",
+            "qe": "output",
+            "siesta": "output",
+            "gaussian": "output",
+            "pwmat": "REPORT",
+        }
+        return styles.get(self.param_data['fp_style'], None)
+
+    def _fp_output_format(self):
+        styles = {
+            "vasp": "vasp/outcar",
+            "cp2k": "cp2k/output",
         }
         return styles.get(self.param_data['fp_style'], None)
 
