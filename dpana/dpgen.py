@@ -291,7 +291,15 @@ class DPTask(object):
             errlog=kwargs.get('errlog', 'model_devi.log'))
         return dispatcher
 
-    def train_model_test(self, iteration=None, params=None, **kwargs):
+    def train_model_test(self, iteration=None, params=None, files=None, **kwargs):
+        """
+        Run MD tests from trained models.
+        :param iteration: Select the iteration for training. If not selected, the last iteration where training has been finished would be chosen.
+        :param params: Necessary params for MD test.
+        :param files: Extra files attached with the MD runs. Not necessary.
+        :param kwargs: Other optional parameters.
+        :return:
+        """
         location = self.path
         if iteration is None:
             if self.step_code < 2:
@@ -302,8 +310,6 @@ class DPTask(object):
         model_path = os.path.join(location, n_iter, '00.train')
         test_path = os.path.join(location, n_iter, '04.model_test')
         print("Preparing MD input......")
-        if params is None:
-            params = kwargs
         self._train_generate_md_test(params=params, work_path=test_path, model_path=model_path)
         if self.step_code < 6:
             md_iter = self.iteration - 1
@@ -314,15 +320,22 @@ class DPTask(object):
             if not os.path.exists(os.path.join(p, 'conf.lmp')):
                 _lmp_data = glob(os.path.join(location, md_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
                 os.symlink(_lmp_data, os.path.join(p, 'conf.lmp'))
+            if files is not None:
+                for file in files:
+                    _file_abs = os.path.abspath(file)
+                    _file_base = os.path.basename(file)
+                    if not os.path.exists(os.path.join(p, _file_base)):
+                        os.symlink(_file_abs, os.path.join(p, _file_base))
         print("Submitting")
         self.md_single_task(
             work_path=test_path,
             model_path=model_path,
             numb_models=self.param_data['numb_models'],
-            forward_files=['conf.lmp', 'input.lammps'],
-            backward_files=['model_devi.out', 'md.log', 'md.err', 'dump.lammpstrj'],
-            outlog='md_test.log',
-            errlog='md_test.err'
+            forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
+            backward_files=kwargs.get("backward_files",
+                                      ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
+            outlog=kwargs.get("outlog", 'md_test.log'),
+            errlog=kwargs.get("errlog", 'md_test.err')
         )
         print("MD Test finished.")
 
