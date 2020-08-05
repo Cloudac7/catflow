@@ -5,7 +5,11 @@ import dpdata
 import numpy as np
 import pandas as pd
 from glob import glob
+
+import shutil
 from ase.io import read, write
+from dpgen.generator.run import parse_cur_job_revmat, revise_lmp_input_model, set_version, find_only_one_key, \
+    revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
 from dpgen.dispatcher.Dispatcher import Dispatcher
 from dpgen.dispatcher.Dispatcher import make_dispatcher
@@ -92,10 +96,7 @@ class DPTask(object):
 
     def md_set_load_pkl(self, iteration):
         pkl_path = os.path.join(self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
-        try:
-            df = pd.read_pickle(pkl_path)
-        except:
-            raise RuntimeError(f"Data of iteration {str(iteration).zfill(2)} does not exist.")
+        df = pd.read_pickle(pkl_path)
         return df
 
     def md_single_iter(
@@ -251,14 +252,18 @@ class DPTask(object):
     def md_single_task(self, work_path, model_path, numb_models=4, **kwargs):
         """
         Submit your own md task with the help of dpgen.
-        :param work_path: The dir contains your md tasks. The tasks must start from "task.".
+        :param work_path: The dir contains your md tasks.
         :param model_path: The path of models contained for calculation.
         :param numb_models: The number of models selected.
         :return:
         """
         mdata = self.machine_data['model_devi'][0]
-        all_task = glob(os.path.join(work_path, "task.*"))
-        all_task.sort()
+        folder_list = kwargs.get('folder_list', ["task.*"])
+        all_task = []
+        for i in folder_list:
+            _task = glob(os.path.join(work_path, i))
+            _task.sort()
+            all_task += _task
         lmp_exec = mdata['command']
         command = lmp_exec + " -i input.lammps"
         commands = [command]
@@ -285,6 +290,105 @@ class DPTask(object):
             outlog=kwargs.get('outlog', 'model_devi.log'),
             errlog=kwargs.get('errlog', 'model_devi.log'))
         return dispatcher
+
+    def train_model_test(self, iteration=None, params=None, **kwargs):
+        location = self.path
+        if iteration is None:
+            if self.step_code < 2:
+                iteration = self.iteration - 1
+            else:
+                iteration = self.iteration
+        n_iter = 'iter.' + str(iteration).zfill(6)
+        model_path = os.path.join(location, n_iter, '00.train')
+        test_path = os.path.join(location, n_iter, '04.model_test')
+        print("Preparing MD input......")
+        if params is None:
+            params = kwargs
+        self._train_generate_md_test(params=params, work_path=test_path, model_path=model_path)
+        if self.step_code < 6:
+            md_iter = self.iteration - 1
+        else:
+            md_iter = self.iteration
+        md_iter = 'iter.' + str(md_iter).zfill(6)
+        for p in glob(os.path.join(test_path, 'task.*')):
+            if not os.path.exists(os.path.join(p, 'conf.lmp')):
+                _lmp_data = glob(os.path.join(location, md_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
+                os.symlink(_lmp_data, os.path.join(p, 'conf.lmp'))
+        print("Submitting")
+        self.md_single_task(
+            work_path=test_path,
+            model_path=model_path,
+            numb_models=self.param_data['numb_models'],
+            forward_files=['conf.lmp', 'input.lammps'],
+            backward_files=['model_devi.out', 'md.log', 'md.err', 'dump.lammpstrj'],
+            outlog='md_test.log',
+            errlog='md_test.err'
+        )
+        print("MD Test finished.")
+
+    def _train_generate_md_test(self, params, work_path, model_path):
+        cur_job = params['model_devi_jobs']
+        use_plm = params.get('model_devi_plumed', False)
+        use_plm_path = params.get('model_devi_plumed_path', False)
+        trj_freq = cur_job.get('traj_freq', False)
+
+        rev_keys, rev_mat, num_lmp = parse_cur_job_revmat(cur_job, use_plm=use_plm)
+        lmp_templ = cur_job['template']['lmp']
+        lmp_templ = os.path.abspath(lmp_templ)
+        plm_templ = None
+        plm_path_templ = None
+        if use_plm:
+            plm_templ = cur_job['template']['plm']
+            plm_templ = os.path.abspath(plm_templ)
+            if use_plm_path:
+                plm_path_templ = cur_job['template']['plm_path']
+                plm_path_templ = os.path.abspath(plm_path_templ)
+        task_counter = 0
+        for ii in range(len(rev_mat)):
+            rev_item = rev_mat[ii]
+            task_name = "task.%06d" % task_counter
+            task_path = os.path.join(work_path, task_name)
+            # create task path
+            os.makedirs(task_path, exist_ok=True)
+            # chdir to task path
+            os.chdir(task_path)
+            shutil.copyfile(lmp_templ, 'input.lammps')
+            model_list = glob(os.path.join(model_path, 'graph*pb'))
+            model_list.sort()
+            model_names = [os.path.basename(i) for i in model_list]
+            task_model_list = []
+            for jj in model_names:
+                task_model_list.append(os.path.join('..', os.path.basename(jj)))
+            # revise input of lammps
+            with open('input.lammps') as fp:
+                lmp_lines = fp.readlines()
+            _dpmd_idx = find_only_one_key(lmp_lines, ['pair_style', 'deepmd'])
+            graph_list = ' '.join(task_model_list)
+            lmp_lines[_dpmd_idx] = "pair_style      deepmd %s out_freq %d out_file model_devi.out\n" % (
+                graph_list, trj_freq)
+            _dump_idx = find_only_one_key(lmp_lines, ['dump', 'dpgen_dump'])
+            lmp_lines[_dump_idx] = "dump            dpgen_dump all custom %d dump.lammpstrj id type x y z\n" % trj_freq
+            lmp_lines = revise_by_keys(lmp_lines, rev_keys[:num_lmp], rev_item[:num_lmp])
+            # revise input of plumed
+            if use_plm:
+                lmp_lines = revise_lmp_input_plm(lmp_lines, 'input.plumed')
+                shutil.copyfile(plm_templ, 'input.plumed')
+                with open('input.plumed') as fp:
+                    plm_lines = fp.readlines()
+                plm_lines = revise_by_keys(plm_lines, rev_keys[num_lmp:], rev_item[num_lmp:])
+                with open('input.plumed', 'w') as fp:
+                    fp.write(''.join(plm_lines))
+                if use_plm_path:
+                    shutil.copyfile(plm_path_templ, 'plmpath.pdb')
+            # dump input of lammps
+            with open('input.lammps', 'w') as fp:
+                fp.write(''.join(lmp_lines))
+            with open('job.json', 'w') as fp:
+                job = {}
+                for mm, nn in zip(rev_keys, rev_item):
+                    job[mm] = nn
+                json.dump(job, fp, indent=4)
+            task_counter += 1
 
     def fp_group_distance(self, iteration, atom_group):
         """
@@ -343,6 +447,12 @@ class DPTask(object):
         return plt
 
     def fp_error_test(self, iteration=None, test_model=None):
+        """
+        Test your model quickly with the data generated from dpgen.
+        :param iteration: Select the iteration of data for testing. Default: the latest one.
+        :param test_model: Select the iteration of model for testing. Default: the latest one.
+        :return:
+        """
         location = self.path
         if iteration is None:
             if self.step_code < 7:
@@ -355,24 +465,33 @@ class DPTask(object):
         task_list = glob(os.path.join(location, n_iter, '02.fp', 'task*'))
         task_list.sort()
         _stc_file = self._fp_output_style()
-        stcs = [read(os.path.join(tt, _stc_file)) for tt in task_list]
-        write(os.path.join(quick_test_dir, 'task.md/validate.xyz'), stcs, format='extxyz')
         _dpgen_output = self._fp_output_dpgen()
         _dpdata_format = self._fp_output_format()
         all_sys = None
+        stcs = []
         for idx, oo in enumerate(task_list):
             sys = dpdata.LabeledSystem(os.path.join(oo, _dpgen_output), fmt=_dpdata_format)
+            stc = read(os.path.join(oo, _stc_file))
             if len(sys) > 0:
                 sys.check_type_map(type_map=self.param_data['type_map'])
             if idx == 0:
                 all_sys = sys
+                stcs.append(stc)
             else:
-                all_sys.append(sys)
+                try:
+                    all_sys.append(sys)
+                    stcs.append(stc)
+                except (RuntimeError, TypeError, NameError):
+                    pass
+        write(os.path.join(quick_test_dir, 'task.md/validate.xyz'), stcs, format='extxyz')
         atom_numb = np.sum(all_sys['atom_numbs'])
         dft_energy = all_sys['energies']
         dft_force = all_sys['forces']
         if test_model is None:
-            test_model = iteration
+            if self.step_code < 2:
+                test_model = self.iteration - 1
+            else:
+                test_model = self.iteration
         model_iter = 'iter.' + str(test_model).zfill(6)
         model_dir = os.path.join(location, model_iter, '00.train')
         self._fp_generate_error_test(work_path=quick_test_dir, model_dir=model_dir)
@@ -436,33 +555,33 @@ class DPTask(object):
         model_list = glob(os.path.join(model_dir, 'graph*pb'))
         model_list.sort()
         model_names = [os.path.basename(i) for i in model_list]
-        input = "units           metal\n"
-        input += "boundary        p p p\n"
-        input += "atom_style      atomic\n"
-        input += "\n"
-        input += "neighbor        2.0 bin\n"
-        input += "neigh_modify    every 10 delay 0 check no\n"
-        input += "read_data       conf.lmp\n"
+        input_file = "units           metal\n"
+        input_file += "boundary        p p p\n"
+        input_file += "atom_style      atomic\n"
+        input_file += "\n"
+        input_file += "neighbor        2.0 bin\n"
+        input_file += "neigh_modify    every 10 delay 0 check no\n"
+        input_file += "read_data       conf.lmp\n"
         _masses = self.param_data['mass_map']
         # change the masses of atoms
         for ii, jj in enumerate(_masses):
-            input += f"mass            {ii + 1} {jj}\n"
+            input_file += f"mass            {ii + 1} {jj}\n"
         # change the file name of graphs
-        input += "pair_style deepmd "
+        input_file += "pair_style deepmd "
         for kk in model_names:
-            input += f"../{kk} "
-        input += "out_freq 1 out_file model_devi.out\n"
-        input += "pair_coeff\n"
-        input += "velocity        all create 330.0 23456789\n"
-        input += "fix             1 all nvt temp 330.0 330.0 0.05\n"
-        input += "timestep        0.0005\n"
-        input += "thermo_style    custom step pe ke etotal temp press vol\n"
-        input += "thermo          1\n"
-        input += "dump            1 all custom 1 dump.lammpstrj id type x y z fx fy fz\n"
-        input += "rerun validate.xyz dump x y z box no format xyz\n"
+            input_file += f"../{kk} "
+        input_file += "out_freq 1 out_file model_devi.out\n"
+        input_file += "pair_coeff\n"
+        input_file += "velocity        all create 330.0 23456789\n"
+        input_file += "fix             1 all nvt temp 330.0 330.0 0.05\n"
+        input_file += "timestep        0.0005\n"
+        input_file += "thermo_style    custom step pe ke etotal temp press vol\n"
+        input_file += "thermo          1\n"
+        input_file += "dump            1 all custom 1 dump.lammpstrj id type x y z fx fy fz\n"
+        input_file += "rerun validate.xyz dump x y z box no format xyz\n"
         with open(os.path.join(work_path, 'task.md/input.lammps'), 'w') as f:
-            f.write(input)
-        return input
+            f.write(input_file)
+        return input_file
 
     def _fp_style(self):
         styles = {
@@ -514,14 +633,11 @@ class DPTask(object):
             self.step = 'Labeling'
 
     def _read_record(self):
-        try:
-            _record_path = os.path.join(self.path, self.record_file)
-            with open(_record_path) as f:
-                _final_step = f.readlines()[-1]
-            self.iteration = int(_final_step.split()[0])
-            self.step_code = int(_final_step.split()[1])
-        except:
-            raise FileNotFoundError('Record file record.dpgen not found')
+        _record_path = os.path.join(self.path, self.record_file)
+        with open(_record_path) as f:
+            _final_step = f.readlines()[-1]
+        self.iteration = int(_final_step.split()[0])
+        self.step_code = int(_final_step.split()[1])
 
     def _read_param_data(self):
         _param_path = os.path.join(self.path, self.param_file)
