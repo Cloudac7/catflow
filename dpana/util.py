@@ -3,7 +3,6 @@ import uuid
 from glob import glob
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
-from dpgen.remote.decide_machine import decide_fp_machine
 
 model_dict = {
     "machine": {
@@ -70,8 +69,9 @@ def multi_fp_task(work_path, machine_data=None):
                         errlog='fp.err')
 
 
-def fp_tasks(ori_fp_tasks, work_path, machine_data, group_size=1):
-    machine_data = decide_fp_machine(machine_data)
+def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
+    if machine_data is None:
+        machine_data = model_dict
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
     forward_common_files = []
@@ -138,14 +138,14 @@ def fp_await_submit(item, forward_common_files=None, forward_files=None, backwar
 def fp_submit(work_path, run_tasks,
               forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     dispatcher = _make_dispatcher(
-        mdata=machine_data,
+        mdata=machine_data['machine'],
         job_record='jr.json'
     )
-    fp_command = machine_data['fp_command']
-    fp_group_size = machine_data['fp_group_size']
-    fp_resources = machine_data['fp_resources']
+    fp_command = machine_data['command']
+    fp_group_size = machine_data['group_size']
+    fp_resources = machine_data['resources']
     mark_failure = fp_resources.get('mark_failure', False)
-    dispatcher.run_jobs(fp_resources,
+    dispatcher.run_jobs(machine_data['resources'],
                         [fp_command],
                         work_path,
                         run_tasks,
