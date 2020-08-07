@@ -1,7 +1,7 @@
 import os
-import asyncio
 import uuid
 from glob import glob
+from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
 
 model_dict = {
@@ -108,21 +108,23 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
             _groups.append(_group_item)
             _groups[_groups_index]['run_tasks'].append(_base_name)
         _group_num += 1
-    loop = asyncio.get_event_loop()
-    tasks = [fp_await_submit(
-        item,
-        forward_common_files,
-        forward_files,
-        backward_files,
-        machine_data) for item in _groups]
-    loop.run_until_complete(asyncio.wait(tasks))
-    loop.close()
+    p = Pool(len(_groups))
+    for item in _groups:
+        p.apply_async(fp_await_submit, args=(
+            item,
+            forward_common_files,
+            forward_files,
+            backward_files,
+            machine_data
+        ))
+    print('Waiting for all subprocesses done...')
+    p.close()
+    p.join()
 
 
-async def fp_await_submit(item,
-                          forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
+def fp_await_submit(item, forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     print(f'Task {item["uuid"]} was submitted.')
-    await fp_submit(
+    fp_submit(
         item["work_dir"],
         item["run_tasks"],
         forward_common_files,
@@ -133,8 +135,8 @@ async def fp_await_submit(item,
     print(f'Task {item["uuid"]} finished.')
 
 
-async def fp_submit(work_path, run_tasks,
-                    forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
+def fp_submit(work_path, run_tasks,
+              forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     dispatcher = _make_dispatcher(
         mdata=machine_data['machine'],
         job_record='jr.json'
