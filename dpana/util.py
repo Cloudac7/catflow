@@ -3,6 +3,7 @@ import uuid
 from glob import glob
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
+from dpgen.remote.decide_machine import decide_fp_machine
 
 model_dict = {
     "machine": {
@@ -69,9 +70,8 @@ def multi_fp_task(work_path, machine_data=None):
                         errlog='fp.err')
 
 
-def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
-    if machine_data is None:
-        machine_data = model_dict
+def fp_tasks(ori_fp_tasks, work_path, machine_data, group_size=1):
+    machine_data = decide_fp_machine(machine_data)
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
     forward_common_files = []
@@ -85,14 +85,14 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
     _group_num = 0
     _groups = []
     _groups_index = 0
-    _uuid = str(uuid.uuid1())
+    _uuid = str(uuid.uuid4())
     _work_dir = os.path.join(work_path, _uuid)
     os.makedirs(os.path.join(_work_dir), exist_ok=True)
     for tt in fp_run_tasks:
         if _group_num >= group_size:
             _group_num = 0
             _groups_index += 1
-            _uuid = str(uuid.uuid1())
+            _uuid = str(uuid.uuid4())
             _work_dir = os.path.join(work_path, _uuid)
             os.makedirs(os.path.join(_work_dir), exist_ok=True)
         _base_name = os.path.basename(tt)
@@ -138,14 +138,14 @@ def fp_await_submit(item, forward_common_files=None, forward_files=None, backwar
 def fp_submit(work_path, run_tasks,
               forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     dispatcher = _make_dispatcher(
-        mdata=machine_data['machine'],
+        mdata=machine_data,
         job_record='jr.json'
     )
-    fp_command = machine_data['command']
-    fp_group_size = machine_data['group_size']
-    fp_resources = machine_data['resources']
+    fp_command = machine_data['fp_command']
+    fp_group_size = machine_data['fp_group_size']
+    fp_resources = machine_data['fp_resources']
     mark_failure = fp_resources.get('mark_failure', False)
-    dispatcher.run_jobs(machine_data['resources'],
+    dispatcher.run_jobs(fp_resources,
                         [fp_command],
                         work_path,
                         run_tasks,
