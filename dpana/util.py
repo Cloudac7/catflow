@@ -138,6 +138,7 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
 
 def fp_await_submit(item, forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     print(f'Task {item["uuid"]} was submitted.')
+    os.chdir(item["work_dir"])
     machine_data = decide_fp_machine(machine_data)
     fp_submit(
         item["work_dir"],
