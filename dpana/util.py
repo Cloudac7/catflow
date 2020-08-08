@@ -1,10 +1,12 @@
 import json
 import os
+import shutil
 import time
 import uuid
 from glob import glob
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
+from dpgen.remote.decide_machine import decide_fp_machine
 from paramiko import SSHException
 
 model_dict = {
@@ -85,6 +87,7 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
         _task_group = glob(task)
         _task_group.sort()
         fp_run_tasks += _task_group
+    work_path = os.path.join(work_path, 'groups')
     if os.path.exists(os.path.join(work_path, 'groups.json')):
         with open(os.path.join(work_path, 'groups.json'), 'r') as f:
             _groups = json.load(f)
@@ -127,13 +130,15 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
             backward_files,
             machine_data
         ))
-    print('Waiting for all subprocesses done...')
+    print('Waiting for all tasks done...')
     p.close()
     p.join()
+    shutil.rmtree(work_path)
 
 
 def fp_await_submit(item, forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     print(f'Task {item["uuid"]} was submitted.')
+    machine_data = decide_fp_machine(machine_data)
     fp_submit(
         item["work_dir"],
         item["run_tasks"],
