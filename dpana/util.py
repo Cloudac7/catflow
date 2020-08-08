@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import uuid
@@ -84,32 +85,38 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
         _task_group = glob(task)
         _task_group.sort()
         fp_run_tasks += _task_group
-    _group_num = 0
-    _groups = []
-    _groups_index = 0
-    _uuid = str(uuid.uuid4())
-    _work_dir = os.path.join(work_path, _uuid)
-    os.makedirs(os.path.join(_work_dir), exist_ok=True)
-    for tt in fp_run_tasks:
-        if _group_num >= group_size:
-            _group_num = 0
-            _groups_index += 1
-            _uuid = str(uuid.uuid4())
-            _work_dir = os.path.join(work_path, _uuid)
-            os.makedirs(os.path.join(_work_dir), exist_ok=True)
-        _base_name = os.path.basename(tt)
-        os.symlink(tt, os.path.join(_work_dir, _base_name))
-        try:
-            _groups[_groups_index]['run_tasks'].append(_base_name)
-        except IndexError:
-            _group_item = {
-                "uuid": _uuid,
-                "work_dir": _work_dir,
-                "run_tasks": []
-            }
-            _groups.append(_group_item)
-            _groups[_groups_index]['run_tasks'].append(_base_name)
-        _group_num += 1
+    if os.path.exists(os.path.join(work_path, 'groups.json')):
+        with open(os.path.join(work_path, 'groups.json'), 'r') as f:
+            _groups = json.load(f)
+    else:
+        _group_num = 0
+        _groups = []
+        _groups_index = 0
+        _uuid = str(uuid.uuid4())
+        _work_dir = os.path.join(work_path, _uuid)
+        os.makedirs(os.path.join(_work_dir), exist_ok=True)
+        for tt in fp_run_tasks:
+            if _group_num >= group_size:
+                _group_num = 0
+                _groups_index += 1
+                _uuid = str(uuid.uuid4())
+                _work_dir = os.path.join(work_path, _uuid)
+                os.makedirs(os.path.join(_work_dir), exist_ok=True)
+            _base_name = os.path.basename(tt)
+            os.symlink(tt, os.path.join(_work_dir, _base_name))
+            try:
+                _groups[_groups_index]['run_tasks'].append(_base_name)
+            except IndexError:
+                _group_item = {
+                    "uuid": _uuid,
+                    "work_dir": _work_dir,
+                    "run_tasks": []
+                }
+                _groups.append(_group_item)
+                _groups[_groups_index]['run_tasks'].append(_base_name)
+            _group_num += 1
+        with open(os.path.join(work_path, 'groups.json'), 'w') as f:
+            json.dump(_groups, f)
     p = Pool(len(_groups))
     for i, item in enumerate(_groups):
         time.sleep(i)
