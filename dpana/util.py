@@ -1,8 +1,10 @@
 import os
+import time
 import uuid
 from glob import glob
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
+from paramiko import SSHException
 
 model_dict = {
     "machine": {
@@ -109,7 +111,8 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
             _groups[_groups_index]['run_tasks'].append(_base_name)
         _group_num += 1
     p = Pool(len(_groups))
-    for item in _groups:
+    for i, item in enumerate(_groups):
+        time.sleep(i)
         p.apply_async(fp_await_submit, args=(
             item,
             forward_common_files,
@@ -137,25 +140,32 @@ def fp_await_submit(item, forward_common_files=None, forward_files=None, backwar
 
 def fp_submit(work_path, run_tasks,
               forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
-    dispatcher = _make_dispatcher(
-        mdata=machine_data['machine'],
-        job_record='jr.json'
-    )
-    fp_command = machine_data['command']
-    fp_group_size = machine_data['group_size']
-    fp_resources = machine_data['resources']
+    fp_command = machine_data['fp_command']
+    fp_group_size = machine_data['fp_group_size']
+    fp_resources = machine_data['fp_resources']
     mark_failure = fp_resources.get('mark_failure', False)
-    dispatcher.run_jobs(machine_data['resources'],
-                        [fp_command],
-                        work_path,
-                        run_tasks,
-                        fp_group_size,
-                        forward_common_files,
-                        forward_files,
-                        backward_files,
-                        mark_failure=mark_failure,
-                        outlog='fp.log',
-                        errlog='fp.err')
+    dispatcher = make_dispatcher(
+        machine_data['fp_machine'], machine_data['fp_resources'], work_path, run_tasks, fp_group_size
+    )
+    for i in range(10):
+        try:
+            dispatcher.run_jobs(fp_resources,
+                                [fp_command],
+                                work_path,
+                                run_tasks,
+                                fp_group_size,
+                                forward_common_files,
+                                forward_files,
+                                backward_files,
+                                mark_failure=mark_failure,
+                                outlog='fp.log',
+                                errlog='fp.err')
+        except (Exception, SSHException):
+            if i < 9:
+                time.sleep(0.5)
+        else:
+            time.sleep(0.1)
+            break
 
 
 def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None, group_size=None, **kwargs):
