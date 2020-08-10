@@ -34,6 +34,47 @@ class DPTask(object):
         self.record_file = record_file
         self._load_task()
 
+    def train_lcurve(self, iteration=None, model=0):
+        if iteration is None:
+            if self.step_code < 2:
+                iteration = self.iteration - 1
+            else:
+                iteration = self.iteration
+        n_iter = 'iter.' + str(iteration).zfill(6)
+        step = []
+        energy_test = []
+        energy_train = []
+        force_test = []
+        force_train = []
+        with open(os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')) as f:
+            for i in f[1:]:
+                step.append(i[0])
+                energy_train.append(i[4])
+                energy_test.append(i[3])
+                force_train.append(i[6])
+                force_test.append(i[5])
+        plt.figure(dpi=144)
+        plt.title("DeepMD training and test error")
+        plt.subplot(2, 1, 1)
+        plt.scatter(step, energy_train, label='train', alpha=0.4)
+        plt.scatter(step, energy_test, label='test', alpha=0.4)
+        plt.hlines(0.005, step[0], step[-1], linestyles='--', colors='red', label='5 meV')
+        plt.hlines(0.01, step[0], step[-1], linestyles='--', colors='blue', label='10 meV')
+        plt.hlines(0.05, step[0], step[-1], linestyles='--', label='50 meV')
+        plt.legend()
+        plt.xlabel('Number of training batch')
+        plt.ylabel('$E$(eV)')
+        plt.subplot(2, 1, 2)
+        plt.scatter(step, force_train, alpha=0.4, label=f'train')
+        plt.scatter(step, force_test, alpha=0.4, label=f'test')
+        plt.hlines(0.05, step[0], step[-1], linestyles='--', colors='red', label='50 meV/Å')
+        plt.hlines(0.1, step[0], step[-1], linestyles='--', colors='blue', label='100 meV/Å')
+        plt.hlines(0.2, step[0], step[-1], linestyles='--', label='200 meV/Å')
+        plt.xlabel('Number of training batch')
+        plt.ylabel('$F$(eV/Å)')
+        plt.legend()
+        return plt
+
     def md_make_set(self, iteration=None):
         location = self.path
         if iteration is None:
@@ -119,6 +160,7 @@ class DPTask(object):
         :param log: Choose whether log scale used. Default: False.
         :return: A plot for different temperatures
         """
+        flatmdf = None
         location = os.path.join(self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
         if os.path.exists(location):
             df = self.md_set_load_pkl(iteration=iteration)
