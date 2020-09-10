@@ -32,7 +32,7 @@ def simu_cli():
 @simu_cli.command()
 @click.option('--input-settings', '-i', type=click.Path(exists=True), required=True,
               help='A json containing input parameters of the simulation.')
-@click.argument('task_path', type=click.Path(exists=True), required=True, help='The path of the DP-GEN task.')
+@click.argument('task_path', type=click.Path(exists=True), required=True)
 @click.argument('param', default='param.json')
 @click.argument('machine', default='machine.json')
 @click.argument('record', default='record.dpgen')
