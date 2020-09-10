@@ -81,7 +81,7 @@ def fprun(input_settings):
         ori_fp_tasks=settings['ori_fp_tasks'],
         work_path=settings['work_path'],
         machine_data=settings,
-        group_size=settings['group_path']
+        group_size=settings['group_size']
     )
 
     mes_text = "# 完成情况 \n\n"
