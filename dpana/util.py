@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 import uuid
-from distutils.version import LooseVersion
+import daemon
 from glob import glob
 from ase.io import iread, write
 from multiprocessing import Pool
@@ -150,20 +150,21 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
                 _group_num += 1
         with open(os.path.join(work_path, 'groups.json'), 'w') as f:
             json.dump(_groups, f)
-    p = Pool(len(_groups))
-    for i, item in enumerate(_groups):
-        time.sleep(i)
-        p.apply_async(fp_await_submit, args=(
-            item,
-            forward_common_files,
-            forward_files,
-            backward_files,
-            machine_data
-        ))
-    print('Waiting for all tasks done...')
-    p.close()
-    p.join()
-    shutil.rmtree(work_path)
+    with daemon.DaemonContext():
+        p = Pool(len(_groups))
+        for i, item in enumerate(_groups):
+            time.sleep(i)
+            p.apply_async(fp_await_submit, args=(
+                item,
+                forward_common_files,
+                forward_files,
+                backward_files,
+                machine_data
+            ))
+        print('Waiting for all tasks done...')
+        p.close()
+        p.join()
+        shutil.rmtree(work_path)
 
 
 def fp_await_submit(item, forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
