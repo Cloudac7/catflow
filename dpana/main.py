@@ -49,7 +49,7 @@ def simu(input_settings, task_path, param, machine, record):
     params = settings['params']
     long_task = read_params(task_path, param, machine, record)
     long_task.train_model_test(
-        iteration=11,
+        iteration=settings['iteration'],
         params=params,
         files=settings['input'],
         forward_files=settings['forward_files'],
