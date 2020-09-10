@@ -18,7 +18,7 @@
     ],
     "entry_points": {
         "console_scripts": [
-            "dpana=dpana.main:main"
+            "dpana=dpana.main:cli"
         ]
    }
 }

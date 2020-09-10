@@ -29,20 +29,16 @@ def simu_cli():
 
 
 @simu_cli.command()
-@simu_cli.option('--input-settings', '-i', type=click.Path(exists=True), required=True)
-@click.argument('task_path', type=click.Path(exists=True), required=True)
-@click.argument('param', default='param.json')
-@click.argument('machine', default='machine.json')
-@click.argument('record', default='record.dpgen')
+@click.option('--input-settings', '-i', type=click.Path(exists=True), required=True, help='A json containing input '
+                                                                                          'parameters of the '
+                                                                                          'simulation.')
+@click.argument('task_path', type=click.Path(exists=True), required=True, help='The path of the DP-GEN task.')
+@click.argument('param', default='param.json', help='File name of DP-GEN param file')
+@click.argument('machine', default='machine.json', help='File name of DP-GEN machine file')
+@click.argument('record', default='record.dpgen', help='File name of DP-GEN record file')
 def simu(input_settings, task_path, param, machine, record):
     """
-    Start a long MD simulation
-    :param input_settings:
-    :param task_path:
-    :param param:
-    :param machine:
-    :param record:
-    :return:
+    Start a long MD simulation with parameters supplied.
     """
     with open(input_settings) as f:
         settings = json.load(f)

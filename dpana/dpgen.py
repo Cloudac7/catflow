@@ -343,7 +343,8 @@ class DPTask(object):
         :param kwargs: Other optional parameters.
         :return:
         """
-        location = self.path
+        location = os.path.abspath(self.path)
+        print(location)
         if iteration is None:
             if self.step_code < 2:
                 iteration = self.iteration - 1
@@ -381,7 +382,7 @@ class DPTask(object):
                 outlog=kwargs.get("outlog", 'md_test.log'),
                 errlog=kwargs.get("errlog", 'md_test.err')
             )
-            print("MD Test finished.")
+        # print("MD Test finished.")
 
     def _train_generate_md_test(self, params, work_path, model_path):
         cur_job = params['model_devi_jobs']
