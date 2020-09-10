@@ -3,10 +3,12 @@ import os
 import shutil
 import time
 import uuid
+from distutils.version import LooseVersion
 from glob import glob
+from ase.io import iread, write
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
-from dpgen.remote.decide_machine import decide_fp_machine
+from dpgen.remote.decide_machine import decide_train_machine, decide_fp_machine
 from paramiko import SSHException
 
 model_dict = {
@@ -37,6 +39,25 @@ model_dict = {
     "command": "/some/work/path/vasp_std",
     "group_size": 25
 }
+
+
+def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
+    """
+    Export VASP POSCAR files from trajectory.
+    :param traj_file:
+    :param work_path:
+    :param chemical_symbol:
+    :param index:
+    :return:
+    """
+    stcs = iread(os.path.abspath(traj_file), index=index)
+    os.makedirs(work_path, exist_ok=True)
+    for i, j in enumerate(stcs):
+        if chemical_symbol:
+            j.set_chemical_symbols(chemical_symbol)
+        task_path = os.path.join(work_path, f'task.{str(i).zfill(6)}')
+        os.makedirs(task_path, exist_ok=True)
+        write(os.path.join(task_path, 'POSCAR'), j, vasp5=True)
 
 
 def multi_fp_task(work_path, machine_data=None):
@@ -75,10 +96,18 @@ def multi_fp_task(work_path, machine_data=None):
 
 
 def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
+    """
+    Submit single point energy tasks at one time.
+    :param ori_fp_tasks: A list of path containing `INPUT FILES`.
+    :param work_path: A local path for creating work directory.
+    :param machine_data: The machine data.
+    :param group_size: Set the group size for tasks.
+    :return:
+    """
     if machine_data is None:
         machine_data = model_dict
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
-    backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
+    backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err', 'tag_0_finished']
     forward_common_files = []
     if len(ori_fp_tasks) == 0:
         return
@@ -99,25 +128,26 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
         _work_dir = os.path.join(work_path, _uuid)
         os.makedirs(os.path.join(_work_dir), exist_ok=True)
         for tt in fp_run_tasks:
-            if _group_num >= group_size:
-                _group_num = 0
-                _groups_index += 1
-                _uuid = str(uuid.uuid4())
-                _work_dir = os.path.join(work_path, _uuid)
-                os.makedirs(os.path.join(_work_dir), exist_ok=True)
-            _base_name = os.path.basename(tt)
-            os.symlink(tt, os.path.join(_work_dir, _base_name))
-            try:
-                _groups[_groups_index]['run_tasks'].append(_base_name)
-            except IndexError:
-                _group_item = {
-                    "uuid": _uuid,
-                    "work_dir": _work_dir,
-                    "run_tasks": []
-                }
-                _groups.append(_group_item)
-                _groups[_groups_index]['run_tasks'].append(_base_name)
-            _group_num += 1
+            if not os.path.exists(os.path.join(tt, 'tag_0_finished')):
+                if _group_num >= group_size:
+                    _group_num = 0
+                    _groups_index += 1
+                    _uuid = str(uuid.uuid4())
+                    _work_dir = os.path.join(work_path, _uuid)
+                    os.makedirs(os.path.join(_work_dir), exist_ok=True)
+                _base_name = os.path.basename(tt)
+                os.symlink(tt, os.path.join(_work_dir, _base_name))
+                try:
+                    _groups[_groups_index]['run_tasks'].append(_base_name)
+                except IndexError:
+                    _group_item = {
+                        "uuid": _uuid,
+                        "work_dir": _work_dir,
+                        "run_tasks": []
+                    }
+                    _groups.append(_group_item)
+                    _groups[_groups_index]['run_tasks'].append(_base_name)
+                _group_num += 1
         with open(os.path.join(work_path, 'groups.json'), 'w') as f:
             json.dump(_groups, f)
     p = Pool(len(_groups))

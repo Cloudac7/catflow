@@ -1,5 +1,6 @@
 import os
 import json
+import daemon
 
 import dpdata
 import numpy as np
@@ -47,17 +48,17 @@ class DPTask(object):
         force_test = []
         force_train = []
         with open(os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')) as f:
-            for i in f[1:]:
-                step.append(i[0])
-                energy_train.append(i[4])
-                energy_test.append(i[3])
-                force_train.append(i[6])
-                force_test.append(i[5])
-        plt.figure(dpi=144)
+            for i in f.readlines()[1:]:
+                step.append(float(i.split()[0]))
+                energy_train.append(float(i.split()[4]))
+                energy_test.append(float(i.split()[3]))
+                force_train.append(float(i.split()[6]))
+                force_test.append(float(i.split()[5]))
+        fig = plt.figure()
         plt.title("DeepMD training and test error")
         plt.subplot(2, 1, 1)
-        plt.scatter(step, energy_train, label='train', alpha=0.4)
-        plt.scatter(step, energy_test, label='test', alpha=0.4)
+        plt.scatter(step[10:], energy_train[10:], alpha=0.4, label='train')
+        plt.scatter(step[10:], energy_test[10:], alpha=0.4, label='test')
         plt.hlines(0.005, step[0], step[-1], linestyles='--', colors='red', label='5 meV')
         plt.hlines(0.01, step[0], step[-1], linestyles='--', colors='blue', label='10 meV')
         plt.hlines(0.05, step[0], step[-1], linestyles='--', label='50 meV')
@@ -65,15 +66,15 @@ class DPTask(object):
         plt.xlabel('Number of training batch')
         plt.ylabel('$E$(eV)')
         plt.subplot(2, 1, 2)
-        plt.scatter(step, force_train, alpha=0.4, label=f'train')
-        plt.scatter(step, force_test, alpha=0.4, label=f'test')
+        plt.scatter(step[10:], force_train[10:], alpha=0.4, label='train')
+        plt.scatter(step[10:], force_test[10:], alpha=0.4, label='test')
         plt.hlines(0.05, step[0], step[-1], linestyles='--', colors='red', label='50 meV/Å')
         plt.hlines(0.1, step[0], step[-1], linestyles='--', colors='blue', label='100 meV/Å')
         plt.hlines(0.2, step[0], step[-1], linestyles='--', label='200 meV/Å')
         plt.xlabel('Number of training batch')
         plt.ylabel('$F$(eV/Å)')
         plt.legend()
-        return plt
+        return fig
 
     def md_make_set(self, iteration=None):
         location = self.path
@@ -369,17 +370,18 @@ class DPTask(object):
                     if not os.path.exists(os.path.join(p, _file_base)):
                         os.symlink(_file_abs, os.path.join(p, _file_base))
         print("Submitting")
-        self.md_single_task(
-            work_path=test_path,
-            model_path=model_path,
-            numb_models=self.param_data['numb_models'],
-            forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
-            backward_files=kwargs.get("backward_files",
-                                      ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
-            outlog=kwargs.get("outlog", 'md_test.log'),
-            errlog=kwargs.get("errlog", 'md_test.err')
-        )
-        print("MD Test finished.")
+        with daemon.DaemonContext():
+            self.md_single_task(
+                work_path=test_path,
+                model_path=model_path,
+                numb_models=self.param_data['numb_models'],
+                forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
+                backward_files=kwargs.get("backward_files",
+                                          ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
+                outlog=kwargs.get("outlog", 'md_test.log'),
+                errlog=kwargs.get("errlog", 'md_test.err')
+            )
+            print("MD Test finished.")
 
     def _train_generate_md_test(self, params, work_path, model_path):
         cur_job = params['model_devi_jobs']
@@ -449,7 +451,7 @@ class DPTask(object):
         """
         Analyse the distance of selected structures.
         :param iteration: The iteration selected.
-        :param atom_group:A tuple contains the index number of two selcted atoms.
+        :param atom_group:A tuple contains the index number of two selected atoms.
         :return: A plot of distance distribution.
         """
         dis_loc = []
@@ -463,10 +465,10 @@ class DPTask(object):
                 dis.append(stc.get_distance(atom_group[0], atom_group[1], mic=True))
         diss = np.array(dis)
         plt.figure()
-        plt.hist(diss, bins=np.arange(1, 1.5, 0.01), label=f'iter {int(iteration)}', density=True)
+        plt.hist(diss, bins=np.arange(diss.min(), diss.max(), 0.01), label=f'iter {int(iteration)}', density=True)
         plt.legend(fontsize=16)
         plt.xlabel("d(Å)", fontsize=16)
-        plt.xticks(np.arange(1, 1.51, step=0.1), fontsize=16)
+        plt.xticks(np.arange(diss.min(), diss.max(), step=1.0), fontsize=16)
         plt.yticks(fontsize=16)
         plt.title("Distibution of distance", fontsize=16)
         return plt
@@ -475,7 +477,7 @@ class DPTask(object):
         """
         Analyse the distance of selected structures.
         :param iteration: The iteration selected.
-        :param ele_group:A tuple contains the index number of two selcted elements.
+        :param ele_group:A tuple contains the index number of two selected elements.
         :return: A plot of distance distribution.
         """
         dis = []

@@ -1,0 +1,24 @@
+{
+    "name": "dpana",
+    "author": "Cloudac7",
+    "author_email": "scottryuu@outlook.com",
+    "description": "Analysis plugin for DP-GEN tasks.",
+    "url": "https://github.com/cloudac7/useful-tools",
+    "version": "0.1.0a1",
+    "install_requires": [
+        "click",
+        "dpdata",
+        "dpgen",
+        "daemon",
+        "six",
+        "voluptuous",
+        "ase",
+        "numpy",
+        "matplotlib"
+    ],
+    "entry_points": {
+        "console_scripts": [
+            "dpana=dpana.main:main"
+        ]
+   }
+}
