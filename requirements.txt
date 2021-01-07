@@ -1,0 +1,12 @@
+click~=7.1.2
+ase~=3.20.1
+dpgen~=0.8.1.dev203+ga4c8a65
+paramiko~=2.7.1
+daemon~=1.2
+dpdata~=0.1.17
+numpy~=1.19.4
+pandas~=1.1.5
+matplotlib~=3.3.3
+requests~=2.25.1
+setuptools~=49.6.0.post20201009
+dscribe~=0.4.0
