@@ -29,7 +29,7 @@ class DPTask(object):
         :param machine_file: The machine json file name.
         :param record_file: The record file name.
         """
-        self.path = path
+        self.path = os.path.abspath(path)
         self.param_file = param_file
         self.machine_file = machine_file
         self.record_file = record_file
@@ -108,7 +108,7 @@ class DPTask(object):
                     lines = f.readlines()[start:final:step]
                 else:
                     lines = f.readlines()[start:final]
-            pot_energy = np.array([p.split()[2] for p in lines]).astype('float')
+            pot_energy = np.array([p.split()[2] for p in lines if 'WARNING' not in p]).astype('float')
             all_data.append({
                 'iter': n_iter,
                 'temp': temp,
@@ -170,14 +170,14 @@ class DPTask(object):
         if isinstance(temps, (list, tuple)):
             num_temp = len(temps)
         elif isinstance(temps, (int, float)):
-            num_temp = 0
+            num_temp = 1
             temps = [temps]
         elif isinstance(temps, str):
-            num_temp = 0
-            temps = [str(temps)]
+            num_temp = 1
+            temps = [int(temps)]
         else:
             raise TypeError("temps should be a value or a list of value.")
-        fig = plt.figure(figsize=[12, 4 * num_temp], constrained_layout=True)
+        fig = plt.figure(figsize=[16, 6 * num_temp], constrained_layout=True)
         gs = fig.add_gridspec(num_temp, 3)
         for i, temp in enumerate(temps):
             partdata = df[df['temp'] == temp]
@@ -213,8 +213,8 @@ class DPTask(object):
             fig_right.set_title('Distribution of Deviation')
             fig_right.set_xlim(0, 150)
             fig_right.set_ylim(0, ylimit)
-            fig_right.hlines(f_trust_lo, 1, 150, linestyles='dashed')
-            fig_right.hlines(f_trust_hi, 1, 150, linestyles='dashed')
+            fig_right.hlines(f_trust_lo, 1, 150, linestyles='dashed', color='black')
+            fig_right.hlines(f_trust_hi, 1, 150, linestyles='dashed', color='black')
             fig_right.set_xticklabels([])
             fig_right.set_yticklabels([])
         return plt
@@ -254,11 +254,11 @@ class DPTask(object):
         if isinstance(temps, (list, tuple)):
             num_temp = len(temps)
         elif isinstance(temps, (int, float)):
-            num_temp = 0
+            num_temp = 1
             temps = [temps]
         elif isinstance(temps, str):
-            num_temp = 0
-            temps = [str(temps)]
+            num_temp = 1
+            temps = [int(temps)]
         else:
             raise TypeError("temps should be a value or a list of value.")
         df = pd.concat(frames)

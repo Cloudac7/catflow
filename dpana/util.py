@@ -161,7 +161,7 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
                 backward_files,
                 machine_data
             ))
-        print('Waiting for all tasks done...')
+        logging.info('Waiting for all tasks done...')
         p.close()
         p.join()
         shutil.rmtree(work_path)
@@ -179,7 +179,7 @@ def fp_await_submit(item, forward_common_files=None, forward_files=None, backwar
         backward_files,
         machine_data
     )
-    print(f'Task {item["uuid"]} finished.')
+    logging.info(f'Task {item["uuid"]} finished.')
 
 
 def fp_submit(work_path, run_tasks,
@@ -207,9 +207,9 @@ def fp_submit(work_path, run_tasks,
         except (Exception, SSHException):
             if i < 9:
                 time.sleep(0.5)
-        else:
-            time.sleep(0.1)
-            break
+            else:
+                time.sleep(0.1)
+                break
 
 
 def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None, group_size=None, **kwargs):
