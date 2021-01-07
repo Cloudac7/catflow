@@ -1,4 +1,5 @@
 import click
+import logging
 import time
 import json
 from dpana.dpgen import DPTask
@@ -40,6 +41,8 @@ def simu(input_settings, task_path, param, machine, record):
     """
     Start a long MD simulation with parameters supplied.
     """
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+    logging.getLogger("paramiko").setLevel(logging.WARNING)
     with open(input_settings) as f:
         settings = json.load(f)
     params = settings['params']
