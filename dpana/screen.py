@@ -137,10 +137,14 @@ class SOAPScreening(DPTask):
         generate vasp fp from idx
         """
         path = os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/02.fp')
+
         # make INCAR
         if incar_path is None:
             incar_path = os.path.join(path, 'INCAR')
             make_vasp_incar(jdata=self.param_data, filename=incar_path)
+        else:
+            incar_path = os.path.abspath(incar_path)
+
         # make POTCAR
         fp_pp_path = self.param_data['fp_pp_path']
         pot_path = os.path.join(path, 'POTCAR')
@@ -148,6 +152,7 @@ class SOAPScreening(DPTask):
             for jj in potcars:
                 with open(os.path.join(fp_pp_path, jj)) as fp:
                     fp_pot.write(fp.read())
+
         # read index of lammps
         if log_file is not None:
             with open(os.path.join(log_file, 'lmp_col.out')) as f:
@@ -156,18 +161,20 @@ class SOAPScreening(DPTask):
             td = os.path.join(path, f'task.{str(sys_idx).zfill(3)}.{str(i).zfill(6)}')
             os.makedirs(td, exist_ok=True)
             _s = stc[j]
-            write(f'{td}/POSCAR', _s)
-            shutil.copyfile(incar_path, td + '/INCAR')
-            shutil.copyfile(pot_path, td + '/POTCAR')
+            write(os.path.join(td, 'POSCAR'), _s)
+            shutil.copyfile(incar_path, os.path.join(td, 'INCAR'))
+            shutil.copyfile(pot_path, os.path.join(td, 'POTCAR'))
             job_path = os.path.abspath(os.path.join(dir_list[j], "../.."))
             job_path = os.path.join(job_path, 'job.json')
-            os.symlink(job_path, td + '/job.json')
+            os.symlink(job_path, os.path.join(td, 'job.json'))
 
     def fp_make_screen(self, iteration=None):
         """
-        make fp tasks from screening steps
-        ----
-        iteration: The iteration of screening step
+
+        Make fp tasks from screening steps.
+
+        Args:
+            iteration: The iteration of screening step
         """
         path = self.path
         if iteration is None:
@@ -195,7 +202,8 @@ class SOAPScreening(DPTask):
         idx = self.soap_pick_idx(
             dis_all,
             fp_task_max=self.param_data['fp_task_max'],
-            fp_task_min=self.param_data['fp_task_min'])
+            fp_task_min=self.param_data['fp_task_min']
+        )
         self._fp_gen_from_soap(
             stc=stc_md,
             stc_idx=idx,

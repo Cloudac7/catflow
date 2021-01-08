@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import time
@@ -96,13 +97,44 @@ def multi_fp_task(work_path, machine_data=None):
 
 
 def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
-    """
-    Submit single point energy tasks at one time.
-    :param ori_fp_tasks: A list of path containing `INPUT FILES`.
-    :param work_path: A local path for creating work directory.
-    :param machine_data: The machine data.
-    :param group_size: Set the group size for tasks.
-    :return:
+    """Submit single point energy tasks at one time.
+
+    Submitting multiple VASP tasks in the work directory to remote or local servers.
+
+    Args:
+        ori_fp_tasks: A list of path containing `INPUT FILES`.
+        work_path: A local path for creating work directory.
+        machine_data: The machine data, read as a dict.
+            For example:
+                {
+                    "machine": {
+                        "batch": "lsf",
+                        "hostname": "localhost",
+                        "port": 22,
+                        "username": "username",
+                        "work_path": "/remote/work/path"
+                    },
+                    "resources": {
+                        "cvasp": False,
+                        "task_per_node": 24,
+                        "numb_node": 1,
+                        "node_cpu": 24,
+                        "exclude_list": [],
+                        "with_mpi": True,
+                        "source_list": [
+                        ],
+                        "module_list": [
+                            "intel/17u5",
+                            "mpi/intel/17u5"
+                        ],
+                        "time_limit": "12:00:00",
+                        "partition": "medium",
+                        "_comment": "that's Bel"
+                    },
+                    "command": "/some/work/path/vasp_std",
+                    "group_size": 25
+                }
+        group_size: Set the group size for tasks.
     """
     if machine_data is None:
         machine_data = model_dict
@@ -238,5 +270,6 @@ def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None,
             remote_profile=mdata,
             context_type=context_type,
             batch_type=batch_type,
-            job_record=kwargs.get('job_record', 'jr.json'))
+            job_record=kwargs.get('job_record', 'jr.json')
+        )
         return disp
