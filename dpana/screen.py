@@ -206,7 +206,7 @@ class SOAPScreening(DPTask):
             soap_ori,
             soap_add,
             plot=kwargs.get('plot', False),
-            plot_path=os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/02.fp')
+            plot_path=os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/01.model_devi/soap_compare.png')
         )
 
         # read json to get the parameters
