@@ -191,7 +191,7 @@ class SOAPScreening(DPTask):
 
         init_data_prefix = self.param_data['init_data_prefix']
         init_data_sys = self.param_data['init_data_sys']
-        init_list = [os.path.join(init_data_prefix, k) for k in init_data_sys]
+        init_list = [os.path.join(init_data_prefix, k, 'set.*') for k in init_data_sys]
         add_list = [os.path.join(path, f'iter.{str(k).zfill(6)}/02.fp/data.*/set.*') for k in range(iteration - 1)]
         path_list = init_list + add_list
 
