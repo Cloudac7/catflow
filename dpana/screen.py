@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 import os
 from glob import glob
@@ -94,7 +96,7 @@ class SOAPScreening(DPTask):
         """
         generate new soap descriptor within structures added.
         """
-        path = os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/01.model_devi/task.*'),
+        path = os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/01.model_devi/task.*')
         stc_md = lammps_collection(path, self.symbols, log_path)
         soap_md = np.zeros((len(stc_md), self.soap_descriptor.get_number_of_features()))
         for i, s in enumerate(stc_md):
@@ -116,7 +118,11 @@ class SOAPScreening(DPTask):
         if plot is True:
             plt.figure()
             plt.hist(dis_all, bins=100)
-            _plot_path = kwargs.get('plot_path', os.path.join(self.path, 'soap_compare.png'))
+            _time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')
+            _plot_path = kwargs.get(
+                'plot_path',
+                os.path.join(self.path, f'soap_compare_{_time}.png')
+            )
             plt.savefig(os.path.abspath(_plot_path))
         dis_all = np.array(dis_all)
         return dis_all
@@ -168,7 +174,7 @@ class SOAPScreening(DPTask):
             job_path = os.path.join(job_path, 'job.json')
             os.symlink(job_path, os.path.join(td, 'job.json'))
 
-    def fp_make_screen(self, iteration=None):
+    def fp_make_screen(self, iteration=None, **kwargs):
         """
 
         Make fp tasks from screening steps.
@@ -196,7 +202,12 @@ class SOAPScreening(DPTask):
             iteration=iteration,
             log_path=os.path.join(path, f'iter.{str(iteration).zfill(6)}/01.model_devi')
         )
-        dis_all = self.soap_compare(soap_ori, soap_add)
+        dis_all = self.soap_compare(
+            soap_ori,
+            soap_add,
+            plot=kwargs.get('plot', False),
+            plot_path=os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/02.fp')
+        )
 
         # read json to get the parameters
         idx = self.soap_pick_idx(
