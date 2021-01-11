@@ -54,7 +54,7 @@ def lammps_collection(path, symbols, log_path=None):
     for s in _add:
         s.set_chemical_symbols(symbols)
     if log_path is not None:
-        with open(os.path.join(log_path, 'lmp_col.out'), 'a') as f:
+        with open(os.path.join(log_path, 'lmp_col.out'), 'w') as f:
             for i in range(len(_idx)):
                 line = _idx[i] + '\n'
                 f.write(line)
@@ -143,6 +143,7 @@ class SOAPScreening(DPTask):
         generate vasp fp from idx
         """
         path = os.path.join(self.path, f'iter.{str(iteration).zfill(6)}/02.fp')
+        os.makedirs(path, exist_ok=True)
 
         # make INCAR
         if incar_path is None:
