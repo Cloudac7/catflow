@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import logging
 import numpy as np
 import os
 from glob import glob
@@ -8,6 +8,9 @@ from dscribe.descriptors import SOAP
 from ase import Atoms
 import matplotlib.pyplot as plt
 import shutil
+
+from tqdm import tqdm
+
 from dpana.dpgen import DPTask
 from dpgen.generator.run import make_vasp_incar
 
@@ -67,7 +70,7 @@ class SOAPScreening(DPTask):
     """
 
     def __init__(self, path, param_file, machine_file, record_file, symbols, rcut, nmax, lmax, sigma=1.0,
-                 periodic=True):
+                 periodic=True, **kwargs):
         super().__init__(path, param_file, machine_file, record_file)
         self.soap_descriptor = SOAP(
             species=self.species,
@@ -76,6 +79,7 @@ class SOAPScreening(DPTask):
             periodic=periodic
         )
         self.symbols = symbols
+        self.soap_dcut = kwargs.get('dcut', 0.08)
 
     @property
     def species(self):
@@ -105,11 +109,18 @@ class SOAPScreening(DPTask):
         return soap_md, stc_md
 
     def soap_compare(self, soap_ori, soap_add, plot=False, **kwargs):
-        """
-        compare added soap with original one
+        """compare added soap with original one
+
+        Args:
+            soap_ori: SOAP descriptor of original structures
+            soap_add: SOAP descriptor of structures to be added
+            plot: choose whether make the plot of distribution
         """
         dis_all = []
-        for i in soap_add:
+        for i in tqdm(
+                iterable=soap_add,
+                desc='Structure adding'
+        ):
             diss = []
             for j in soap_ori:
                 dis = np.linalg.norm(i - j)
@@ -125,6 +136,10 @@ class SOAPScreening(DPTask):
             )
             plt.savefig(os.path.abspath(_plot_path))
         dis_all = np.array(dis_all)
+        dcut = self.soap_dcut
+        _select = np.where(dis_all >= dcut)[0]
+        select_ratio = len(_select) / len(dis_all)
+        logging.info('Ratio of available structures: {}'.format(select_ratio))
         return dis_all
 
     @staticmethod
@@ -133,6 +148,7 @@ class SOAPScreening(DPTask):
         pick farthest structures from soap_dis
         """
         top_k_idx = soap_dis.argsort()[(0 - fp_task_max):]
+        logging.info('Structures decided.')
         if len(top_k_idx) >= fp_task_min:
             return top_k_idx
         else:
