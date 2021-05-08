@@ -5,6 +5,7 @@ import daemon
 import dpdata
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from glob import glob
 
 import shutil
@@ -12,6 +13,7 @@ from ase.io import read, write
 from dpgen.generator.run import parse_cur_job_revmat, revise_lmp_input_model, set_version, find_only_one_key, \
     revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
+from dpana.util import canvas_style
 from dpgen.dispatcher.Dispatcher import Dispatcher
 from dpgen.dispatcher.Dispatcher import make_dispatcher
 
@@ -35,25 +37,22 @@ class DPTask(object):
         self.record_file = record_file
         self._load_task()
 
-    def train_lcurve(self, iteration=None, model=0):
+    def train_lcurve(self, iteration=None, model=0, **kwargs):
         if iteration is None:
             if self.step_code < 2:
                 iteration = self.iteration - 1
             else:
                 iteration = self.iteration
         n_iter = 'iter.' + str(iteration).zfill(6)
-        step = []
-        energy_test = []
-        energy_train = []
-        force_test = []
-        force_train = []
-        with open(os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')) as f:
-            for i in f.readlines()[1:]:
-                step.append(float(i.split()[0]))
-                energy_train.append(float(i.split()[4]))
-                energy_test.append(float(i.split()[3]))
-                force_train.append(float(i.split()[6]))
-                force_test.append(float(i.split()[5]))
+        lcurve_path = os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')
+
+        step = np.loadtxt(lcurve_path, usecols=0)
+        energy_train = np.loadtxt(lcurve_path, usecols=4)
+        energy_test = np.loadtxt(lcurve_path, usecols=3)
+        force_train = np.loadtxt(lcurve_path, usecols=6)
+        force_test = np.loadtxt(lcurve_path, usecols=5)
+
+        canvas_style(kwargs.get('context', 'paper'))
         fig = plt.figure()
         plt.title("DeepMD training and test error")
         plt.subplot(2, 1, 1)

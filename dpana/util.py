@@ -5,6 +5,7 @@ import shutil
 import time
 import uuid
 import daemon
+import seaborn as sns
 from glob import glob
 from ase.io import iread, write
 from multiprocessing import Pool
@@ -273,3 +274,9 @@ def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None,
             job_record=kwargs.get('job_record', 'jr.json')
         )
         return disp
+
+
+def canvas_style(context='paper'):
+    sns.set_theme()
+    sns.set_style('white')
+    sns.set_context(context)
