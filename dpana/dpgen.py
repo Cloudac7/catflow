@@ -197,10 +197,13 @@ class DPTask(object):
                 fig_left.set_yscale('log')
             fig_left.hlines(f_trust_lo, 0, xlimit, linestyles='dashed')
             fig_left.hlines(f_trust_hi, 0, xlimit, linestyles='dashed')
-            fig_left.set_xlabel('Simulation time (fs)')
-            fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
+            if fig_left.is_last_row():
+                fig_left.set_xlabel('Simulation time (fs)')
+            if fig_left.is_first_col():
+                fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
             fig_left.legend()
-            fig_left.set_title(f'Iteration {iteration}')
+            if fig_left.is_first_row():
+                fig_left.set_title(f'Iteration {iteration}')
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
             fig_right.hist(
@@ -209,7 +212,8 @@ class DPTask(object):
                 orientation='horizontal',
                 density=True,
                 color='red')
-            fig_right.set_title('Distribution of Deviation')
+            if fig_right.is_first_row():
+                fig_right.set_title('Distribution of Deviation')
             fig_right.set_xlim(0, 150)
             fig_right.set_ylim(0, ylimit)
             fig_right.hlines(f_trust_lo, 1, 150, linestyles='dashed', color='black')
