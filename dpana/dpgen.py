@@ -10,12 +10,10 @@ from glob import glob
 
 import shutil
 from ase.io import read, write
-from dpgen.generator.run import parse_cur_job_revmat, revise_lmp_input_model, set_version, find_only_one_key, \
+from dpgen.generator.run import parse_cur_job_revmat, find_only_one_key, \
     revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
-from matplotlib import mlab
 from dpana.util import canvas_style
-from dpgen.dispatcher.Dispatcher import Dispatcher
 from dpgen.dispatcher.Dispatcher import make_dispatcher
 
 
@@ -149,7 +147,8 @@ class DPTask(object):
             f_trust_hi=0.30,
             xlimit=1e3,
             ylimit=0.50,
-            log=False):
+            log=False,
+            **kwargs):
         """
         Generate a plot of model deviation in each iteration
         :param iteration: The iteration
@@ -186,12 +185,13 @@ class DPTask(object):
             fig_left = fig.add_subplot(gs[i, :-1])
             parts = partdata[partdata['iter'] == 'iter.' + str(iteration).zfill(6)]
             for j, [temp, part] in enumerate(parts.groupby('temp')):
-                mdf = np.array(list(part['max_devi_f']))
-                t_freq = np.average(part['t_freq'])
+                mdf = np.array(list(part['max_devi_f']))[:, ::kwargs.get('step', None)]
+                t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
                 dupt = np.tile(range(mdf.shape[1]) * t_freq, mdf.shape[0])
                 flatmdf = np.ravel(mdf)
                 print(f"max devi of F is :{max(flatmdf)} ev/Å on {temp} K")
-                fig_left.scatter(dupt, flatmdf, s=80, alpha=0.3, color='red', label=f'{int(temp)} K', marker='o')
+                #fig_left.scatter(dupt, flatmdf, s=10, alpha=0.5, color='red', label=f'{int(temp)} K', marker='o')
+                sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(temp)} K')
             fig_left.set_xlim(0, xlimit)
             if not log:
                 fig_left.set_ylim(0, ylimit)
@@ -209,14 +209,7 @@ class DPTask(object):
             
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
-            sns.distplot(
-                a=flatmdf,
-                bins=100,
-                kde=True,
-                vertical=True,
-                color='red',
-                norm_hist=True,
-                ax=fig_right)
+            sns.histplot(y=flatmdf, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=fig_right)
             if fig_right.is_first_row():
                 fig_right.set_title('Distribution of Deviation')
             fig_right.set_xlim(0, 150)
