@@ -13,6 +13,7 @@ from ase.io import read, write
 from dpgen.generator.run import parse_cur_job_revmat, revise_lmp_input_model, set_version, find_only_one_key, \
     revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
+from matplotlib import mlab
 from dpana.util import canvas_style
 from dpgen.dispatcher.Dispatcher import Dispatcher
 from dpgen.dispatcher.Dispatcher import make_dispatcher
@@ -180,6 +181,7 @@ class DPTask(object):
         gs = fig.add_gridspec(num_temp, 3)
         for i, temp in enumerate(temps):
             partdata = df[df['temp'] == temp]
+
             # left part
             fig_left = fig.add_subplot(gs[i, :-1])
             parts = partdata[partdata['iter'] == 'iter.' + str(iteration).zfill(6)]
@@ -204,14 +206,17 @@ class DPTask(object):
             fig_left.legend()
             if fig_left.is_first_row():
                 fig_left.set_title(f'Iteration {iteration}')
+            
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
-            fig_right.hist(
-                flatmdf,
-                bins=np.linspace(0, ylimit, 1001),
-                orientation='horizontal',
-                density=True,
-                color='red')
+            sns.distplot(
+                a=flatmdf,
+                bins=100,
+                kde=True,
+                vertical=True,
+                color='red',
+                norm_hist=True,
+                ax=fig_right)
             if fig_right.is_first_row():
                 fig_right.set_title('Distribution of Deviation')
             fig_right.set_xlim(0, 150)
