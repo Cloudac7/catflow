@@ -7,6 +7,7 @@ import uuid
 import daemon
 import seaborn as sns
 from glob import glob
+import matplotlib
 from ase.io import iread, write
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
@@ -276,7 +277,13 @@ def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None,
         return disp
 
 
-def canvas_style(context='paper'):
+def canvas_style(context='paper', style='white', **kwargs):
+    """set basic properties for canvas
+
+    :param context: select context of the plot. Please refer to seaborn contexts.
+    :param style: select style of the plot. Please refer to seaborn styles.
+    :param kwargs: rc dict to optimize the plot. Please refer to matplotlib document for description in detail.
+    """
     sns.set_theme()
-    sns.set_style('white')
-    sns.set_context(context)
+    sns.set_style(style)
+    sns.set_context(context, rc=kwargs.get('rc', None))
