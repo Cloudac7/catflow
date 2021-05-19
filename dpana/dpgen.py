@@ -51,7 +51,11 @@ class DPTask(object):
         force_train = np.loadtxt(lcurve_path, usecols=6)
         force_test = np.loadtxt(lcurve_path, usecols=5)
 
-        canvas_style(kwargs.get('context', 'paper'))
+        canvas_style(
+            context=kwargs.get('context', 'paper'),
+            style=kwargs.get('style', 'white'),
+            rc=kwargs.get('rc', None)
+        )
         fig = plt.figure()
         plt.title("DeepMD training and test error")
         plt.subplot(2, 1, 1)
@@ -176,6 +180,11 @@ class DPTask(object):
             temps = [int(temps)]
         else:
             raise TypeError("temps should be a value or a list of value.")
+        canvas_style(
+            context=kwargs.get('context', 'paper'),
+            style=kwargs.get('style', 'white'),
+            rc=kwargs.get('rc', None)
+        )
         fig = plt.figure(figsize=[16, 6 * num_temp], constrained_layout=True)
         gs = fig.add_gridspec(num_temp, 3)
         for i, temp in enumerate(temps):
@@ -187,10 +196,9 @@ class DPTask(object):
             for j, [temp, part] in enumerate(parts.groupby('temp')):
                 mdf = np.array(list(part['max_devi_f']))[:, ::kwargs.get('step', None)]
                 t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
-                dupt = np.tile(range(mdf.shape[1]) * t_freq, mdf.shape[0])
+                dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                 flatmdf = np.ravel(mdf)
                 print(f"max devi of F is :{max(flatmdf)} ev/Å on {temp} K")
-                #fig_left.scatter(dupt, flatmdf, s=10, alpha=0.5, color='red', label=f'{int(temp)} K', marker='o')
                 sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(temp)} K')
             fig_left.set_xlim(0, xlimit)
             if not log:
@@ -206,7 +214,7 @@ class DPTask(object):
             fig_left.legend()
             if fig_left.is_first_row():
                 fig_left.set_title(f'Iteration {iteration}')
-            
+
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
             sns.histplot(y=flatmdf, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=fig_right)
