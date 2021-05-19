@@ -51,11 +51,7 @@ class DPTask(object):
         force_train = np.loadtxt(lcurve_path, usecols=6)
         force_test = np.loadtxt(lcurve_path, usecols=5)
 
-        canvas_style(
-            context=kwargs.get('context', 'paper'),
-            style=kwargs.get('style', 'white'),
-            rc=kwargs.get('rc', None)
-        )
+        canvas_style(**kwargs)
         fig = plt.figure()
         plt.title("DeepMD training and test error")
         plt.subplot(2, 1, 1)
@@ -88,11 +84,10 @@ class DPTask(object):
         n_iter = 'iter.' + str(iteration).zfill(6)
         all_data = []
         for task in glob(f'{location}/{n_iter}/01.model_devi/task*'):
-            with open(f'{task}/model_devi.out', 'r') as f:
-                lines = f.readlines()[1:]
-            dump_freq = int(lines[2].split()[0]) - int(lines[1].split()[0])
-            max_devi_f = np.array([p.split()[4] for p in lines]).astype('float')
-            max_devi_e = np.array([p.split()[3] for p in lines]).astype('float')
+            step = np.loadtxt(f'{task}/model_devi.out', usecols=0)
+            dump_freq = step[1] - step[0]
+            max_devi_f = np.loadtxt(f'{task}/model_devi.out', usecols=4)
+            max_devi_e = np.loadtxt(f'{task}/model_devi.out', usecols=3)
             with open(f'{task}/input.lammps', 'r') as f:
                 lines = f.readlines()
             temp = float(lines[3].split()[3])
