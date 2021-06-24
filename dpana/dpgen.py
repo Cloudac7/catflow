@@ -210,7 +210,15 @@ class DPTask(object):
                     dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
                     print(f"max devi of F is :{max(flatmdf)} ev/Å on {item} of {group_by}")
-                    sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(item)} K')
+                    label_unit = kwargs.get('label_unit', None)
+                    sns.scatterplot(
+                        x=dupt,
+                        y=flatmdf,
+                        color='red',
+                        alpha=0.5,
+                        ax=fig_left,
+                        label=f'{item} {label_unit}'
+                    )
                 fig_left.set_xlim(0, xlimit)
                 if not log:
                     fig_left.set_ylim(0, ylimit)
@@ -242,8 +250,8 @@ class DPTask(object):
                     fig_right.set_title('Distribution of Deviation')
                 # fig_right.set_xlim(0, 1.2*max())
                 fig_right.set_ylim(0, ylimit)
-                fig_left.axhline(f_trust_lo, linestyle='dashed')
-                fig_left.axhline(f_trust_hi, linestyle='dashed')
+                fig_right.axhline(f_trust_lo, linestyle='dashed')
+                fig_right.axhline(f_trust_hi, linestyle='dashed')
                 fig_right.set_xticklabels([])
                 fig_right.set_yticklabels([])
             return plt
