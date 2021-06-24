@@ -118,10 +118,10 @@ class DPTask(object):
                 'max_devi_f': max_devi_f,
                 'task': task,
                 't_freq': dump_freq,
-                'pot_energy': pot_energy,
-                'job_dict': job_dict
+                'pot_energy': pot_energy
             }
-            all_data.append({**result_dict, **job_dict})
+            all_dict = {**result_dict, **job_dict}
+            all_data.append(all_dict)
         return all_data
 
     def md_set_pd(self, iteration=None):
@@ -174,39 +174,40 @@ class DPTask(object):
         else:
             df = self.md_set_pd(iteration=iteration)
         try:
-            temps = kwargs.get(group_by, None)
-            if isinstance(temps, (list, tuple)):
-                num_temp = len(temps)
-            elif isinstance(temps, (int, float)):
+            plot_items = kwargs.get(group_by, None)
+            if isinstance(plot_items, (list, tuple)):
+                num_temp = len(plot_items)
+            elif isinstance(plot_items, (int, float)):
                 num_temp = 1
-                temps = [temps]
-            elif isinstance(temps, str):
+                plot_items = [plot_items]
+            elif isinstance(plot_items, str):
                 num_temp = 1
-                temps = [int(temps)]
+                plot_items = [int(plot_items)]
             else:
                 raise TypeError("group_by should exist.")
             canvas_style(
                 context=kwargs.get('context', 'paper'),
                 style=kwargs.get('style', 'white'),
-                rc=kwargs.get('rc', None),
-                **kwargs
+                rc=kwargs.get('rc', None)
             )
             fig = plt.figure(figsize=[16, 6 * num_temp], constrained_layout=True)
             gs = fig.add_gridspec(num_temp, 3)
 
-            for i, temp in enumerate(temps):
-                partdata = df[df['temp'] == temp]
-
+            for i, item in enumerate(plot_items):
+                partdata = df[df[group_by] == item]
                 # left part
                 fig_left = fig.add_subplot(gs[i, :-1])
                 parts = partdata[partdata['iter'] == 'iter.' + str(iteration).zfill(6)]
-                for j, [temp, part] in enumerate(parts.groupby('temp')):
+                for j, [item, part] in enumerate(parts.groupby(group_by)):
                     mdf = np.array(list(part['max_devi_f']))[:, ::kwargs.get('step', None)]
                     t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
                     dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
-                    print(f"max devi of F is :{max(flatmdf)} ev/Å on {temp} K")
-                    sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(temp)} K')
+                    print(f"max devi of F is :{max(flatmdf)} ev/Å on {item} of {group_by}")
+                    label = kwargs.get('color_label', None)
+                    if label is None:
+                        label = str(int(item))
+                        sns.scatterplot(x=dupt, y=flatmdf, alpha=0.5, ax=fig_left, label=label)
                 fig_left.set_xlim(0, xlimit)
                 if not log:
                     fig_left.set_ylim(0, ylimit)
@@ -224,7 +225,7 @@ class DPTask(object):
 
                 # right part
                 fig_right = fig.add_subplot(gs[i, -1])
-                sns.histplot(y=flatmdf, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=fig_right)
+                sns.histplot(y=flatmdf, bins=50, color='red', ec=None, alpha=0.5, ax=fig_right, label=f'{int(item)} K')
                 if fig_right.is_first_row():
                     fig_right.set_title('Distribution of Deviation')
                 fig_right.set_xlim(0, 150)
@@ -234,7 +235,8 @@ class DPTask(object):
                 fig_right.set_xticklabels([])
                 fig_right.set_yticklabels([])
             return plt
-        except Exception:
+        except Exception as e:
+            print(e)
             print('Please choose proper `group_by` with in dict.')
             return None
 
