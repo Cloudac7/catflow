@@ -216,8 +216,8 @@ class DPTask(object):
                     fig_left.set_ylim(0, ylimit)
                 else:
                     fig_left.set_yscale('log')
-                fig_left.axhlines(f_trust_lo, linestyles='dashed')
-                fig_left.axhlines(f_trust_hi, linestyles='dashed')
+                fig_left.axhline(f_trust_lo, linestyles='dashed')
+                fig_left.axhline(f_trust_hi, linestyles='dashed')
                 if fig_left.is_last_row():
                     fig_left.set_xlabel('Simulation time (fs)')
                 if fig_left.is_first_col():
@@ -242,8 +242,8 @@ class DPTask(object):
                     fig_right.set_title('Distribution of Deviation')
                 # fig_right.set_xlim(0, 1.2*max())
                 fig_right.set_ylim(0, ylimit)
-                fig_left.axhlines(f_trust_lo, linestyles='dashed')
-                fig_left.axhlines(f_trust_hi, linestyles='dashed')
+                fig_left.axhline(f_trust_lo, linestyles='dashed')
+                fig_left.axhline(f_trust_hi, linestyles='dashed')
                 fig_right.set_xticklabels([])
                 fig_right.set_yticklabels([])
             return plt
