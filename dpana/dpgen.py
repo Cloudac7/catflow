@@ -154,6 +154,7 @@ class DPTask(object):
             ylimit=0.50,
             log=False,
             group_by='temp',
+            select=None,
             **kwargs):
         """
         Generate a plot of model deviation in each iteration
@@ -165,6 +166,7 @@ class DPTask(object):
         :param ylimit: Choose the limit of y axis.
         :param log: Choose whether log scale used. Default: False.
         :param group_by: Choose which the plots are grouped by. Default: "temp"
+        :param select: Choose which param selected as plot zone.
         :return: A plot for different temperatures
         """
         flatmdf = None
@@ -194,6 +196,10 @@ class DPTask(object):
             gs = fig.add_gridspec(num_temp, 3)
 
             for i, item in enumerate(plot_items):
+                if select is not None:
+                    select_value = kwargs.get('select_value', None)
+                    if select_value is not None:
+                        df = df[df[select] == select_value]
                 partdata = df[df[group_by] == item]
                 # left part
                 fig_left = fig.add_subplot(gs[i, :-1])
@@ -204,10 +210,7 @@ class DPTask(object):
                     dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
                     print(f"max devi of F is :{max(flatmdf)} ev/Å on {item} of {group_by}")
-                    label = kwargs.get('color_label', None)
-                    if label is None:
-                        label = str(int(item))
-                        sns.scatterplot(x=dupt, y=flatmdf, alpha=0.5, ax=fig_left, label=label)
+                    sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(item)} K')
                 fig_left.set_xlim(0, xlimit)
                 if not log:
                     fig_left.set_ylim(0, ylimit)
@@ -225,10 +228,19 @@ class DPTask(object):
 
                 # right part
                 fig_right = fig.add_subplot(gs[i, -1])
-                sns.histplot(y=flatmdf, bins=50, color='red', ec=None, alpha=0.5, ax=fig_right, label=f'{int(item)} K')
+                sns.histplot(
+                    y=flatmdf,
+                    bins=50,
+                    kde=True,
+                    stat='density',
+                    color='red',
+                    ec=None,
+                    alpha=0.5,
+                    ax=fig_right
+                )
                 if fig_right.is_first_row():
                     fig_right.set_title('Distribution of Deviation')
-                fig_right.set_xlim(0, 150)
+                # fig_right.set_xlim(0, 1.2*max())
                 fig_right.set_ylim(0, ylimit)
                 fig_right.hlines(f_trust_lo, 1, 150, linestyles='dashed', color='black')
                 fig_right.hlines(f_trust_hi, 1, 150, linestyles='dashed', color='black')
@@ -239,7 +251,6 @@ class DPTask(object):
             print(e)
             print('Please choose proper `group_by` with in dict.')
             return None
-
 
     def md_multi_iter(
             self,
