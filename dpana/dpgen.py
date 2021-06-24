@@ -106,15 +106,22 @@ class DPTask(object):
                 else:
                     lines = f.readlines()[start:final]
             pot_energy = np.array([p.split()[2] for p in lines if 'WARNING' not in p]).astype('float')
-            all_data.append({
+            try:
+                with open(f'{task}/job.json', 'r') as f:
+                    job_dict = json.load(f)
+            except Exception:
+                job_dict = {}
+            result_dict = {
                 'iter': n_iter,
                 'temp': temp,
                 'max_devi_e': max_devi_e,
                 'max_devi_f': max_devi_f,
                 'task': task,
                 't_freq': dump_freq,
-                'pot_energy': pot_energy
-            })
+                'pot_energy': pot_energy,
+                'job_dict': job_dict
+            }
+            all_data.append({**result_dict, **job_dict})
         return all_data
 
     def md_set_pd(self, iteration=None):
@@ -141,12 +148,12 @@ class DPTask(object):
     def md_single_iter(
             self,
             iteration,
-            temps,
             f_trust_lo=0.10,
             f_trust_hi=0.30,
             xlimit=1e3,
             ylimit=0.50,
             log=False,
+            group_by='temp',
             **kwargs):
         """
         Generate a plot of model deviation in each iteration
@@ -157,6 +164,7 @@ class DPTask(object):
         :param xlimit: Choose the limit of x axis.
         :param ylimit: Choose the limit of y axis.
         :param log: Choose whether log scale used. Default: False.
+        :param group_by: Choose which the plots are grouped by. Default: "temp"
         :return: A plot for different temperatures
         """
         flatmdf = None
@@ -165,63 +173,71 @@ class DPTask(object):
             df = self.md_set_load_pkl(iteration=iteration)
         else:
             df = self.md_set_pd(iteration=iteration)
-        if isinstance(temps, (list, tuple)):
-            num_temp = len(temps)
-        elif isinstance(temps, (int, float)):
-            num_temp = 1
-            temps = [temps]
-        elif isinstance(temps, str):
-            num_temp = 1
-            temps = [int(temps)]
-        else:
-            raise TypeError("temps should be a value or a list of value.")
-        canvas_style(
-            context=kwargs.get('context', 'paper'),
-            style=kwargs.get('style', 'white'),
-            rc=kwargs.get('rc', None)
-        )
-        fig = plt.figure(figsize=[16, 6 * num_temp], constrained_layout=True)
-        gs = fig.add_gridspec(num_temp, 3)
-        for i, temp in enumerate(temps):
-            partdata = df[df['temp'] == temp]
-
-            # left part
-            fig_left = fig.add_subplot(gs[i, :-1])
-            parts = partdata[partdata['iter'] == 'iter.' + str(iteration).zfill(6)]
-            for j, [temp, part] in enumerate(parts.groupby('temp')):
-                mdf = np.array(list(part['max_devi_f']))[:, ::kwargs.get('step', None)]
-                t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
-                dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
-                flatmdf = np.ravel(mdf)
-                print(f"max devi of F is :{max(flatmdf)} ev/Å on {temp} K")
-                sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(temp)} K')
-            fig_left.set_xlim(0, xlimit)
-            if not log:
-                fig_left.set_ylim(0, ylimit)
+        try:
+            temps = kwargs.get(group_by, None)
+            if isinstance(temps, (list, tuple)):
+                num_temp = len(temps)
+            elif isinstance(temps, (int, float)):
+                num_temp = 1
+                temps = [temps]
+            elif isinstance(temps, str):
+                num_temp = 1
+                temps = [int(temps)]
             else:
-                fig_left.set_yscale('log')
-            fig_left.hlines(f_trust_lo, 0, xlimit, linestyles='dashed')
-            fig_left.hlines(f_trust_hi, 0, xlimit, linestyles='dashed')
-            if fig_left.is_last_row():
-                fig_left.set_xlabel('Simulation time (fs)')
-            if fig_left.is_first_col():
-                fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
-            fig_left.legend()
-            if fig_left.is_first_row():
-                fig_left.set_title(f'Iteration {iteration}')
+                raise TypeError("group_by should exist.")
+            canvas_style(
+                context=kwargs.get('context', 'paper'),
+                style=kwargs.get('style', 'white'),
+                rc=kwargs.get('rc', None),
+                **kwargs
+            )
+            fig = plt.figure(figsize=[16, 6 * num_temp], constrained_layout=True)
+            gs = fig.add_gridspec(num_temp, 3)
 
-            # right part
-            fig_right = fig.add_subplot(gs[i, -1])
-            sns.histplot(y=flatmdf, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=fig_right)
-            if fig_right.is_first_row():
-                fig_right.set_title('Distribution of Deviation')
-            fig_right.set_xlim(0, 150)
-            fig_right.set_ylim(0, ylimit)
-            fig_right.hlines(f_trust_lo, 1, 150, linestyles='dashed', color='black')
-            fig_right.hlines(f_trust_hi, 1, 150, linestyles='dashed', color='black')
-            fig_right.set_xticklabels([])
-            fig_right.set_yticklabels([])
-        return plt
+            for i, temp in enumerate(temps):
+                partdata = df[df['temp'] == temp]
+
+                # left part
+                fig_left = fig.add_subplot(gs[i, :-1])
+                parts = partdata[partdata['iter'] == 'iter.' + str(iteration).zfill(6)]
+                for j, [temp, part] in enumerate(parts.groupby('temp')):
+                    mdf = np.array(list(part['max_devi_f']))[:, ::kwargs.get('step', None)]
+                    t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
+                    dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
+                    flatmdf = np.ravel(mdf)
+                    print(f"max devi of F is :{max(flatmdf)} ev/Å on {temp} K")
+                    sns.scatterplot(x=dupt, y=flatmdf, color='red', alpha=0.5, ax=fig_left, label=f'{int(temp)} K')
+                fig_left.set_xlim(0, xlimit)
+                if not log:
+                    fig_left.set_ylim(0, ylimit)
+                else:
+                    fig_left.set_yscale('log')
+                fig_left.hlines(f_trust_lo, 0, xlimit, linestyles='dashed')
+                fig_left.hlines(f_trust_hi, 0, xlimit, linestyles='dashed')
+                if fig_left.is_last_row():
+                    fig_left.set_xlabel('Simulation time (fs)')
+                if fig_left.is_first_col():
+                    fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
+                fig_left.legend()
+                if fig_left.is_first_row():
+                    fig_left.set_title(f'Iteration {iteration}')
+
+                # right part
+                fig_right = fig.add_subplot(gs[i, -1])
+                sns.histplot(y=flatmdf, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=fig_right)
+                if fig_right.is_first_row():
+                    fig_right.set_title('Distribution of Deviation')
+                fig_right.set_xlim(0, 150)
+                fig_right.set_ylim(0, ylimit)
+                fig_right.hlines(f_trust_lo, 1, 150, linestyles='dashed', color='black')
+                fig_right.hlines(f_trust_hi, 1, 150, linestyles='dashed', color='black')
+                fig_right.set_xticklabels([])
+                fig_right.set_yticklabels([])
+            return plt
+        except Exception:
+            print('Please choose proper `group_by` with in dict.')
+            return None
+
 
     def md_multi_iter(
             self,
