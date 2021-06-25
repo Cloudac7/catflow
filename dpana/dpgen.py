@@ -109,11 +109,12 @@ class DPTask(object):
             try:
                 with open(f'{task}/job.json', 'r') as f:
                     job_dict = json.load(f)
-            except Exception:
+            except Exception as e:
+                print(e)
                 job_dict = {}
             result_dict = {
                 'iter': n_iter,
-                'temp': temp,
+                'temps': temp,
                 'max_devi_e': max_devi_e,
                 'max_devi_f': max_devi_f,
                 'task': task,
@@ -150,24 +151,32 @@ class DPTask(object):
             iteration,
             f_trust_lo=0.10,
             f_trust_hi=0.30,
-            xlimit=1e3,
-            ylimit=0.50,
+            xlimit=None,
+            ylimit=None,
             log=False,
-            group_by='temp',
+            group_by='temps',
             select=None,
             **kwargs):
         """
-        Generate a plot of model deviation in each iteration
+        Generate a plot of model deviation in each iteration.
         :param iteration: The iteration
-        :param temps: A list of temperatures plotted.
         :param f_trust_lo: The lower limit of max_deviation_force.
         :param f_trust_hi: The higher limit of max_deviation_force.
         :param xlimit: Choose the limit of x axis.
         :param ylimit: Choose the limit of y axis.
         :param log: Choose whether log scale used. Default: False.
-        :param group_by: Choose which the plots are grouped by. Default: "temp"
+        :param group_by: Choose which the plots are grouped by, which should be included.
+            For value of group_by, a list, int or str containing desired value(s) should be included as kwargs.
+            For example, if `group_by='temps'`, then `temps=[100., 200., 300.]` should also be passed to this function.
+            Default: "temps".
         :param select: Choose which param selected as plot zone.
-        :return: A plot for different temperatures
+        :param kwargs: Include other params, such as:
+            `temps`: please use the value of `group_by`, whose default input is `"temps"`.
+            `select_value`: the dependence of `select`. Different from `group_by`, please pass only one number.
+            `label_unit`: the unit of `select_value`, such as 'Å'.
+            `step`: control the step of each point along x axis, in prevention of overlap.
+            Parameters of `canvas_style`: please refer to `dpana.util.canvas_style`.
+        :return: A plot for different desired values.
         """
         flatmdf = None
         location = os.path.join(self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
@@ -178,22 +187,19 @@ class DPTask(object):
         try:
             plot_items = kwargs.get(group_by, None)
             if isinstance(plot_items, (list, tuple)):
-                num_temp = len(plot_items)
+                num_item = len(plot_items)
             elif isinstance(plot_items, (int, float)):
-                num_temp = 1
+                num_item = 1
                 plot_items = [plot_items]
             elif isinstance(plot_items, str):
-                num_temp = 1
+                num_item = 1
                 plot_items = [int(plot_items)]
             else:
-                raise TypeError("group_by should exist.")
-            canvas_style(
-                context=kwargs.get('context', 'paper'),
-                style=kwargs.get('style', 'white'),
-                rc=kwargs.get('rc', None)
-            )
-            fig = plt.figure(figsize=[16, 6 * num_temp], constrained_layout=True)
-            gs = fig.add_gridspec(num_temp, 3)
+                raise TypeError("The value of `group_by` dependence should exist.")
+            label_unit = kwargs.get('label_unit', None)
+            canvas_style(**kwargs)
+            fig = plt.figure(figsize=[16, 6 * num_item], constrained_layout=True)
+            gs = fig.add_gridspec(num_item, 3)
 
             for i, item in enumerate(plot_items):
                 if select is not None:
@@ -209,8 +215,7 @@ class DPTask(object):
                     t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
                     dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
-                    print(f"max devi of F is :{max(flatmdf)} ev/Å on {item} of {group_by}")
-                    label_unit = kwargs.get('label_unit', None)
+                    print(f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
                     sns.scatterplot(
                         x=dupt,
                         y=flatmdf,
@@ -219,11 +224,19 @@ class DPTask(object):
                         ax=fig_left,
                         label=f'{item} {label_unit}'
                     )
-                fig_left.set_xlim(0, xlimit)
-                if not log:
-                    fig_left.set_ylim(0, ylimit)
+                if xlimit is not None:
+                    fig_left.set_xlim(0, xlimit)
+                if ylimit is not None:
+                    if not log:
+                        fig_left.set_ylim(0, ylimit)
+                    else:
+                        fig_left.set_yscale('log')
                 else:
-                    fig_left.set_yscale('log')
+                    ylimit = fig_left.get_ylim()[1]
+                    if not log:
+                        fig_left.set_ylim(0, ylimit)
+                    else:
+                        fig_left.set_yscale('log')
                 fig_left.axhline(f_trust_lo, linestyle='dashed')
                 fig_left.axhline(f_trust_hi, linestyle='dashed')
                 if fig_left.is_last_row():
@@ -248,8 +261,10 @@ class DPTask(object):
                 )
                 if fig_right.is_first_row():
                     fig_right.set_title('Distribution of Deviation')
-                # fig_right.set_xlim(0, 1.2*max())
-                fig_right.set_ylim(0, ylimit)
+                if not log:
+                    fig_right.set_ylim(0, ylimit)
+                else:
+                    fig_right.set_yscale('log')
                 fig_right.axhline(f_trust_lo, linestyle='dashed')
                 fig_right.axhline(f_trust_hi, linestyle='dashed')
                 fig_right.set_xticklabels([])

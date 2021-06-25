@@ -284,7 +284,8 @@ def canvas_style(
         font='sans-serif',
         font_scale=1,
         color_codes=True,
-        rc=None
+        rc=None,
+        **kwargs
 ):
     """set basic properties for canvas
 
