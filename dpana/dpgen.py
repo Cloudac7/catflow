@@ -226,6 +226,9 @@ class DPTask(object):
                     )
                 if xlimit is not None:
                     fig_left.set_xlim(0, xlimit)
+                else:
+                    xlimit = fig_left.get_xlim()[1]
+                    fig_left.set_xlim(0, xlimit)
                 if ylimit is not None:
                     if not log:
                         fig_left.set_ylim(0, ylimit)
