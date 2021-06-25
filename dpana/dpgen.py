@@ -243,7 +243,7 @@ class DPTask(object):
                 fig_left.axhline(f_trust_lo, linestyle='dashed')
                 fig_left.axhline(f_trust_hi, linestyle='dashed')
                 if fig_left.is_last_row():
-                    fig_left.set_xlabel('Simulation time (fs)')
+                    fig_left.set_xlabel('Simulation Steps')
                 if fig_left.is_first_col():
                     fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
                 fig_left.legend()
