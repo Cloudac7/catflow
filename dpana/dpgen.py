@@ -355,8 +355,8 @@ class DPTask(object):
                 plt.xscale('log')
             if y_log:
                 plt.yscale('log')
-            plt.axhline(f_trust_lo, linestyles='dashed')
-            plt.axhline(f_trust_hi, linestyles='dashed')
+            plt.axhline(f_trust_lo, linestyle='dashed')
+            plt.axhline(f_trust_hi, linestyle='dashed')
             plt.xlabel('Simulation time (fs)', fontsize=24)
             plt.ylabel('$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             plt.xticks(fontsize=24)
