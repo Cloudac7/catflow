@@ -346,10 +346,10 @@ class DPTask(object):
                     flatmdf = np.ravel(mdf)
                     plt.scatter(dupt, flatmdf, s=80, alpha=0.3, label=f'iter {int(k)}', marker='o')
             if x_higher_limit is None:
-                x_higher_limit = ax.get_xlimit()[1]
+                x_higher_limit = ax.get_xlim()[1]
             plt.xlim(x_lower_limit, x_higher_limit)
             if y_limit is None:
-                y_limit = ax.get_ylimit()[1]
+                y_limit = ax.get_ylim()[1]
             plt.ylim(0, y_limit)
             if x_log:
                 plt.xscale('log')
