@@ -10,11 +10,13 @@ from glob import glob
 
 import shutil
 from ase.io import read, write
+from dpgen.dispatcher.Dispatcher import make_dispatcher
 from dpgen.generator.run import parse_cur_job_revmat, find_only_one_key, \
     revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
-from dpana.util import canvas_style
-from dpgen.dispatcher.Dispatcher import make_dispatcher
+from dpana.util import canvas_style, load_machine_json
+from dpdispatcher.submission import Submission, Task, Resources
+from dpdispatcher.machine import Machine
 
 
 class DPTask(object):
@@ -151,8 +153,8 @@ class DPTask(object):
             iteration,
             f_trust_lo=0.10,
             f_trust_hi=0.30,
-            xlimit=None,
-            ylimit=None,
+            x_limit=None,
+            y_limit=None,
             log=False,
             group_by='temps',
             select=None,
@@ -162,8 +164,8 @@ class DPTask(object):
         :param iteration: The iteration
         :param f_trust_lo: The lower limit of max_deviation_force.
         :param f_trust_hi: The higher limit of max_deviation_force.
-        :param xlimit: Choose the limit of x axis.
-        :param ylimit: Choose the limit of y axis.
+        :param x_limit: Choose the limit of x axis.
+        :param y_limit: Choose the limit of y axis.
         :param log: Choose whether log scale used. Default: False.
         :param group_by: Choose which the plots are grouped by, which should be included.
             For value of group_by, a list, int or str containing desired value(s) should be included as kwargs.
@@ -224,20 +226,20 @@ class DPTask(object):
                         ax=fig_left,
                         label=f'{item} {label_unit}'
                     )
-                if xlimit is not None:
-                    fig_left.set_xlim(0, xlimit)
+                if x_limit is not None:
+                    fig_left.set_xlim(0, x_limit)
                 else:
-                    xlimit = fig_left.get_xlim()[1]
-                    fig_left.set_xlim(0, xlimit)
-                if ylimit is not None:
+                    x_limit = fig_left.get_xlim()[1]
+                    fig_left.set_xlim(0, x_limit)
+                if y_limit is not None:
                     if not log:
-                        fig_left.set_ylim(0, ylimit)
+                        fig_left.set_ylim(0, y_limit)
                     else:
                         fig_left.set_yscale('log')
                 else:
-                    ylimit = fig_left.get_ylim()[1]
+                    y_limit = fig_left.get_ylim()[1]
                     if not log:
-                        fig_left.set_ylim(0, ylimit)
+                        fig_left.set_ylim(0, y_limit)
                     else:
                         fig_left.set_yscale('log')
                 fig_left.axhline(f_trust_lo, linestyle='dashed')
@@ -265,7 +267,7 @@ class DPTask(object):
                 if fig_right.is_first_row():
                     fig_right.set_title('Distribution of Deviation')
                 if not log:
-                    fig_right.set_ylim(0, ylimit)
+                    fig_right.set_ylim(0, y_limit)
                 else:
                     fig_right.set_yscale('log')
                 fig_right.axhline(f_trust_lo, linestyle='dashed')
@@ -366,6 +368,70 @@ class DPTask(object):
         plt.tight_layout()
         return plt
 
+    def multi_iter_distribution(
+            self,
+            iterations,
+            group_by='temps',
+            select=None,
+            f_trust_lo=0.10,
+            f_trust_hi=0.30,
+            x_lower_limit=1,
+            x_higher_limit=None,
+            y_limit=0.6,
+            **kwargs
+    ):
+        frames = []
+        for it in iterations:
+            location = os.path.join(self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
+            if os.path.exists(location):
+                frames.append(self.md_set_load_pkl(iteration=it))
+            else:
+                frames.append(self.md_set_pd(iteration=it))
+        items = kwargs.get(group_by, None)
+        if isinstance(items, (list, tuple)):
+            num_items = len(items)
+        elif isinstance(items, (int, float)):
+            num_items = 0
+            items = [items]
+        elif isinstance(items, str):
+            num_items = 0
+            items = [str(items)]
+        else:
+            raise TypeError("temps should be a value or a list of value.")
+        label_unit = kwargs.get('label_unit', 'K')
+        df = pd.concat(frames)
+        plt.figure(figsize=[12, 12])
+        for i, item in enumerate(items):
+            ax = plt.subplot(num_items, 1, i + 1)
+            for k in iterations:
+                if select is not None:
+                    select_value = kwargs.get('select_value', None)
+                    if select_value is not None:
+                        df = df[df[select] == select_value]
+                part_data = df[df[group_by] == item]
+                parts = part_data[part_data['iter'] == 'iter.' + str(k).zfill(6)]
+                for j, [temp, part] in enumerate(parts.groupby(group_by)):
+                    mdf = np.array(list(part['max_devi_f']))
+                    t_freq = np.average(part['t_freq'])
+                    flatmdf = np.ravel(mdf)
+                    plt.hist(flatmdf, bins=100, density=True, label=f'iter {int(k)}', alpha=0.5)
+            if x_higher_limit is None:
+                x_higher_limit = ax.get_xlim()[1]
+            ax.set_xlim(x_lower_limit, x_higher_limit)
+            if y_limit is None:
+                y_limit = ax.get_ylim()[1]
+            ax.set_ylim(0, y_limit)
+            plt.axvline(f_trust_lo, linestyle='dashed')
+            plt.axvline(f_trust_hi, linestyle='dashed')
+            plt.xlabel('$\sigma_{f}^{max}$ (eV/Å)', fontsize=16)
+            plt.ylabel('Distribution', fontsize=16)
+            plt.xticks(fontsize=16)
+            plt.yticks(fontsize=16)
+            plt.legend(fontsize=16)
+            plt.title(f'{item} {label_unit}', fontsize=16)
+        plt.tight_layout()
+        return plt
+
     def md_single_task(self, work_path, model_path, numb_models=4, **kwargs):
         """
         Submit your own md task with the help of dpgen.
@@ -374,6 +440,7 @@ class DPTask(object):
         :param numb_models: The number of models selected.
         :return:
         """
+
         mdata = self.machine_data['model_devi'][0]
         folder_list = kwargs.get('folder_list', ["task.*"])
         all_task = []
@@ -411,7 +478,8 @@ class DPTask(object):
     def train_model_test(self, iteration=None, params=None, files=None, **kwargs):
         """
         Run MD tests from trained models.
-        :param iteration: Select the iteration for training. If not selected, the last iteration where training has been finished would be chosen.
+        :param iteration: Select the iteration for training. If not selected,
+            the last iteration where training has been finished would be chosen.
         :param params: Necessary params for MD test.
         :param files: Extra files attached with the MD runs. Not necessary.
         :param kwargs: Other optional parameters.

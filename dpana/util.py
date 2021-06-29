@@ -13,6 +13,8 @@ from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
 from dpgen.remote.decide_machine import decide_train_machine, decide_fp_machine
 from paramiko import SSHException
+from dpdispatcher.submission import Submission, Task, Resources
+from dpdispatcher.machine import Machine
 
 model_dict = {
     "machine": {
@@ -42,6 +44,14 @@ model_dict = {
     "command": "/some/work/path/vasp_std",
     "group_size": 25
 }
+
+
+def load_machine_json(path):
+    with open(path, 'r') as f:
+        mdata = json.load(f)
+    machine = Machine.load_from_dict(mdata['machine'])
+    resources = Resources.load_from_dict(mdata['resources'])
+    return machine, resources
 
 
 def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
