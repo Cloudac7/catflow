@@ -1,19 +1,28 @@
 import os
 from glob import glob
 from . import from_yaml, from_json
-from . import CalculationTask
 
 
-def model_devi_calc(conf_file, work_path, model_path=None, numb_models=4, **kwargs):
+def multi_deepmd_task(
+        work_path,
+        machine_conf,
+        model_path=None,
+        numb_models=4,
+        outlog=None,
+        errlog=None,
+        **kwargs
+):
     """
-    Submit your own md task with the help of dpgen.
+    Submit your own md task with the help of DPDispatcher.
 
     Parameters
     ----------
-        conf_file: Configuration file of machine and resources.
         work_path: The dir contains your md tasks.
+        machine_conf: Configuration file of machine and resources.
         model_path: The path of models contained for calculation.
         numb_models: The number of models selected.
+        outlog : filename of output file
+        errlog : filename of error file
 
     Returns
     -------
@@ -39,11 +48,15 @@ def model_devi_calc(conf_file, work_path, model_path=None, numb_models=4, **kwar
 
     forward_files = kwargs.get('forward_files', ['conf.lmp', 'input.lammps', 'traj'])
     backward_files = kwargs.get('backward_files', ['model_devi.out', 'model_devi.log', 'traj'])
-    conf_file = os.path.abspath(conf_file)
+    if outlog is not None:
+        backward_files.append(outlog)
+    if errlog is not None:
+        backward_files.append(errlog)
+    machine_conf = os.path.abspath(machine_conf)
 
-    if os.path.basename(conf_file).split('.')[-1] in ['yaml', 'yml']:
+    if os.path.basename(machine_conf).split('.')[-1] in ['yaml', 'yml']:
         calc = from_yaml(
-            conf_file,
+            machine_conf,
             work_base=work_base,
             task_list=run_tasks,
             forward_common_files=model_names,
@@ -52,7 +65,7 @@ def model_devi_calc(conf_file, work_path, model_path=None, numb_models=4, **kwar
         )
     else:
         calc = from_json(
-            conf_file,
+            machine_conf,
             work_base=work_base,
             task_list=run_tasks,
             forward_common_files=model_names,

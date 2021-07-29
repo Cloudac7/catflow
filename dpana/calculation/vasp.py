@@ -24,21 +24,38 @@ def traj_to_fp_task(traj_file, work_path, chemical_symbol=None, index="::"):
         write(filename=os.path.join(task_path, 'POSCAR'), images=j, vasp5=True)
 
 
-def multi_fp_task(work_path, machine_data_path, **kwargs):
+def multi_fp_task(
+        work_path,
+        machine_conf,
+        forward_files=None,
+        backward_files=None,
+        outlog=None,
+        errlog=None
+):
     """submit multiple VASP tasks
 
     Parameters
     ----------
     work_path : path to base directory of tasks
-    machine_data_path : path of machine data filename, in format of DPDispatcher machine file
-    kwargs : some other keyword arguments
+    machine_conf : path of machine data filename, in format of DPDispatcher machine file
+    forward_files : files needed to upload for each task, such as: `['POSCAR', 'INCAR', 'POTCAR']`
+    backward_files : files needed to download, not including `outlog` and `errlog`
+    outlog : filename of output file
+    errlog : filename of error file
 
     Returns
     -------
-    None
+    CalculationTask object.
     """
-    forward_files = ['POSCAR', 'INCAR', 'POTCAR']
-    backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
+    if forward_files is None:
+        forward_files = ['POSCAR', 'INCAR', 'POTCAR']
+    if backward_files is None:
+        backward_files = ['OUTCAR', 'vasprun.xml']
+    if outlog is not None:
+        backward_files.append(outlog)
+    if errlog is not None:
+        backward_files.append(errlog)
+
     forward_common_files = []
     fp_task_list = glob(os.path.join(work_path, 'task.*'))
     fp_task_list.sort()
@@ -46,17 +63,32 @@ def multi_fp_task(work_path, machine_data_path, **kwargs):
         return
     fp_run_tasks = fp_task_list
     run_tasks = [os.path.basename(ii) for ii in fp_run_tasks]
-    calculation_task = from_json(
-        path=machine_data_path,
-        work_base=work_path,
-        task_list=run_tasks,
-        forward_common_files=forward_common_files,
-        forward_files=forward_files,
-        backward_files=backward_files
-    )
-    calculation_task.run(kwargs.get('clean', True))
+    if os.path.basename(machine_conf).split('.')[-1] in ['yaml', 'yml']:
+        calculation_task = from_yaml(
+            path=machine_conf,
+            work_base=work_path,
+            task_list=run_tasks,
+            forward_common_files=forward_common_files,
+            forward_files=forward_files,
+            backward_files=backward_files,
+            outlog=outlog,
+            errlog=errlog
+        )
+    else:
+        calculation_task = from_json(
+            path=machine_conf,
+            work_base=work_path,
+            task_list=run_tasks,
+            forward_common_files=forward_common_files,
+            forward_files=forward_files,
+            backward_files=backward_files,
+            outlog=outlog,
+            errlog=errlog
+        )
+    return calculation_task
 
 
+# TODO: find a solution to submit tasks to different hosts in parallel.
 def fp_tasks(
         ori_fp_tasks,
         work_path,
