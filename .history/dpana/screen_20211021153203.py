@@ -158,13 +158,10 @@ class SOAPScreening(DPTask):
             for i in range(fp_task_max):
                 diss = np.min(inter_diss_matrix, axis=1)
                 _top_k_idx[i] = np.argmax(diss)
-                tmp_diss = np.delete(inner_diss_matrix[np.argmax(diss)],np.argmax(diss))
                 inner_diss_matrix = np.delete(inner_diss_matrix, np.argmax(diss), axis=0)
                 inner_diss_matrix = np.delete(inner_diss_matrix, np.argmax(diss), axis=1)
                 inter_diss_matrix = np.delete(inter_diss_matrix, np.argmax(diss), axis=0)
-                inter_diss_matrix = np.transpose(inter_diss_matrix)
-                inter_diss_matrix = np.concatenate((inter_diss_matrix,np.array([tmp_diss])), axis=0)
-                inter_diss_matrix = np.transpose(inter_diss_matrix) 
+            
             top_k_idx = np.zeros(fp_task_max)
             for i, item in enumerate(_top_k_idx):
                 top_k_idx[i] = full_idx[item]

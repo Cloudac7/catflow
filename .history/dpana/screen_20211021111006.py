@@ -150,34 +150,24 @@ class SOAPScreening(DPTask):
         return:
             top_k_idx: list of index of selected structures 
         """
-        if len(inner_diss_matrix) >= fp_task_max:
-            # if the number of candidates is larger than the fp_task_max
-            # return fp_task_max structures with farthest distance
-            full_idx = np.arange(len(inner_diss_matrix)) 
+        if len(inner_diss_matrix) >= fp_task_min:
             _top_k_idx = np.zeros(fp_task_max)
             for i in range(fp_task_max):
                 diss = np.min(inter_diss_matrix, axis=1)
                 _top_k_idx[i] = np.argmax(diss)
-                tmp_diss = np.delete(inner_diss_matrix[np.argmax(diss)],np.argmax(diss))
                 inner_diss_matrix = np.delete(inner_diss_matrix, np.argmax(diss), axis=0)
                 inner_diss_matrix = np.delete(inner_diss_matrix, np.argmax(diss), axis=1)
                 inter_diss_matrix = np.delete(inter_diss_matrix, np.argmax(diss), axis=0)
-                inter_diss_matrix = np.transpose(inter_diss_matrix)
-                inter_diss_matrix = np.concatenate((inter_diss_matrix,np.array([tmp_diss])), axis=0)
-                inter_diss_matrix = np.transpose(inter_diss_matrix) 
+            full_idx = np.arange(len(inner_diss_matrix))
             top_k_idx = np.zeros(fp_task_max)
             for i, item in enumerate(_top_k_idx):
                 top_k_idx[i] = full_idx[item]
                 full_idx = np.delete(full_idx, item, axis=0)
             logging.info('Structures decided.')
             return top_k_idx 
-        elif len(inner_diss_matrix) >= fp_task_min and len(inner_diss_matrix) <= fp_task_max:
-            # if the number of candidates locates in the range of (fp_task_min, fp_task_max)
-            # return all structures
+        elif len(inner_diss_matrix) >= fp_task_min and len(inner_diss_matrix) < fp_task_max:
             return np.arange(len(inner_diss_matrix))
         else:
-            # if the number of candidates is smaller than the fp_task_min
-            # return none  
             return None
 
     def _fp_gen_from_soap(self, stc, stc_idx, incar_path, potcars, sys_idx=0, iteration=0, log_file=None):

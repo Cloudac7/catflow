@@ -111,9 +111,6 @@ class SOAPScreening(DPTask):
     def get_inner_diss_matrix(self, soap_add):
         """
         generate distance matrix (based on soap) between the new structures 
-
-        return:
-            inner_diss_matrix[i][j]: distance between i-th and j-th structure in soap_add
         """
         inner_diss_matrix = np.zeros((len(soap_add),len(soap_add))) 
         for i, item in enumerate(soap_add):
@@ -123,61 +120,50 @@ class SOAPScreening(DPTask):
             inner_diss_matrix[i][i] = 0
         return inner_diss_matrix
 
-    def get_inter_diss_matrix(self, soap_add, soap_ori):
-        """
-        generate distance matrix (based on soap) between the new structures and the original structrues
-
-        return:
-            inter_diss_matrix[i][j]: distance between i-th structure in soap_add and j-th structure in soap_add
-        """
-        inter_diss_matrix = np.zeros((len(soap_add),len(soap_ori))) 
-        for i, i_item in enumerate(soap_add):
-            for j, j_item in enumerate(soap_ori): 
-                inter_diss_matrix[i][j] = np.linalg.norm(i_item - j_item)
-        return inter_diss_matrix
-
-    @staticmethod
-    def soap_pick_idx(inner_diss_matrix, inter_diss_matrix, fp_task_max=100, fp_task_min=5):
-        """
-        find (fp_task_max) structures with farthest distance to other stuctures (both original and added structure)
-        used when the number of candidate structures is larger than the fp_task_max
+    def soap_compare(self, soap_ori, soap_add, plot=False, **kwargs):
+        """compare added soap with original one
 
         Args:
-            inner_diss_matrix: (len(soap_add),len(soap_add))
-            inter_diss_matrix: (len(soap_add),len(soap_ori))
-            fp_task_max/fp_task_min: see DP-GEN setting
-
-        return:
-            top_k_idx: list of index of selected structures 
+            soap_ori: SOAP descriptor of original structures
+            soap_add: SOAP descriptor of structures to be added
+            plot: choose whether make the plot of distribution
         """
-        if len(inner_diss_matrix) >= fp_task_max:
-            # if the number of candidates is larger than the fp_task_max
-            # return fp_task_max structures with farthest distance
-            full_idx = np.arange(len(inner_diss_matrix)) 
-            _top_k_idx = np.zeros(fp_task_max)
-            for i in range(fp_task_max):
-                diss = np.min(inter_diss_matrix, axis=1)
-                _top_k_idx[i] = np.argmax(diss)
-                tmp_diss = np.delete(inner_diss_matrix[np.argmax(diss)],np.argmax(diss))
-                inner_diss_matrix = np.delete(inner_diss_matrix, np.argmax(diss), axis=0)
-                inner_diss_matrix = np.delete(inner_diss_matrix, np.argmax(diss), axis=1)
-                inter_diss_matrix = np.delete(inter_diss_matrix, np.argmax(diss), axis=0)
-                inter_diss_matrix = np.transpose(inter_diss_matrix)
-                inter_diss_matrix = np.concatenate((inter_diss_matrix,np.array([tmp_diss])), axis=0)
-                inter_diss_matrix = np.transpose(inter_diss_matrix) 
-            top_k_idx = np.zeros(fp_task_max)
-            for i, item in enumerate(_top_k_idx):
-                top_k_idx[i] = full_idx[item]
-                full_idx = np.delete(full_idx, item, axis=0)
-            logging.info('Structures decided.')
-            return top_k_idx 
-        elif len(inner_diss_matrix) >= fp_task_min and len(inner_diss_matrix) <= fp_task_max:
-            # if the number of candidates locates in the range of (fp_task_min, fp_task_max)
-            # return all structures
-            return np.arange(len(inner_diss_matrix))
+        dis_all = []
+        for i in tqdm(
+                iterable=soap_add,
+                desc='Structure adding'
+        ):
+            diss = []
+            for j in soap_ori:
+                dis = np.linalg.norm(i - j)
+                diss.append(dis)
+            dis_all.append(min(diss))
+        if plot is True:
+            plt.figure()
+            plt.hist(dis_all, bins=100)
+            _time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')
+            _plot_path = kwargs.get(
+                'plot_path',
+                os.path.join(self.path, f'soap_compare_{_time}.png')
+            )
+            plt.savefig(os.path.abspath(_plot_path))
+        dis_all = np.array(dis_all)
+        dcut = self.soap_dcut
+        _select = np.where(dis_all >= dcut)[0]
+        select_ratio = len(_select) / len(dis_all)
+        logging.info('Ratio of available structures: {}'.format(select_ratio))
+        return dis_all
+
+    @staticmethod
+    def soap_pick_idx(soap_dis, fp_task_max=100, fp_task_min=5):
+        """
+        pick farthest structures from soap_dis
+        """
+        top_k_idx = soap_dis.argsort()[(0 - fp_task_max):]
+        logging.info('Structures decided.')
+        if len(top_k_idx) >= fp_task_min:
+            return top_k_idx
         else:
-            # if the number of candidates is smaller than the fp_task_min
-            # return none  
             return None
 
     def _fp_gen_from_soap(self, stc, stc_idx, incar_path, potcars, sys_idx=0, iteration=0, log_file=None):
