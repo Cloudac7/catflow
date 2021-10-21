@@ -8,6 +8,7 @@ from dscribe.descriptors import SOAP
 from ase import Atoms
 import matplotlib.pyplot as plt
 import shutil
+import numba 
 
 from tqdm import tqdm
 
@@ -108,6 +109,7 @@ class SOAPScreening(DPTask):
             soap_md[i] = _soap_item
         return soap_md, stc_md
 
+    @numba.njit
     def get_inner_diss_matrix(self, soap_add):
         """
         generate distance matrix (based on soap) between the new structures 
@@ -122,7 +124,8 @@ class SOAPScreening(DPTask):
                 inner_diss_matrix[j][i] = inner_diss_matrix[i][j]
             inner_diss_matrix[i][i] = 0
         return inner_diss_matrix
-
+        
+    @numba.njit
     def get_inter_diss_matrix(self, soap_add, soap_ori):
         """
         generate distance matrix (based on soap) between the new structures and the original structrues
