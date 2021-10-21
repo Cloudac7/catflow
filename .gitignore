@@ -143,3 +143,4 @@ cython_debug/
 .vscode/*
 .idea/*
 .ipynb_checkpoints/*
+.history/*
