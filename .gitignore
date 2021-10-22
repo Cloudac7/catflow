@@ -143,3 +143,5 @@ cython_debug/
 .vscode/*
 .idea/*
 .ipynb_checkpoints/*
+.history/*
+.DS_Store
