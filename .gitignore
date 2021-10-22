@@ -144,3 +144,4 @@ cython_debug/
 .idea/*
 .ipynb_checkpoints/*
 .history/*
+.DS_Store
