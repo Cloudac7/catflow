@@ -11,7 +11,7 @@ import matplotlib
 from ase.io import iread, write
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
-from dpgen.remote.decide_machine import decide_train_machine, decide_fp_machine
+#from dpgen.remote.decide_machine import decide_train_machine, decide_fp_machine
 from paramiko import SSHException
 from dpdispatcher.submission import Submission, Task, Resources
 from dpdispatcher.machine import Machine

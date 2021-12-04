@@ -38,7 +38,7 @@ class DPTask(object):
         self.record_file = record_file
         self._load_task()
 
-    def train_lcurve(self, iteration=None, model=0, **kwargs):
+    def train_lcurve(self, iteration=None, model=0, test=True, **kwargs):
         if iteration is None:
             if self.step_code < 2:
                 iteration = self.iteration - 1
@@ -48,17 +48,22 @@ class DPTask(object):
         lcurve_path = os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')
 
         step = np.loadtxt(lcurve_path, usecols=0)
-        energy_train = np.loadtxt(lcurve_path, usecols=4)
-        energy_test = np.loadtxt(lcurve_path, usecols=3)
-        force_train = np.loadtxt(lcurve_path, usecols=6)
-        force_test = np.loadtxt(lcurve_path, usecols=5)
+        if test == True:
+            energy_train = np.loadtxt(lcurve_path, usecols=4)
+            energy_test = np.loadtxt(lcurve_path, usecols=3)
+            force_train = np.loadtxt(lcurve_path, usecols=6)
+            force_test = np.loadtxt(lcurve_path, usecols=5)
+        else:
+            energy_train = np.loadtxt(lcurve_path, usecols=2)
+            force_train = np.loadtxt(lcurve_path, usecols=3)
 
         canvas_style(**kwargs)
         fig = plt.figure()
         plt.title("DeepMD training and test error")
         plt.subplot(2, 1, 1)
         plt.scatter(step[10:], energy_train[10:], alpha=0.4, label='train')
-        plt.scatter(step[10:], energy_test[10:], alpha=0.4, label='test')
+        if test == True:
+            plt.scatter(step[10:], energy_test[10:], alpha=0.4, label='test')
         plt.hlines(0.005, step[0], step[-1], linestyles='--', colors='red', label='5 meV')
         plt.hlines(0.01, step[0], step[-1], linestyles='--', colors='blue', label='10 meV')
         plt.hlines(0.05, step[0], step[-1], linestyles='--', label='50 meV')
@@ -67,7 +72,8 @@ class DPTask(object):
         plt.ylabel('$E$(eV)')
         plt.subplot(2, 1, 2)
         plt.scatter(step[10:], force_train[10:], alpha=0.4, label='train')
-        plt.scatter(step[10:], force_test[10:], alpha=0.4, label='test')
+        if test == True:
+            plt.scatter(step[10:], force_test[10:], alpha=0.4, label='test')
         plt.hlines(0.05, step[0], step[-1], linestyles='--', colors='red', label='50 meV/Å')
         plt.hlines(0.1, step[0], step[-1], linestyles='--', colors='blue', label='100 meV/Å')
         plt.hlines(0.2, step[0], step[-1], linestyles='--', label='200 meV/Å')
