@@ -2,12 +2,12 @@ import click
 import logging
 import time
 import json
-from dpana.dpgen import DPTask
-from dpana.util import fp_tasks
-from dpana.message import task_reminder
+from miko.tesla import DPTask
+from miko.util import fp_tasks
+from miko.message import task_reminder
 
 
-def read_params(task_path, param='param.json', machine='machine.json', record='record.dpgen'):
+def read_params(task_path, param='param.json', machine='machine.json', record='record.tesla'):
     """
     Load the DP-GEN task
     :param task_path:
@@ -36,7 +36,7 @@ def simu_cli():
 @click.argument('task_path', type=click.Path(exists=True), required=True)
 @click.argument('param', default='param.json')
 @click.argument('machine', default='machine.json')
-@click.argument('record', default='record.dpgen')
+@click.argument('record', default='record.tesla')
 def simu(input_settings, task_path, param, machine, record):
     """
     Start a simulation with selected parameters \n

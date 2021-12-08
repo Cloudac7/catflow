@@ -3,7 +3,7 @@ import json
 
 import dpdata
 import numpy as np
-from dpana.dpgen import DPTask
+from miko.tesla import DPTask
 
 
 class TrainModel(object):

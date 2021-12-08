@@ -12,7 +12,7 @@ import numba
 
 from tqdm import tqdm
 
-from dpana.dpgen import DPTask
+from miko.tesla import DPTask
 from dpgen.generator.run import make_vasp_incar
 
 

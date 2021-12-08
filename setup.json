@@ -1,10 +1,10 @@
 {
-    "name": "dpana",
+    "name": "miko-analyzer",
     "author": "Cloudac7",
     "author_email": "scottryuu@outlook.com",
-    "description": "Analysis plugin for DP-GEN tasks.",
+    "description": "Analyzing tool for Deep Potential based chemical research.",
     "url": "https://github.com/cloudac7/useful-tools",
-    "version": "0.1.0a1",
+    "version": "0.1.0",
     "install_requires": [
         "click",
         "dpdata",
@@ -18,7 +18,7 @@
     ],
     "entry_points": {
         "console_scripts": [
-            "dpana=dpana.main:cli"
+            "miko=miko.main:cli"
         ]
    }
 }

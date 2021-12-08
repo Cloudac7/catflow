@@ -1,6 +1,5 @@
 import os
 import json
-import daemon
 
 import dpdata
 import numpy as np
@@ -10,24 +9,23 @@ from glob import glob
 
 import shutil
 from ase.io import read, write
-from dpgen.dispatcher.Dispatcher import make_dispatcher
 from dpgen.generator.run import parse_cur_job_revmat, find_only_one_key, \
     revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
-from dpana.util import canvas_style, load_machine_json
-from dpdispatcher.submission import Submission, Task, Resources
-from dpdispatcher.machine import Machine
+
+from miko.resources.submit import JobFactory
+from miko.util import canvas_style, LogFactory
 
 
 class DPTask(object):
     """
-    DPTask is a class reading a dpgen directory, where the dpgen task run.
+    DPTask is a class reading a DP-GEN directory, where the DP-GEN task run.
     """
 
     def __init__(self, path, param_file, machine_file, record_file):
         """
-        Generate a class of dpgen task.
-        :param path: The path of the dpgen task.
+        Generate a class of tesla task.
+        :param path: The path of the tesla task.
         :param param_file: The param json file name.
         :param machine_file: The machine json file name.
         :param record_file: The record file name.
@@ -48,7 +46,7 @@ class DPTask(object):
         lcurve_path = os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')
 
         step = np.loadtxt(lcurve_path, usecols=0)
-        if test == True:
+        if test:
             energy_train = np.loadtxt(lcurve_path, usecols=4)
             energy_test = np.loadtxt(lcurve_path, usecols=3)
             force_train = np.loadtxt(lcurve_path, usecols=6)
@@ -58,28 +56,30 @@ class DPTask(object):
             force_train = np.loadtxt(lcurve_path, usecols=3)
 
         canvas_style(**kwargs)
-        fig = plt.figure()
-        plt.title("DeepMD training and test error")
-        plt.subplot(2, 1, 1)
-        plt.scatter(step[10:], energy_train[10:], alpha=0.4, label='train')
-        if test == True:
-            plt.scatter(step[10:], energy_test[10:], alpha=0.4, label='test')
-        plt.hlines(0.005, step[0], step[-1], linestyles='--', colors='red', label='5 meV')
-        plt.hlines(0.01, step[0], step[-1], linestyles='--', colors='blue', label='10 meV')
-        plt.hlines(0.05, step[0], step[-1], linestyles='--', label='50 meV')
-        plt.legend()
-        plt.xlabel('Number of training batch')
-        plt.ylabel('$E$(eV)')
-        plt.subplot(2, 1, 2)
-        plt.scatter(step[10:], force_train[10:], alpha=0.4, label='train')
-        if test == True:
-            plt.scatter(step[10:], force_test[10:], alpha=0.4, label='test')
-        plt.hlines(0.05, step[0], step[-1], linestyles='--', colors='red', label='50 meV/Å')
-        plt.hlines(0.1, step[0], step[-1], linestyles='--', colors='blue', label='100 meV/Å')
-        plt.hlines(0.2, step[0], step[-1], linestyles='--', label='200 meV/Å')
-        plt.xlabel('Number of training batch')
-        plt.ylabel('$F$(eV/Å)')
-        plt.legend()
+        fig, axs = plt.subplots(2, 1)
+        fig.suptitle("DeepMD training and tests error")
+
+        # energy figure
+        axs[0].scatter(step[10:], energy_train[10:], alpha=0.4, label='train')
+        if test:
+            axs[0].scatter(step[10:], energy_test[10:], alpha=0.4, label='tests')
+        axs[0].hlines(0.005, step[0], step[-1], linestyles='--', colors='red', label='5 meV')
+        axs[0].hlines(0.01, step[0], step[-1], linestyles='--', colors='blue', label='10 meV')
+        axs[0].hlines(0.05, step[0], step[-1], linestyles='--', label='50 meV')
+        axs[0].set_xlabel('Number of training batch')
+        axs[0].set_ylabel('$E$(eV)')
+        axs[0].legend()
+
+        # force figure
+        axs[1].scatter(step[10:], force_train[10:], alpha=0.4, label='train')
+        if test:
+            axs[1].scatter(step[10:], force_test[10:], alpha=0.4, label='tests')
+        axs[1].hlines(0.05, step[0], step[-1], linestyles='--', colors='red', label='50 meV/Å')
+        axs[1].hlines(0.1, step[0], step[-1], linestyles='--', colors='blue', label='100 meV/Å')
+        axs[1].hlines(0.2, step[0], step[-1], linestyles='--', label='200 meV/Å')
+        axs[1].set_xlabel('Number of training batch')
+        axs[1].set_ylabel('$F$(eV/Å)')
+        axs[1].legend()
         return fig
 
     def md_make_set(self, iteration=None):
@@ -183,7 +183,7 @@ class DPTask(object):
             `select_value`: the dependence of `select`. Different from `group_by`, please pass only one number.
             `label_unit`: the unit of `select_value`, such as 'Å'.
             `step`: control the step of each point along x axis, in prevention of overlap.
-            Parameters of `canvas_style`: please refer to `dpana.util.canvas_style`.
+            Parameters of `canvas_style`: please refer to `miko.util.canvas_style`.
         :return: A plot for different desired values.
         """
         flatmdf = None
@@ -253,7 +253,7 @@ class DPTask(object):
                 if fig_left.is_last_row():
                     fig_left.set_xlabel('Simulation Steps')
                 if fig_left.is_first_col():
-                    fig_left.set_ylabel('$\sigma_{f}^{max}$ (ev/Å)')
+                    fig_left.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
                 fig_left.legend()
                 if fig_left.is_first_row():
                     fig_left.set_title(f'Iteration {iteration}')
@@ -366,7 +366,7 @@ class DPTask(object):
             plt.axhline(f_trust_lo, linestyle='dashed')
             plt.axhline(f_trust_hi, linestyle='dashed')
             plt.xlabel('Simulation time (fs)', fontsize=24)
-            plt.ylabel('$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
+            plt.ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             plt.xticks(fontsize=24)
             plt.yticks(fontsize=24)
             plt.legend(fontsize=24)
@@ -429,7 +429,7 @@ class DPTask(object):
             ax.set_ylim(0, y_limit)
             plt.axvline(f_trust_lo, linestyle='dashed')
             plt.axvline(f_trust_hi, linestyle='dashed')
-            plt.xlabel('$\sigma_{f}^{max}$ (eV/Å)', fontsize=16)
+            plt.xlabel(r'$\sigma_{f}^{max}$ (eV/Å)', fontsize=16)
             plt.ylabel('Distribution', fontsize=16)
             plt.xticks(fontsize=16)
             plt.yticks(fontsize=16)
@@ -438,15 +438,26 @@ class DPTask(object):
         plt.tight_layout()
         return plt
 
-    def md_single_task(self, work_path, model_path, numb_models=4, **kwargs):
+    def md_single_task(
+            self,
+            work_path,
+            model_path,
+            machine_name,
+            resource_name,
+            numb_models=4,
+            **kwargs
+    ):
         """
-        Submit your own md task with the help of dpgen.
-        :param work_path: The dir contains your md tasks.
-        :param model_path: The path of models contained for calculation.
-        :param numb_models: The number of models selected.
-        :return:
-        """
+        Submit your own md task with the help of DPDispatcher.
 
+        Parameters
+        ----------
+        work_path : The dir contains your md tasks.
+        model_path : The path of models contained for calculation.
+        numb_models : The number of models selected.
+        machine_name : machine name to use
+        resource_name : resource name to use
+        """
         mdata = self.machine_data['model_devi'][0]
         folder_list = kwargs.get('folder_list', ["task.*"])
         all_task = []
@@ -467,32 +478,54 @@ class DPTask(object):
         forward_files = kwargs.get('forward_files', ['conf.lmp', 'input.lammps', 'traj'])
         backward_files = kwargs.get('backward_files', ['model_devi.out', 'model_devi.log', 'traj'])
 
-        dispatcher = make_dispatcher(mdata['machine'], mdata['resources'], work_path, run_tasks, 1)
-        dispatcher.run_jobs(
-            resources=mdata['resources'],
-            command=commands,
-            work_path=work_path,
-            tasks=run_tasks,
-            group_size=1,
-            forward_common_files=model_names,
-            forward_task_files=forward_files,
-            backward_task_files=backward_files,
-            outlog=kwargs.get('outlog', 'model_devi.log'),
-            errlog=kwargs.get('errlog', 'model_devi.log'))
-        return dispatcher
+        task_dict_list = [
+            {
+                "command": commands,
+                "task_work_path": task,
+                "group_size": 1,
+                "forward_files": forward_files,
+                "backward_files": backward_files,
+                "outlog": kwargs.get('outlog', 'model_devi.log'),
+                "errlog": kwargs.get('errlog', 'model_devi.log'),
+            } for task in run_tasks
+        ]
 
-    def train_model_test(self, iteration=None, params=None, files=None, **kwargs):
-        """
-        Run MD tests from trained models.
-        :param iteration: Select the iteration for training. If not selected,
+        submission_dict = {
+            "work_base": work_path,
+            "forward_common_files": model_names,
+            "backward_common_files": kwargs.get('backward_common_files', [])
+        }
+        return JobFactory(task_dict_list, submission_dict, machine_name, resource_name, group_size=1)
+
+    def train_model_test(
+            self,
+            machine_name,
+            resource_name,
+            iteration=None,
+            params=None,
+            files=None,
+            **kwargs
+    ):
+        """Run MD tests from trained models.
+
+        Parameters
+        ----------
+        machine_name : machine name
+        resource_name : resource name
+        iteration : Select the iteration for training. If not selected,
             the last iteration where training has been finished would be chosen.
-        :param params: Necessary params for MD test.
-        :param files: Extra files attached with the MD runs. Not necessary.
-        :param kwargs: Other optional parameters.
-        :return:
+        params : Necessary params for MD tests.
+        files : Extra files attached with the MD runs. Not necessary.
+        kwargs : Other optional parameters.
+
+        Returns
+        -------
+
         """
+        logger = LogFactory(__name__).get_log()
         location = os.path.abspath(self.path)
-        print(location)
+        logger.info("Task path:", location)
+
         if iteration is None:
             if self.step_code < 2:
                 iteration = self.iteration - 1
@@ -501,7 +534,8 @@ class DPTask(object):
         n_iter = 'iter.' + str(iteration).zfill(6)
         model_path = os.path.join(location, n_iter, '00.train')
         test_path = os.path.join(location, n_iter, '04.model_test')
-        print("Preparing MD input......")
+
+        logger.info("Preparing MD input")
         self._train_generate_md_test(params=params, work_path=test_path, model_path=model_path)
         if self.step_code < 6:
             md_iter = self.iteration - 1
@@ -518,21 +552,25 @@ class DPTask(object):
                     _file_base = os.path.basename(file)
                     if not os.path.exists(os.path.join(p, _file_base)):
                         os.symlink(_file_abs, os.path.join(p, _file_base))
-        print("Submitting")
-        with daemon.DaemonContext():
-            self.md_single_task(
-                work_path=test_path,
-                model_path=model_path,
-                numb_models=self.param_data['numb_models'],
-                forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
-                backward_files=kwargs.get("backward_files",
-                                          ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
-                outlog=kwargs.get("outlog", 'md_test.log'),
-                errlog=kwargs.get("errlog", 'md_test.err')
-            )
-        # print("MD Test finished.")
+        logger.info("Task submitting")
 
-    def _train_generate_md_test(self, params, work_path, model_path):
+        job = self.md_single_task(
+            work_path=test_path,
+            model_path=model_path,
+            machine_name=machine_name,
+            resource_name=resource_name,
+            numb_models=self.param_data['numb_models'],
+            forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
+            backward_files=kwargs.get("backward_files",
+                                    ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
+            outlog=kwargs.get("outlog", 'md_test.log'),
+            errlog=kwargs.get("errlog", 'md_test.err')
+        )
+        job.run_submission()
+        logger.info("MD Test finished.")
+
+    @staticmethod
+    def _train_generate_md_test(params, work_path, model_path):
         cur_job = params['model_devi_jobs']
         use_plm = params.get('model_devi_plumed', False)
         use_plm_path = params.get('model_devi_plumed_path', False)
@@ -652,9 +690,15 @@ class DPTask(object):
         plt.title(f"Distibution of {ele_group[0]}-{ele_group[1]} distance", fontsize=16)
         return plt
 
-    def fp_error_test(self, iteration=None, test_model=None):
+    def fp_error_test(
+            self,
+            machine_name,
+            resource_name,
+            iteration=None,
+            test_model=None
+    ):
         """
-        Test your model quickly with the data generated from dpgen.
+        Test your model quickly with the data generated from tesla.
         :param iteration: Select the iteration of data for testing. Default: the latest one.
         :param test_model: Select the iteration of model for testing. Default: the latest one.
         :return:
@@ -704,7 +748,7 @@ class DPTask(object):
         if not os.path.exists(os.path.join(quick_test_dir, 'task.md/conf.lmp')):
             _lmp_data = glob(os.path.join(location, n_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
             os.symlink(_lmp_data, os.path.join(quick_test_dir, 'task.md/conf.lmp'))
-        print("Quick test task submitting...")
+        print("Quick tests task submitting...")
         self.md_single_task(
             work_path=quick_test_dir,
             model_path=model_dir,
@@ -712,7 +756,9 @@ class DPTask(object):
             forward_files=['conf.lmp', 'input.lammps', 'validate.xyz'],
             backward_files=['model_devi.out', 'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
             outlog='quick_test.log',
-            errlog='quick_test.err'
+            errlog='quick_test.err',
+            machine_name=machine_name,
+            resource_name=resource_name
         )
         print("Finished")
         start, final = 0, 0

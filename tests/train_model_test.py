@@ -1,5 +1,5 @@
 import unittest
-from dpana.dpgen import DPTask
+from miko.tesla import DPTask
 
 class MyTestCase(unittest.TestCase):
     def test_train_model_test(self):

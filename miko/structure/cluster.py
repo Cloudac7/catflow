@@ -1,41 +1,39 @@
-from MDAnalysis import Universe
-from ase.io import read, write
 import numpy as np
+import pandas as pd
+
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
-import pandas as pd
+from MDAnalysis import Universe
 
 
 class Cluster(object):
     def __init__(self, path):
         self.path = path
 
-    def trajectory(self, trj_type='ase', **kwargs):
+    @property
+    def trajectory(self, **kwargs):
         """
         load trajectory from file
         """
-        if trj_type == 'mda':
-            return self.load_mda_trajectory(**kwargs)
-        else:
-            return self.load_ase_trajectory(**kwargs)
+        return self.load_mda_trajectory(**kwargs)
 
     def load_mda_trajectory(self, **kwargs):
         topology_format = kwargs.get('topology_format', 'XYZ')
         return Universe(self.path, topology_format=topology_format)
 
-    def load_ase_trajectory(self, **kwargs):
-        topology_format = kwargs.get('topology_format', 'xyz')
-        return read(self.path, format=topology_format)
 
+def distance_to_cnt(u: Universe, selection_cluster, cluster_size):
+    """For carbon nanotube included trajectories, analyze cluster atoms.
 
-def distance_to_cnt(u, selection_cluster, cluster_size):
-    """
-    For carbon nanotube included trajectories, analyze cluster atoms.
+    Parameters
+    ----------
+    u : MDA trajectory instance.
+    selection_cluster : selection_cluster:
+    cluster_size : size of clusters
 
-    Args:
-         u: MDA trajectory instance.
-         selection_cluster:
-         cluster_size: size of clusters
+    Returns
+    -------
+
     """
     distances = np.zeros((len(u.trajectory), cluster_size))
     cnt = u.select_atoms('name C', updating=True)
@@ -48,12 +46,20 @@ def distance_to_cnt(u, selection_cluster, cluster_size):
     return distances
 
 
-def lindemann_per_frames(u, select_lang):
-    """
-    Calculate the lindemann index for each atom AND FRAME
-    Return a ndarray of shape (len_frames, natoms, natoms)
-    Warning this can produce extremly large ndarrays in memory 
+def lindemann_per_frames(u: Universe, select_lang):
+    """Calculate the lindemann index for each atom AND FRAME
+
+    Warning this can produce extremly large ndarrays in memory
     depending on the size of the cluster and the ammount of frames.
+
+    Parameters
+    ----------
+    u : MDA trajectory instance.
+    select_lang : select language.
+
+    Returns
+    -------
+    a ndarray of shape (len_frames, natoms, natoms)
     """
     # natoms = natoms
     sele_ori = u.select_atoms(select_lang)
@@ -103,20 +109,28 @@ def lindemann_per_frames(u, select_lang):
     return np.array([np.nanmean(i, axis=1) for i in lindex_array])
 
 
-def fitting_lindemann_curve(temperature, lindemann, bounds, function='func2'):
+def fitting_lindemann_curve(
+        temperature,
+        lindemann,
+        bounds,
+        function='func2'
+):
     """
     fit smooth curve from given lindemann index of each temperature.
-    ----
-    Args:
-        temperature: list of temperatures. e.g.: [200, 300, 400, 500, 600, 700, 800]
-        lindemann: list of lindemann index calculated from trajectories at each temperature
-        bounds: upper and lower bounds of each param in functions.
-            e.g. ([-np.inf, -np.inf, -np.inf, -np.inf, 400, 15.], [np.inf, np.inf, np.inf, np.inf, 700., 100.])
-        function: function used to fit the curve
 
-    Return:
-        pd.DataFrame
+    Parameters
+    ----------
+    temperature : list of temperatures. e.g.: [200, 300, 400, 500, 600, 700, 800]
+    lindemann : list of lindemann index calculated from trajectories at each temperature
+    bounds : upper and lower bounds of each param in functions.
+        e.g. ([-np.inf, -np.inf, -np.inf, -np.inf, 400, 15.], [np.inf, np.inf, np.inf, np.inf, 700., 100.])
+    function : function used to fit the curve
+
+    Returns
+    ----------
+    pd.DataFrame
     """
+
     def func(x, a, b, c, d, x0, dx):
         return b + (a - b) * x + d / (1 + np.exp((x - x0) / dx)) + c * x
 
