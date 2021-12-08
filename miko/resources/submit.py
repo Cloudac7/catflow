@@ -8,10 +8,10 @@ class JobFactory(object):
 
         task_list = [Task(**task_dict) for task_dict in task_dict_list]
 
-        machine_dict = settings[machine_name]
-        machine = Machine.load_from_dict(**machine_dict)
-
-        resources = Resources.load_from_dict(**machine_dict[resource_name])
+        machine_dict = settings['POOL'][machine_name]
+        machine = Machine.load_from_dict(machine_dict['machine'])
+        resource_dict = machine_dict['resources']
+        resources = Resources.load_from_dict(resource_dict[resource_name])
         group_size = kwargs.get('group_size', 1)
         resources.group_size = group_size
 

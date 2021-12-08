@@ -3,8 +3,8 @@ import logging
 import time
 import json
 from miko.tesla import DPTask
-from miko.util import fp_tasks
-from miko.message import task_reminder
+from miko.tesla.vasp import fp_tasks
+from miko.utils.message import task_reminder
 
 
 def read_params(task_path, param='param.json', machine='machine.json', record='record.tesla'):

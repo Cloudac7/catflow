@@ -9,12 +9,11 @@ from glob import glob
 
 import shutil
 from ase.io import read, write
-from dpgen.generator.run import parse_cur_job_revmat, find_only_one_key, \
-    revise_by_keys, revise_lmp_input_plm
 from matplotlib import pyplot as plt
 
 from miko.resources.submit import JobFactory
-from miko.util import canvas_style, LogFactory
+from miko.utils import canvas_style, LogFactory, \
+    parse_cur_job_revmat, find_only_one_key, revise_by_keys, revise_lmp_input_plm
 
 
 class DPTask(object):
@@ -467,7 +466,6 @@ class DPTask(object):
             all_task += _task
         lmp_exec = mdata['command']
         command = lmp_exec + " -i input.lammps"
-        commands = [command]
         run_tasks_ = all_task
         run_tasks = [os.path.basename(ii) for ii in run_tasks_]
 
@@ -480,9 +478,8 @@ class DPTask(object):
 
         task_dict_list = [
             {
-                "command": commands,
+                "command": command,
                 "task_work_path": task,
-                "group_size": 1,
                 "forward_files": forward_files,
                 "backward_files": backward_files,
                 "outlog": kwargs.get('outlog', 'model_devi.log'),
@@ -524,7 +521,7 @@ class DPTask(object):
         """
         logger = LogFactory(__name__).get_log()
         location = os.path.abspath(self.path)
-        logger.info("Task path:", location)
+        logger.info(f"Task path:{location}")
 
         if iteration is None:
             if self.step_code < 2:
@@ -569,9 +566,12 @@ class DPTask(object):
         job.run_submission()
         logger.info("MD Test finished.")
 
-    @staticmethod
-    def _train_generate_md_test(params, work_path, model_path):
-        cur_job = params['model_devi_jobs']
+    def _train_generate_md_test(self, params, work_path, model_path):
+        if self.step_code < 6:
+            iteration = self.iteration - 1
+        else:
+            iteration = self.iteration
+        cur_job = params['model_devi_jobs'][iteration]
         use_plm = params.get('model_devi_plumed', False)
         use_plm_path = params.get('model_devi_plumed_path', False)
         trj_freq = cur_job.get('traj_freq', False)

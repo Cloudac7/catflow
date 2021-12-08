@@ -5,44 +5,13 @@ import shutil
 import time
 import uuid
 import daemon
-import seaborn as sns
 from glob import glob
-import matplotlib
 from ase.io import iread, write
 from multiprocessing import Pool
 from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
 from paramiko import SSHException
 from dpdispatcher.submission import Submission, Task, Resources
 from dpdispatcher.machine import Machine
-
-model_dict = {
-    "machine": {
-        "batch": "lsf",
-        "hostname": "localhost",
-        "port": 22,
-        "username": "username",
-        "work_path": "/remote/work/path"
-    },
-    "resources": {
-        "cvasp": False,
-        "task_per_node": 24,
-        "numb_node": 1,
-        "node_cpu": 24,
-        "exclude_list": [],
-        "with_mpi": True,
-        "source_list": [
-        ],
-        "module_list": [
-            "intel/17u5",
-            "mpi/intel/17u5"
-        ],
-        "time_limit": "12:00:00",
-        "partition": "medium",
-        "_comment": "that's Bel"
-    },
-    "command": "/some/work/path/vasp_std",
-    "group_size": 25
-}
 
 
 def load_machine_json(path):
@@ -72,9 +41,7 @@ def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
         write(os.path.join(task_path, 'POSCAR'), j, vasp5=True)
 
 
-def multi_fp_task(work_path, machine_data=None):
-    if machine_data is None:
-        machine_data = model_dict
+def multi_fp_task(work_path, machine_data):
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
     forward_common_files = []
@@ -107,7 +74,7 @@ def multi_fp_task(work_path, machine_data=None):
                         errlog='fp.err')
 
 
-def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
+def fp_tasks(ori_fp_tasks, work_path, machine_data, group_size=1):
     """Submit single point energy tasks at one time.
 
     Submitting multiple VASP tasks in the work directory to remote or local servers.
@@ -147,8 +114,6 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
                 }
         group_size: Set the group size for tasks.
     """
-    if machine_data is None:
-        machine_data = model_dict
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err', 'tag_0_finished']
     forward_common_files = []
@@ -213,7 +178,8 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data=None, group_size=1):
 def fp_await_submit(item, forward_common_files=None, forward_files=None, backward_files=None, machine_data=None):
     print(f'Task {item["uuid"]} was submitted.')
     os.chdir(item["work_dir"])
-    machine_data = decide_fp_machine(machine_data)
+    # machine_data = decide_fp_machine(machine_data)
+    # TODO: decide which machine to use according to resources
     fp_submit(
         item["work_dir"],
         item["run_tasks"],
@@ -284,60 +250,3 @@ def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None,
             job_record=kwargs.get('job_record', 'jr.json')
         )
         return disp
-
-
-def canvas_style(
-        context='notebook',
-        style='darkgrid',
-        palette='deep',
-        font='sans-serif',
-        font_scale=1,
-        color_codes=True,
-        rc=None,
-        **kwargs
-):
-    """set basic properties for canvas
-
-    :param context: select context of the plot. Please refer to seaborn contexts.
-    :param style: select style of the plot. Please refer to seaborn styles.
-    :param palette: Color palette, see color_palette()
-    :param font: Font family, see matplotlib font manager.
-    :param font_scale: Separate scaling factor to independently scale the size of the font elements.
-    :param color_codes: If True and palette is a seaborn palette,
-        remap the shorthand color codes (e.g. “b”, “g”, “r”, etc.) to the colors from this palette.
-    :param rc: rc dict to optimize the plot. Please refer to matplotlib document for description in detail.
-    """
-    sns.set_theme(
-        context=context,
-        style=style,
-        palette=palette,
-        font=font,
-        font_scale=font_scale,
-        color_codes=color_codes,
-        rc=rc
-    )
-
-
-class LogFactory(object):
-
-    def __init__(self, logger=None, log_dir=""):
-        self.log_path = os.getcwd() if log_dir == "" else log_dir
-        self.logger = logging.getLogger(logger)
-        self.logger.setLevel(logging.DEBUG)
-        self.log_name = os.path.join(self.log_path, "miko.log")
-
-        # create file handler which logs even debug messages
-        file_handler = logging.FileHandler(self.log_name, delay=True)
-        file_handler.setLevel(logging.DEBUG)
-        # create console handler with a higher log level
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s : %(message)s')
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(console_handler)
-
-    def get_log(self):
-        return self.logger
