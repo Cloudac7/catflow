@@ -856,7 +856,7 @@ class DPTask(object):
 
     def _fp_output_style(self):
         styles = {
-            "vasp": "OUTCAR",
+            "vasp": "vasprun.xml",
             "cp2k": "coord.xyz",
         }
         return styles.get(self.param_data['fp_style'], None)
