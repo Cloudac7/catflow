@@ -731,6 +731,7 @@ class DPTask(object):
         all_sys = None
         stcs = []
         for idx, oo in enumerate(task_list):
+            logger.debug(f"Task: {oo}")
             sys = dpdata.LabeledSystem(os.path.join(oo, _dpgen_output), fmt=_dpdata_format)
             stc = read(os.path.join(oo, _stc_file))
             if len(sys) > 0:
