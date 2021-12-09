@@ -559,7 +559,7 @@ class DPTask(object):
             numb_models=self.param_data['numb_models'],
             forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
             backward_files=kwargs.get("backward_files",
-                                    ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
+                                      ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
             outlog=kwargs.get("outlog", 'md_test.log'),
             errlog=kwargs.get("errlog", 'md_test.err')
         )
@@ -578,12 +578,12 @@ class DPTask(object):
 
         rev_keys, rev_mat, num_lmp = parse_cur_job_revmat(cur_job, use_plm=use_plm)
         lmp_templ = cur_job['template']['lmp']
-        lmp_templ = os.path.abspath(lmp_templ)
+        lmp_templ = os.path.abspath(os.path.join(self.path, lmp_templ))
         plm_templ = None
         plm_path_templ = None
         if use_plm:
             plm_templ = cur_job['template']['plm']
-            plm_templ = os.path.abspath(plm_templ)
+            plm_templ = os.path.abspath(os.path.join(self.path, plm_templ))
             if use_plm_path:
                 plm_path_templ = cur_job['template']['plm_path']
                 plm_path_templ = os.path.abspath(plm_path_templ)
