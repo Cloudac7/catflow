@@ -12,13 +12,13 @@ from ase.io import read, write
 from matplotlib import pyplot as plt
 
 from miko.resources.submit import JobFactory
-from miko.utils import canvas_style, LogFactory, \
+from miko.utils import LogFactory
+from miko.utils import canvas_style, \
     parse_cur_job_revmat, find_only_one_key, revise_by_keys, revise_lmp_input_plm
 
 
 class DPTask(object):
-    """
-    DPTask is a class reading a DP-GEN directory, where the DP-GEN task run.
+    """DPTask is a class reading a DP-GEN directory, where the DP-GEN task run.
     """
 
     def __init__(self, path, param_file, machine_file, record_file):
@@ -446,17 +446,26 @@ class DPTask(object):
             numb_models=4,
             **kwargs
     ):
-        """
-        Submit your own md task with the help of DPDispatcher.
+        """Submit your own md task with the help of DPDispatcher.
 
         Parameters
         ----------
-        work_path : The dir contains your md tasks.
-        model_path : The path of models contained for calculation.
-        numb_models : The number of models selected.
-        machine_name : machine name to use
-        resource_name : resource name to use
-        """
+        work_path : str
+            The dir contains your md tasks.
+        model_path : str
+            The path of models contained for calculation.
+        machine_name : str
+            machine name to use
+        resource_name : str
+            resource name to use
+        numb_models : int, optional
+            The number of models selected., by default 4
+
+        Returns
+        -------
+        JobFactory
+            To generate job to be submitted.
+        """        
         mdata = self.machine_data['model_devi'][0]
         folder_list = kwargs.get('folder_list', ["task.*"])
         all_task = []
@@ -507,13 +516,19 @@ class DPTask(object):
 
         Parameters
         ----------
-        machine_name : machine name
-        resource_name : resource name
-        iteration : Select the iteration for training. If not selected,
-            the last iteration where training has been finished would be chosen.
-        params : Necessary params for MD tests.
-        files : Extra files attached with the MD runs. Not necessary.
-        kwargs : Other optional parameters.
+        machine_name : str
+            machine name
+        resource_name : str
+            resource name
+        iteration : str, optional
+            Select the iteration for training. 
+            If not selected, the last iteration where training has been finished would be chosen.
+        params : str, optional
+            Necessary params for MD tests.
+        files : str, optional
+            Extra files attached with the MD runs. Not necessary.
+        kwargs : str, optional
+            Other optional parameters.
 
         Returns
         -------
@@ -702,10 +717,12 @@ class DPTask(object):
 
         Parameters
         ----------
-        resource_name :
-        machine_name :
-        iteration : Select the iteration of data for testing. Default: the latest one.
-        test_model : Select the iteration of model for testing. Default: the latest one.
+        resource_name : str
+        machine_name : str
+        iteration : str, optional
+            Select the iteration of data for testing. Default: the latest one.
+        test_model : str, optional
+            Select the iteration of model for testing. Default: the latest one.
 
         Return
         ------
@@ -761,55 +778,68 @@ class DPTask(object):
             _lmp_data = glob(os.path.join(location, n_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
             os.symlink(_lmp_data, os.path.join(quick_test_dir, 'task.md/conf.lmp'))
         logger.info("Quick tests task submitting.")
-        self.md_single_task(
+        job = self.md_single_task(
             work_path=quick_test_dir,
             model_path=model_dir,
             numb_models=self.param_data['numb_models'],
             forward_files=['conf.lmp', 'input.lammps', 'validate.xyz'],
-            backward_files=['model_devi.out', 'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
+            backward_files=['model_devi.out', 'energy.log', 'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
             outlog='quick_test.log',
             errlog='quick_test.err',
             machine_name=machine_name,
             resource_name=resource_name
         )
+        job.run_submission()
         logger.info("Quick tests finished.")
-        self._fp_error_test_plot(iteration, quick_test_dir, atom_numb, dft_energy, dft_force)
+        quick_test_result_dict = self._fp_error_test_result(quick_test_dir, atom_numb, dft_energy, dft_force)
+        fig = self._fp_error_test_plot(iteration, **quick_test_result_dict)
+        return quick_test_result_dict, fig
 
     @staticmethod
-    def _fp_error_test_plot(iteration, quick_test_dir, atom_numb, dft_energy, dft_force):
-        start, final = 0, 0
-        with open(os.path.join(quick_test_dir, 'task.md/quick_test.log'), 'r') as f:
-            for i, line in enumerate(f):
-                key_line = line.strip()
-                if 'Step ' in key_line:
-                    start = i + 1
-                elif 'Loop time of' in key_line:
-                    final = i
-        with open(os.path.join(quick_test_dir, 'task.md/quick_test.log'), 'r') as f:
-            lines = f.readlines()[start:final]
-        md_energy = np.array([p.split()[1] for p in lines]).astype('float')
+    def _fp_error_test_result(quick_test_dir, atom_numb, dft_energy, dft_force):
+        md_energy = np.loadtxt(os.path.join(quick_test_dir, 'task.md/energy.log'), usecols=3)
         _md_stc = read(os.path.join(quick_test_dir, 'task.md/dump.lammpstrj'), index=':', format='lammps-dump-text')
         md_force = np.array([ss.get_forces() for ss in _md_stc])
-        energy_rmse = np.sqrt(np.mean((md_energy - dft_energy) ** 2)) / atom_numb
+        dft_energy_per_atom = dft_energy / atom_numb
+        md_energy_per_atom = md_energy / atom_numb
+        energy_per_atom_rmse = np.sqrt(np.mean((md_energy - dft_energy) ** 2)) / atom_numb
         md_force_r = np.ravel(md_force)
         dft_force_r = np.ravel(dft_force)
         force_rmse = np.sqrt(np.mean((md_force_r - dft_force_r) ** 2))
-        fig, axs = plt.subplot(1, 2)
+        result_dict = {
+            "dft_energy_per_atom": dft_energy_per_atom,
+            "md_energy_per_atom": md_energy_per_atom,
+            "energy_per_atom_rmse": energy_per_atom_rmse,
+            "dft_force": dft_force_r,
+            "md_force": md_force_r,
+            "force_rmse": force_rmse
+        }
+        return result_dict
+
+    @staticmethod
+    def _fp_error_test_plot(iteration, dft_energy_per_atom, md_energy_per_atom, energy_per_atom_rmse, dft_force, md_force, force_rmse):
+        from matplotlib.offsetbox import AnchoredText
+
+        fig, axs = plt.subplots(1, 2)
         # Plot of energy error
-        axs[0].scatter(dft_energy / atom_numb, md_energy / atom_numb, s=5, label=f'Iter. {iteration}')
-        _x = np.linspace(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05, 10)
+        axs[0].scatter(dft_energy_per_atom, md_energy_per_atom, s=5, label=f'Iter. {iteration}')
+        _x = np.linspace(np.min(dft_energy_per_atom) - 0.05, np.max(dft_energy_per_atom) + 0.05, 10)
         axs[0].plot(_x, _x, 'r--')
-        axs[0].text(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05,
-                    f'RMSE={energy_rmse} (eV/atom)', fontsize=14)
+
+        box = AnchoredText(
+            s=f'RMSE={energy_per_atom_rmse} (eV/atom)', prop=dict(fontsize=14),
+            loc="upper left", frameon=False)
+        box.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+        axs[0].add_artist(box)
         axs[0].set_title(f'Energy error', fontsize=14)
         axs[0].set_xlabel(r'$e_{DFT}$ (eV/atom)', fontsize=14)
         axs[0].set_ylabel(r'$e_{DPMD}$ (eV/atom)', fontsize=14)
         axs[0].set_aspect('equal')
         # Plot of force error
-        axs[1].scatter(md_force_r, dft_force_r, s=5, label=f'Iter. {iteration}')
-        _y = np.linspace(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, 10)
+        axs[1].scatter(md_force, dft_force, s=5, label=f'Iter. {iteration}')
+        _y = np.linspace(np.min(dft_force) - 0.05, np.max(dft_force) + 0.05, 10)
         axs[1].plot(_y, _y, 'r--')
-        axs[1].text(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
+        axs[1].text(np.min(dft_force) - 0.05, np.max(dft_force) + 0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
         axs[1].set_title(f'Force error', fontsize=14)
         axs[1].set_xlabel(r'$f_{DFT}$ (eV/Å)', fontsize=14)
         axs[1].set_ylabel(r'$f_{DPMD}$ (eV/Å)', fontsize=14)
@@ -836,13 +866,23 @@ class DPTask(object):
         for kk in model_names:
             input_file += f"../{kk} "
         input_file += "out_freq 1 out_file model_devi.out\n"
-        input_file += "pair_coeff\n"
-        input_file += "velocity        all create 330.0 23456789\n"
-        input_file += "fix             1 all nvt temp 330.0 330.0 0.05\n"
-        input_file += "timestep        0.0005\n"
-        input_file += "thermo_style    custom step pe ke etotal temp press vol\n"
-        input_file += "thermo          1\n"
-        input_file += "dump            1 all custom 1 dump.lammpstrj id type x y z fx fy fz\n"
+        
+        input_file += \
+            """
+            pair_coeff
+            velocity        all create 330.0 23456789
+            fix             1 all nvt temp 330.0 330.0 0.05
+            timestep        0.0005
+            thermo_style    custom step pe ke etotal temp press vol
+            thermo          1
+            dump            1 all custom 1 dump.lammpstrj id type x y z fx fy fz
+            variable temp equal temp
+            variable etotal equal etotal
+            variable pe equal pe
+            variable ke equal ke
+            variable step equal step
+            fix sys_info all print 1 "${step} ${temp} ${etotal} ${pe} ${ke}" title "#step temp etotal pe ke" file energy.log
+            """
         input_file += "rerun validate.xyz dump x y z box no format xyz\n"
         with open(os.path.join(work_path, 'task.md/input.lammps'), 'w') as f:
             f.write(input_file)
