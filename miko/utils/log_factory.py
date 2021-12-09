@@ -27,3 +27,6 @@ class LogFactory(object):
 
     def get_log(self):
         return self.logger
+
+
+logger = LogFactory(__name__).get_log()

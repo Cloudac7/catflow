@@ -11,6 +11,7 @@ import shutil
 from ase.io import read, write
 from matplotlib import pyplot as plt
 
+from miko.utils import logger
 from miko.resources.submit import JobFactory
 from miko.utils import LogFactory
 from miko.utils import canvas_style, \
@@ -222,7 +223,7 @@ class DPTask(object):
                     t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
                     dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
-                    print(f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
+                    logger.info(f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
                     sns.scatterplot(
                         x=dupt,
                         y=flatmdf,
@@ -281,8 +282,8 @@ class DPTask(object):
                 fig_right.set_yticklabels([])
             return plt
         except Exception as e:
-            print(e)
-            print('Please choose proper `group_by` with in dict.')
+            logger.exception(e)
+            logger.error('Please choose proper `group_by` with in dict.')
             return None
 
     def md_multi_iter(
@@ -512,7 +513,7 @@ class DPTask(object):
             files=None,
             **kwargs
     ):
-        """Run MD tests from trained models.
+        """Run lammps MD tests from trained models.
 
         Parameters
         ----------
@@ -537,7 +538,7 @@ class DPTask(object):
         # TODO: support MD runs for structures in different systems.
         logger = LogFactory(__name__).get_log()
         location = os.path.abspath(self.path)
-        logger.info(f"Task path:{location}")
+        logger.info(f"Task path: {location}")
 
         if iteration is None:
             if self.step_code < 2:
@@ -547,6 +548,9 @@ class DPTask(object):
         n_iter = 'iter.' + str(iteration).zfill(6)
         model_path = os.path.join(location, n_iter, '00.train')
         test_path = os.path.join(location, n_iter, '04.model_test')
+
+        if params is None:
+            params = self.param_data
 
         logger.info("Preparing MD input")
         self._train_generate_md_test(params=params, work_path=test_path, model_path=model_path)
