@@ -519,6 +519,7 @@ class DPTask(object):
         -------
 
         """
+        # TODO: support MD runs for structures in different systems.
         logger = LogFactory(__name__).get_log()
         location = os.path.abspath(self.path)
         logger.info(f"Task path:{location}")
@@ -697,18 +698,28 @@ class DPTask(object):
             iteration=None,
             test_model=None
     ):
+        """Test your model quickly with the data generated from tesla.
+
+        Parameters
+        ----------
+        resource_name :
+        machine_name :
+        iteration : Select the iteration of data for testing. Default: the latest one.
+        test_model : Select the iteration of model for testing. Default: the latest one.
+
+        Return
+        ------
+
         """
-        Test your model quickly with the data generated from tesla.
-        :param iteration: Select the iteration of data for testing. Default: the latest one.
-        :param test_model: Select the iteration of model for testing. Default: the latest one.
-        :return:
-        """
+        logger = LogFactory(__name__).get_log()
+
         location = self.path
         if iteration is None:
             if self.step_code < 7:
                 iteration = self.iteration - 1
             else:
                 iteration = self.iteration
+        logger.info("Preparing structures from FP runs.")
         n_iter = 'iter.' + str(iteration).zfill(6)
         quick_test_dir = os.path.join(location, n_iter, '03.quick_test')
         os.makedirs(os.path.join(quick_test_dir, 'task.md'), exist_ok=True)
@@ -748,7 +759,7 @@ class DPTask(object):
         if not os.path.exists(os.path.join(quick_test_dir, 'task.md/conf.lmp')):
             _lmp_data = glob(os.path.join(location, n_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
             os.symlink(_lmp_data, os.path.join(quick_test_dir, 'task.md/conf.lmp'))
-        print("Quick tests task submitting...")
+        logger.info("Quick tests task submitting.")
         self.md_single_task(
             work_path=quick_test_dir,
             model_path=model_dir,
@@ -760,7 +771,11 @@ class DPTask(object):
             machine_name=machine_name,
             resource_name=resource_name
         )
-        print("Finished")
+        logger.info("Quick tests finished.")
+        self._fp_error_test_plot(iteration, quick_test_dir, atom_numb, dft_energy, dft_force)
+
+    @staticmethod
+    def _fp_error_test_plot(iteration, quick_test_dir, atom_numb, dft_energy, dft_force):
         start, final = 0, 0
         with open(os.path.join(quick_test_dir, 'task.md/quick_test.log'), 'r') as f:
             for i, line in enumerate(f):
@@ -778,29 +793,26 @@ class DPTask(object):
         md_force_r = np.ravel(md_force)
         dft_force_r = np.ravel(dft_force)
         force_rmse = np.sqrt(np.mean((md_force_r - dft_force_r) ** 2))
-        fig = plt.figure(figsize=[16, 8], dpi=96)
+        fig, axs = plt.subplot(1, 2)
         # Plot of energy error
-        plt.subplot(1, 2, 1)
-        plt.scatter(dft_energy / atom_numb, md_energy / atom_numb, s=5, label=f'Iter. {iteration}')
+        axs[0].scatter(dft_energy / atom_numb, md_energy / atom_numb, s=5, label=f'Iter. {iteration}')
         _x = np.linspace(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05, 10)
-        plt.plot(_x, _x, 'r--')
-        plt.text(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05,
-                 f'RMSE={energy_rmse} (eV/atom)',
-                 fontsize=14)
-        plt.title(f'Energy error', fontsize=14)
-        plt.xlabel(r'$e_{DFT}$ (eV/atom)', fontsize=14)
-        plt.ylabel(r'$e_{DPMD}$ (eV/atom)', fontsize=14)
+        axs[0].plot(_x, _x, 'r--')
+        axs[0].text(np.min(dft_energy / atom_numb) - 0.05, np.max(dft_energy / atom_numb) + 0.05,
+                    f'RMSE={energy_rmse} (eV/atom)', fontsize=14)
+        axs[0].set_title(f'Energy error', fontsize=14)
+        axs[0].set_xlabel(r'$e_{DFT}$ (eV/atom)', fontsize=14)
+        axs[0].set_ylabel(r'$e_{DPMD}$ (eV/atom)', fontsize=14)
+        axs[0].set_aspect('equal')
         # Plot of force error
-        plt.subplot(1, 2, 2)
-        plt.scatter(md_force_r, dft_force_r, s=5, label=f'Iter. {iteration}')
+        axs[1].scatter(md_force_r, dft_force_r, s=5, label=f'Iter. {iteration}')
         _y = np.linspace(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, 10)
-        plt.plot(_y, _y, 'r--')
-        plt.text(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
-        plt.title(f'Force error', fontsize=14)
-        plt.xlabel(r'$f_{DFT}$ (eV/Å)', fontsize=14)
-        plt.ylabel(r'$f_{DPMD}$ (eV/Å)', fontsize=14)
-        f, ax = plt.subplots()
-        ax.set_aspect('equal')
+        axs[1].plot(_y, _y, 'r--')
+        axs[1].text(np.min(dft_force_r) - 0.05, np.max(dft_force_r) + 0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
+        axs[1].set_title(f'Force error', fontsize=14)
+        axs[1].set_xlabel(r'$f_{DFT}$ (eV/Å)', fontsize=14)
+        axs[1].set_ylabel(r'$f_{DPMD}$ (eV/Å)', fontsize=14)
+        axs[1].set_aspect('equal')
         return fig
 
     def _fp_generate_error_test(self, work_path, model_dir):
