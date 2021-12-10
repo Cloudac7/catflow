@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 from miko.utils import logger
 from miko.resources.submit import JobFactory
 from miko.utils import LogFactory
-from miko.utils import canvas_style, \
-    parse_cur_job_revmat, find_only_one_key, revise_by_keys, revise_lmp_input_plm
+from miko.utils import canvas_style
+from miko.utils.lammps import *
 
 
 class DPTask(object):
@@ -43,7 +43,8 @@ class DPTask(object):
             else:
                 iteration = self.iteration
         n_iter = 'iter.' + str(iteration).zfill(6)
-        lcurve_path = os.path.join(self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')
+        lcurve_path = os.path.join(
+            self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')
 
         step = np.loadtxt(lcurve_path, usecols=0)
         if test:
@@ -62,9 +63,12 @@ class DPTask(object):
         # energy figure
         axs[0].scatter(step[10:], energy_train[10:], alpha=0.4, label='train')
         if test:
-            axs[0].scatter(step[10:], energy_test[10:], alpha=0.4, label='tests')
-        axs[0].hlines(0.005, step[0], step[-1], linestyles='--', colors='red', label='5 meV')
-        axs[0].hlines(0.01, step[0], step[-1], linestyles='--', colors='blue', label='10 meV')
+            axs[0].scatter(step[10:], energy_test[10:],
+                           alpha=0.4, label='tests')
+        axs[0].hlines(0.005, step[0], step[-1], linestyles='--',
+                      colors='red', label='5 meV')
+        axs[0].hlines(0.01, step[0], step[-1], linestyles='--',
+                      colors='blue', label='10 meV')
         axs[0].hlines(0.05, step[0], step[-1], linestyles='--', label='50 meV')
         axs[0].set_xlabel('Number of training batch')
         axs[0].set_ylabel('$E$(eV)')
@@ -73,10 +77,14 @@ class DPTask(object):
         # force figure
         axs[1].scatter(step[10:], force_train[10:], alpha=0.4, label='train')
         if test:
-            axs[1].scatter(step[10:], force_test[10:], alpha=0.4, label='tests')
-        axs[1].hlines(0.05, step[0], step[-1], linestyles='--', colors='red', label='50 meV/Å')
-        axs[1].hlines(0.1, step[0], step[-1], linestyles='--', colors='blue', label='100 meV/Å')
-        axs[1].hlines(0.2, step[0], step[-1], linestyles='--', label='200 meV/Å')
+            axs[1].scatter(step[10:], force_test[10:],
+                           alpha=0.4, label='tests')
+        axs[1].hlines(0.05, step[0], step[-1], linestyles='--',
+                      colors='red', label='50 meV/Å')
+        axs[1].hlines(0.1, step[0], step[-1], linestyles='--',
+                      colors='blue', label='100 meV/Å')
+        axs[1].hlines(0.2, step[0], step[-1],
+                      linestyles='--', label='200 meV/Å')
         axs[1].set_xlabel('Number of training batch')
         axs[1].set_ylabel('$F$(eV/Å)')
         axs[1].legend()
@@ -113,7 +121,8 @@ class DPTask(object):
                     lines = f.readlines()[start:final:step]
                 else:
                     lines = f.readlines()[start:final]
-            pot_energy = np.array([p.split()[2] for p in lines if 'WARNING' not in p]).astype('float')
+            pot_energy = np.array(
+                [p.split()[2] for p in lines if 'WARNING' not in p]).astype('float')
             try:
                 with open(f'{task}/job.json', 'r') as f:
                     job_dict = json.load(f)
@@ -147,10 +156,12 @@ class DPTask(object):
         df = self.md_set_pd(iteration=iteration)
         save_path = self.path
         os.makedirs(name=f'{save_path}/data_pkl', exist_ok=True)
-        df.to_pickle(f'{save_path}/data_pkl/data_{str(iteration).zfill(2)}.pkl')
+        df.to_pickle(
+            f'{save_path}/data_pkl/data_{str(iteration).zfill(2)}.pkl')
 
     def md_set_load_pkl(self, iteration):
-        pkl_path = os.path.join(self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
+        pkl_path = os.path.join(
+            self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
         df = pd.read_pickle(pkl_path)
         return df
 
@@ -187,7 +198,8 @@ class DPTask(object):
         :return: A plot for different desired values.
         """
         flatmdf = None
-        location = os.path.join(self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
+        location = os.path.join(
+            self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
         if os.path.exists(location):
             df = self.md_set_load_pkl(iteration=iteration)
         else:
@@ -203,10 +215,12 @@ class DPTask(object):
                 num_item = 1
                 plot_items = [int(plot_items)]
             else:
-                raise TypeError("The value of `group_by` dependence should exist.")
+                raise TypeError(
+                    "The value of `group_by` dependence should exist.")
             label_unit = kwargs.get('label_unit', None)
             canvas_style(**kwargs)
-            fig = plt.figure(figsize=[16, 6 * num_item], constrained_layout=True)
+            fig = plt.figure(figsize=[16, 6 * num_item],
+                             constrained_layout=True)
             gs = fig.add_gridspec(num_item, 3)
 
             for i, item in enumerate(plot_items):
@@ -217,13 +231,17 @@ class DPTask(object):
                 partdata = df[df[group_by] == item]
                 # left part
                 fig_left = fig.add_subplot(gs[i, :-1])
-                parts = partdata[partdata['iter'] == 'iter.' + str(iteration).zfill(6)]
+                parts = partdata[partdata['iter'] ==
+                                 'iter.' + str(iteration).zfill(6)]
                 for j, [item, part] in enumerate(parts.groupby(group_by)):
-                    mdf = np.array(list(part['max_devi_f']))[:, ::kwargs.get('step', None)]
+                    mdf = np.array(list(part['max_devi_f']))[
+                        :, ::kwargs.get('step', None)]
                     t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
-                    dupt = np.tile(np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
+                    dupt = np.tile(
+                        np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
-                    logger.info(f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
+                    logger.info(
+                        f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
                     sns.scatterplot(
                         x=dupt,
                         y=flatmdf,
@@ -319,7 +337,8 @@ class DPTask(object):
         """
         frames = []
         for it in iterations:
-            location = os.path.join(self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
+            location = os.path.join(
+                self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
             if os.path.exists(location):
                 frames.append(self.md_set_load_pkl(iteration=it))
             else:
@@ -352,7 +371,8 @@ class DPTask(object):
                     t_freq = np.average(part['t_freq'])
                     dupt = np.tile(range(mdf.shape[1]) * t_freq, mdf.shape[0])
                     flatmdf = np.ravel(mdf)
-                    plt.scatter(dupt, flatmdf, s=80, alpha=0.3, label=f'iter {int(k)}', marker='o')
+                    plt.scatter(dupt, flatmdf, s=80, alpha=0.3,
+                                label=f'iter {int(k)}', marker='o')
             if x_higher_limit is None:
                 x_higher_limit = ax.get_xlim()[1]
             plt.xlim(x_lower_limit, x_higher_limit)
@@ -388,7 +408,8 @@ class DPTask(object):
     ):
         frames = []
         for it in iterations:
-            location = os.path.join(self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
+            location = os.path.join(
+                self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
             if os.path.exists(location):
                 frames.append(self.md_set_load_pkl(iteration=it))
             else:
@@ -415,12 +436,14 @@ class DPTask(object):
                     if select_value is not None:
                         df = df[df[select] == select_value]
                 part_data = df[df[group_by] == item]
-                parts = part_data[part_data['iter'] == 'iter.' + str(k).zfill(6)]
+                parts = part_data[part_data['iter']
+                                  == 'iter.' + str(k).zfill(6)]
                 for j, [temp, part] in enumerate(parts.groupby(group_by)):
                     mdf = np.array(list(part['max_devi_f']))
                     t_freq = np.average(part['t_freq'])
                     flatmdf = np.ravel(mdf)
-                    plt.hist(flatmdf, bins=100, density=True, label=f'iter {int(k)}', alpha=0.5)
+                    plt.hist(flatmdf, bins=100, density=True,
+                             label=f'iter {int(k)}', alpha=0.5)
             if x_higher_limit is None:
                 x_higher_limit = ax.get_xlim()[1]
             ax.set_xlim(x_lower_limit, x_higher_limit)
@@ -466,7 +489,7 @@ class DPTask(object):
         -------
         JobFactory
             To generate job to be submitted.
-        """        
+        """
         mdata = self.machine_data['model_devi'][0]
         folder_list = kwargs.get('folder_list', ["task.*"])
         all_task = []
@@ -479,12 +502,16 @@ class DPTask(object):
         run_tasks_ = all_task
         run_tasks = [os.path.basename(ii) for ii in run_tasks_]
 
-        model_names = kwargs.get('model_names', [f'graph.{str(i).zfill(3)}.pb' for i in range(numb_models)])
+        model_names = kwargs.get(
+            'model_names', [f'graph.{str(i).zfill(3)}.pb' for i in range(numb_models)])
         for ii in model_names:
             if not os.path.exists(os.path.join(work_path, ii)):
-                os.symlink(os.path.join(model_path, ii), os.path.join(work_path, ii))
-        forward_files = kwargs.get('forward_files', ['conf.lmp', 'input.lammps', 'traj'])
-        backward_files = kwargs.get('backward_files', ['model_devi.out', 'model_devi.log', 'traj'])
+                os.symlink(os.path.join(model_path, ii),
+                           os.path.join(work_path, ii))
+        forward_files = kwargs.get(
+            'forward_files', ['conf.lmp', 'input.lammps', 'traj'])
+        backward_files = kwargs.get(
+            'backward_files', ['model_devi.out', 'model_devi.log', 'traj'])
 
         task_dict_list = [
             {
@@ -535,7 +562,6 @@ class DPTask(object):
         -------
 
         """
-        # TODO: support MD runs for structures in different systems.
         logger = LogFactory(__name__).get_log()
         location = os.path.abspath(self.path)
         logger.info(f"Task path: {location}")
@@ -553,31 +579,41 @@ class DPTask(object):
             params = self.param_data
 
         logger.info("Preparing MD input")
-        self._train_generate_md_test(params=params, work_path=test_path, model_path=model_path)
+        template_base = kwargs.get('template_base', None)
+        self._train_generate_md_test(
+            params=params,
+            work_path=test_path,
+            model_path=model_path,
+            template_base=template_base
+        )
+        logger.info("Preparing initial structures")
+
         if self.step_code < 6:
             md_iter = self.iteration - 1
         else:
             md_iter = self.iteration
         md_iter = 'iter.' + str(md_iter).zfill(6)
-        for p in glob(os.path.join(test_path, 'task.*')):
-            if not os.path.exists(os.path.join(p, 'conf.lmp')):
-                _lmp_data = glob(os.path.join(location, md_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
-                os.symlink(_lmp_data, os.path.join(p, 'conf.lmp'))
-            if files is not None:
-                for file in files:
-                    _file_abs = os.path.abspath(file)
-                    _file_base = os.path.basename(file)
-                    if not os.path.exists(os.path.join(p, _file_base)):
-                        os.symlink(_file_abs, os.path.join(p, _file_base))
+        # for p in glob(os.path.join(test_path, 'task.*')):
+        #     if not os.path.exists(os.path.join(p, 'conf.lmp')):
+        #         _lmp_data = glob(os.path.join(
+        #             location, md_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
+        #         os.symlink(_lmp_data, os.path.join(p, 'conf.lmp'))
+        #     if files is not None:
+        #         for file in files:
+        #             _file_abs = os.path.abspath(file)
+        #             _file_base = os.path.basename(file)
+        #             if not os.path.exists(os.path.join(p, _file_base)):
+        #                 os.symlink(_file_abs, os.path.join(p, _file_base))
+        
         logger.info("Task submitting")
-
         job = self.md_single_task(
             work_path=test_path,
             model_path=model_path,
             machine_name=machine_name,
             resource_name=resource_name,
             numb_models=self.param_data['numb_models'],
-            forward_files=kwargs.get("forward_files", ['conf.lmp', 'input.lammps']),
+            forward_files=kwargs.get(
+                "forward_files", ['conf.lmp', 'input.lammps']),
             backward_files=kwargs.get("backward_files",
                                       ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
             outlog=kwargs.get("outlog", 'md_test.log'),
@@ -586,73 +622,73 @@ class DPTask(object):
         job.run_submission()
         logger.info("MD Test finished.")
 
-    def _train_generate_md_test(self, params, work_path, model_path):
-        if self.step_code < 6:
-            iteration = self.iteration - 1
-        else:
-            iteration = self.iteration
-        cur_job = params['model_devi_jobs'][iteration]
+    def _train_generate_md_test(self, params, work_path, model_path, template_base=None):
+        cur_job = params['md_test']
         use_plm = params.get('model_devi_plumed', False)
-        use_plm_path = params.get('model_devi_plumed_path', False)
         trj_freq = cur_job.get('traj_freq', False)
 
-        rev_keys, rev_mat, num_lmp = parse_cur_job_revmat(cur_job, use_plm=use_plm)
+        if template_base is None:
+            template_base = self.path
+
         lmp_templ = cur_job['template']['lmp']
-        lmp_templ = os.path.abspath(os.path.join(self.path, lmp_templ))
+        lmp_templ = os.path.abspath(os.path.join(template_base, lmp_templ))
         plm_templ = None
-        plm_path_templ = None
+
         if use_plm:
             plm_templ = cur_job['template']['plm']
-            plm_templ = os.path.abspath(os.path.join(self.path, plm_templ))
-            if use_plm_path:
-                plm_path_templ = cur_job['template']['plm_path']
-                plm_path_templ = os.path.abspath(plm_path_templ)
-        task_counter = 0
-        for ii in range(len(rev_mat)):
-            rev_item = rev_mat[ii]
-            task_name = "task.%06d" % task_counter
-            task_path = os.path.join(work_path, task_name)
-            # create task path
-            os.makedirs(task_path, exist_ok=True)
-            # chdir to task path
-            os.chdir(task_path)
-            shutil.copyfile(lmp_templ, 'input.lammps')
-            model_list = glob(os.path.join(model_path, 'graph*pb'))
-            model_list.sort()
-            model_names = [os.path.basename(i) for i in model_list]
-            task_model_list = []
-            for jj in model_names:
-                task_model_list.append(os.path.join('..', os.path.basename(jj)))
-            # revise input of lammps
-            with open('input.lammps') as fp:
-                lmp_lines = fp.readlines()
-            _dpmd_idx = find_only_one_key(lmp_lines, ['pair_style', 'deepmd'])
-            graph_list = ' '.join(task_model_list)
-            lmp_lines[_dpmd_idx] = "pair_style      deepmd %s out_freq %d out_file model_devi.out\n" % (
-                graph_list, trj_freq)
-            _dump_idx = find_only_one_key(lmp_lines, ['dump', 'dpgen_dump'])
-            lmp_lines[_dump_idx] = "dump            dpgen_dump all custom %d dump.lammpstrj id type x y z\n" % trj_freq
-            lmp_lines = revise_by_keys(lmp_lines, rev_keys[:num_lmp], rev_item[:num_lmp])
-            # revise input of plumed
-            if use_plm:
-                lmp_lines = revise_lmp_input_plm(lmp_lines, 'input.plumed')
-                shutil.copyfile(plm_templ, 'input.plumed')
-                with open('input.plumed') as fp:
-                    plm_lines = fp.readlines()
-                plm_lines = revise_by_keys(plm_lines, rev_keys[num_lmp:], rev_item[num_lmp:])
-                with open('input.plumed', 'w') as fp:
-                    fp.write(''.join(plm_lines))
-                if use_plm_path:
-                    shutil.copyfile(plm_path_templ, 'plmpath.pdb')
-            # dump input of lammps
-            with open('input.lammps', 'w') as fp:
-                fp.write(''.join(lmp_lines))
-            with open('job.json', 'w') as fp:
-                job = {}
-                for mm, nn in zip(rev_keys, rev_item):
-                    job[mm] = nn
-                json.dump(job, fp, indent=4)
-            task_counter += 1
+            plm_templ = os.path.abspath(os.path.join(template_base, plm_templ))
+
+        sys_idxs = cur_job.get('sys_idx')
+        for sys_idx in sys_idxs:
+            sys_init_stc = convert_init_structures(params, sys_idx)
+            templ, rev_mat = parse_template(cur_job, sys_idx)
+            for task_counter, task in enumerate(rev_mat):
+                task_name = "task.%03d.%06d" % (sys_idx, task_counter)
+                task_path = os.path.join(work_path, task_name)
+                # create task path
+                os.makedirs(task_path, exist_ok=True)
+                # chdir to task path
+                os.chdir(task_path)
+                shutil.copyfile(lmp_templ, 'input.lammps')
+                model_list = glob(os.path.join(model_path, 'graph*pb'))
+                model_list.sort()
+                model_names = [os.path.basename(i) for i in model_list]
+                task_model_list = []
+                for jj in model_names:
+                    task_model_list.append(
+                        os.path.join('..', os.path.basename(jj)))
+
+                # revise input of lammps
+                with open('input.lammps') as fp:
+                    lmp_lines = fp.readlines()
+                _dpmd_idx = check_keywords(lmp_lines, ['pair_style', 'deepmd'])
+                graph_list = ' '.join(task_model_list)
+                lmp_lines[_dpmd_idx] = f"pair_style      deepmd {graph_list} out_freq {trj_freq} out_file model_devi.out\n"
+                _dump_idx = check_keywords(lmp_lines, ['dump', 'dpgen_dump'])
+                lmp_lines[_dump_idx] = f"dump            dpgen_dump all custom {trj_freq} dump.lammpstrj id type x y z\n"
+                lmp_lines = substitute_keywords(lmp_lines, task)
+
+                # revise input of plumed
+                if use_plm:
+                    _plm_idx = check_keywords(lmp_lines, ['fix', 'dpgen_plm'])
+                    lmp_lines[_plm_idx] = "fix            dpgen_plm all plumed plumedfile input.plumed outfile output.plumed\n"
+                    shutil.copyfile(plm_templ, 'input.plumed')
+                    with open('input.plumed') as fp:
+                        plm_lines = fp.readlines()
+                    plm_lines = substitute_keywords(plm_lines, task)
+                    with open('input.plumed', 'w') as fp:
+                        fp.write(''.join(plm_lines))
+
+                # dump input of lammps
+                with open('input.lammps', 'w') as fp:
+                    fp.write(''.join(lmp_lines))
+                with open('job.json', 'w') as fp:
+                    job = rev_mat
+                    json.dump(job, fp, indent=4)
+                
+                # dump init structure 
+                    write('conf.lmp', sys_init_stc, format='lammps-data')
+
 
     def fp_group_distance(self, iteration, atom_group):
         """
@@ -663,16 +699,19 @@ class DPTask(object):
         """
         dis_loc = []
         dis = []
-        place = os.path.join(self.path, 'iter.' + str(iteration).zfill(6), '02.fp')
+        place = os.path.join(self.path, 'iter.' +
+                             str(iteration).zfill(6), '02.fp')
         _stc_name = self._fp_style()
         for i in os.listdir(place):
             if os.path.exists(os.path.join(place, i, _stc_name)):
                 dis_loc.append(i)
                 stc = read(os.path.join(place, i, _stc_name))
-                dis.append(stc.get_distance(atom_group[0], atom_group[1], mic=True))
+                dis.append(stc.get_distance(
+                    atom_group[0], atom_group[1], mic=True))
         diss = np.array(dis)
         plt.figure()
-        plt.hist(diss, bins=np.arange(diss.min(), diss.max(), 0.01), label=f'iter {int(iteration)}', density=True)
+        plt.hist(diss, bins=np.arange(diss.min(), diss.max(), 0.01),
+                 label=f'iter {int(iteration)}', density=True)
         plt.legend(fontsize=16)
         plt.xlabel("d(Å)", fontsize=16)
         plt.xticks(np.arange(diss.min(), diss.max(), step=1.0), fontsize=16)
@@ -689,25 +728,31 @@ class DPTask(object):
         """
         dis = []
         dis_loc = []
-        place = os.path.join(self.path, 'iter.' + str(iteration).zfill(6), '02.fp')
+        place = os.path.join(self.path, 'iter.' +
+                             str(iteration).zfill(6), '02.fp')
         _output_name = self._fp_style()
         for i in os.listdir(place):
             if os.path.exists(os.path.join(place, i, _output_name)):
                 dis_loc.append(i)
                 stc = read(os.path.join(place, i, _output_name))
                 symbol_list = stc.get_chemical_symbols()
-                ele_list_1 = [i for i in range(len(symbol_list)) if symbol_list[i] == ele_group[0]]
-                ele_list_2 = [i for i in range(len(symbol_list)) if symbol_list[i] == ele_group[0]]
-                min_dis = min([stc.get_distance(ii, jj, mic=True) for ii in ele_list_1 for jj in ele_list_2])
+                ele_list_1 = [i for i in range(
+                    len(symbol_list)) if symbol_list[i] == ele_group[0]]
+                ele_list_2 = [i for i in range(
+                    len(symbol_list)) if symbol_list[i] == ele_group[0]]
+                min_dis = min([stc.get_distance(ii, jj, mic=True)
+                              for ii in ele_list_1 for jj in ele_list_2])
                 dis.append(min_dis)
         diss = np.array(dis)
         plt.figure(figsize=[16, 8], dpi=144)
-        plt.hist(diss, bins=np.arange(1, 6, 0.01), label=f'iter {int(iteration)}')
+        plt.hist(diss, bins=np.arange(1, 6, 0.01),
+                 label=f'iter {int(iteration)}')
         plt.legend(fontsize=16)
         plt.xlabel("d(Å)", fontsize=16)
         plt.xticks(np.arange(0, 6, step=0.5), fontsize=16)
         plt.yticks(fontsize=16)
-        plt.title(f"Distibution of {ele_group[0]}-{ele_group[1]} distance", fontsize=16)
+        plt.title(
+            f"Distibution of {ele_group[0]}-{ele_group[1]} distance", fontsize=16)
         return plt
 
     def fp_error_test(
@@ -753,7 +798,8 @@ class DPTask(object):
         stcs = []
         for idx, oo in enumerate(task_list):
             logger.debug(f"Task: {oo}")
-            sys = dpdata.LabeledSystem(os.path.join(oo, _dpgen_output), fmt=_dpdata_format)
+            sys = dpdata.LabeledSystem(os.path.join(
+                oo, _dpgen_output), fmt=_dpdata_format)
             stc = read(os.path.join(oo, _stc_file))
             if len(sys) > 0:
                 sys.check_type_map(type_map=self.param_data['type_map'])
@@ -766,7 +812,8 @@ class DPTask(object):
                     stcs.append(stc)
                 except (RuntimeError, TypeError, NameError):
                     pass
-        write(os.path.join(quick_test_dir, 'task.md/validate.xyz'), stcs, format='extxyz')
+        write(os.path.join(quick_test_dir, 'task.md/validate.xyz'),
+              stcs, format='extxyz')
         atom_numb = np.sum(all_sys['atom_numbs'])
         dft_energy = all_sys['energies']
         dft_force = all_sys['forces']
@@ -777,17 +824,21 @@ class DPTask(object):
                 test_model = self.iteration
         model_iter = 'iter.' + str(test_model).zfill(6)
         model_dir = os.path.join(location, model_iter, '00.train')
-        self._fp_generate_error_test(work_path=quick_test_dir, model_dir=model_dir)
+        self._fp_generate_error_test(
+            work_path=quick_test_dir, model_dir=model_dir)
         if not os.path.exists(os.path.join(quick_test_dir, 'task.md/conf.lmp')):
-            _lmp_data = glob(os.path.join(location, n_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
-            os.symlink(_lmp_data, os.path.join(quick_test_dir, 'task.md/conf.lmp'))
+            _lmp_data = glob(os.path.join(location, n_iter,
+                             '01.model_devi', 'task*', 'conf.lmp'))[0]
+            os.symlink(_lmp_data, os.path.join(
+                quick_test_dir, 'task.md/conf.lmp'))
         logger.info("Quick tests task submitting.")
         job = self.md_single_task(
             work_path=quick_test_dir,
             model_path=model_dir,
             numb_models=self.param_data['numb_models'],
             forward_files=['conf.lmp', 'input.lammps', 'validate.xyz'],
-            backward_files=['model_devi.out', 'energy.log', 'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
+            backward_files=['model_devi.out', 'energy.log',
+                            'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
             outlog='quick_test.log',
             errlog='quick_test.err',
             machine_name=machine_name,
@@ -795,18 +846,22 @@ class DPTask(object):
         )
         job.run_submission()
         logger.info("Quick tests finished.")
-        quick_test_result_dict = self._fp_error_test_result(quick_test_dir, atom_numb, dft_energy, dft_force)
+        quick_test_result_dict = self._fp_error_test_result(
+            quick_test_dir, atom_numb, dft_energy, dft_force)
         fig = self._fp_error_test_plot(iteration, **quick_test_result_dict)
         return quick_test_result_dict, fig
 
     @staticmethod
     def _fp_error_test_result(quick_test_dir, atom_numb, dft_energy, dft_force):
-        md_energy = np.loadtxt(os.path.join(quick_test_dir, 'task.md/energy.log'), usecols=3)
-        _md_stc = read(os.path.join(quick_test_dir, 'task.md/dump.lammpstrj'), index=':', format='lammps-dump-text')
+        md_energy = np.loadtxt(os.path.join(
+            quick_test_dir, 'task.md/energy.log'), usecols=3)
+        _md_stc = read(os.path.join(
+            quick_test_dir, 'task.md/dump.lammpstrj'), index=':', format='lammps-dump-text')
         md_force = np.array([ss.get_forces() for ss in _md_stc])
         dft_energy_per_atom = dft_energy / atom_numb
         md_energy_per_atom = md_energy / atom_numb
-        energy_per_atom_rmse = np.sqrt(np.mean((md_energy - dft_energy) ** 2)) / atom_numb
+        energy_per_atom_rmse = np.sqrt(
+            np.mean((md_energy - dft_energy) ** 2)) / atom_numb
         md_force_r = np.ravel(md_force)
         dft_force_r = np.ravel(dft_force)
         force_rmse = np.sqrt(np.mean((md_force_r - dft_force_r) ** 2))
@@ -826,8 +881,10 @@ class DPTask(object):
 
         fig, axs = plt.subplots(1, 2)
         # Plot of energy error
-        axs[0].scatter(dft_energy_per_atom, md_energy_per_atom, s=5, label=f'Iter. {iteration}')
-        _x = np.linspace(np.min(dft_energy_per_atom) - 0.05, np.max(dft_energy_per_atom) + 0.05, 10)
+        axs[0].scatter(dft_energy_per_atom, md_energy_per_atom,
+                       s=5, label=f'Iter. {iteration}')
+        _x = np.linspace(np.min(dft_energy_per_atom) - 0.05,
+                         np.max(dft_energy_per_atom) + 0.05, 10)
         axs[0].plot(_x, _x, 'r--')
 
         box = AnchoredText(
@@ -841,9 +898,11 @@ class DPTask(object):
         axs[0].set_aspect('equal')
         # Plot of force error
         axs[1].scatter(md_force, dft_force, s=5, label=f'Iter. {iteration}')
-        _y = np.linspace(np.min(dft_force) - 0.05, np.max(dft_force) + 0.05, 10)
+        _y = np.linspace(np.min(dft_force) - 0.05,
+                         np.max(dft_force) + 0.05, 10)
         axs[1].plot(_y, _y, 'r--')
-        axs[1].text(np.min(dft_force) - 0.05, np.max(dft_force) + 0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
+        axs[1].text(np.min(dft_force) - 0.05, np.max(dft_force) +
+                    0.05, f'RMSE={force_rmse} (eV/Å)', fontsize=14)
         axs[1].set_title(f'Force error', fontsize=14)
         axs[1].set_xlabel(r'$f_{DFT}$ (eV/Å)', fontsize=14)
         axs[1].set_ylabel(r'$f_{DPMD}$ (eV/Å)', fontsize=14)
@@ -870,7 +929,7 @@ class DPTask(object):
         for kk in model_names:
             input_file += f"../{kk} "
         input_file += "out_freq 1 out_file model_devi.out\n"
-        
+
         input_file += \
             """
             pair_coeff
