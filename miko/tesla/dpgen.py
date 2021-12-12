@@ -235,7 +235,7 @@ class DPTask(object):
                                  'iter.' + str(iteration).zfill(6)]
                 for j, [item, part] in enumerate(parts.groupby(group_by)):
                     mdf = np.array(list(part['max_devi_f']))[
-                        :, ::kwargs.get('step', None)]
+                          :, ::kwargs.get('step', None)]
                     t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
                     dupt = np.tile(
                         np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
@@ -466,7 +466,7 @@ class DPTask(object):
             work_path,
             model_path,
             machine_name,
-            resource_name,
+            resource_dict,
             numb_models=4,
             **kwargs
     ):
@@ -480,8 +480,8 @@ class DPTask(object):
             The path of models contained for calculation.
         machine_name : str
             machine name to use
-        resource_name : str
-            resource name to use
+        resource_dict : dict
+            resource dict
         numb_models : int, optional
             The number of models selected., by default 4
 
@@ -529,12 +529,12 @@ class DPTask(object):
             "forward_common_files": model_names,
             "backward_common_files": kwargs.get('backward_common_files', [])
         }
-        return JobFactory(task_dict_list, submission_dict, machine_name, resource_name, group_size=1)
+        return JobFactory(task_dict_list, submission_dict, machine_name, resource_dict)
 
     def train_model_test(
             self,
             machine_name,
-            resource_name,
+            resource_dict,
             iteration=None,
             params=None,
             files=None,
@@ -546,7 +546,7 @@ class DPTask(object):
         ----------
         machine_name : str
             machine name
-        resource_name : str
+        resource_dict : dict
             resource name
         iteration : str, optional
             Select the iteration for training. 
@@ -562,7 +562,6 @@ class DPTask(object):
         -------
 
         """
-        logger = LogFactory(__name__).get_log()
         location = os.path.abspath(self.path)
         logger.info(f"Task path: {location}")
 
@@ -604,13 +603,13 @@ class DPTask(object):
         #             _file_base = os.path.basename(file)
         #             if not os.path.exists(os.path.join(p, _file_base)):
         #                 os.symlink(_file_abs, os.path.join(p, _file_base))
-        
+
         logger.info("Task submitting")
         job = self.md_single_task(
             work_path=test_path,
             model_path=model_path,
             machine_name=machine_name,
-            resource_name=resource_name,
+            resource_dict=resource_dict,
             numb_models=self.param_data['numb_models'],
             forward_files=kwargs.get(
                 "forward_files", ['conf.lmp', 'input.lammps']),
@@ -663,15 +662,18 @@ class DPTask(object):
                     lmp_lines = fp.readlines()
                 _dpmd_idx = check_keywords(lmp_lines, ['pair_style', 'deepmd'])
                 graph_list = ' '.join(task_model_list)
-                lmp_lines[_dpmd_idx] = f"pair_style      deepmd {graph_list} out_freq {trj_freq} out_file model_devi.out\n"
+                lmp_lines[_dpmd_idx] = \
+                    f"pair_style      deepmd {graph_list} out_freq {trj_freq} out_file model_devi.out\n "
                 _dump_idx = check_keywords(lmp_lines, ['dump', 'dpgen_dump'])
-                lmp_lines[_dump_idx] = f"dump            dpgen_dump all custom {trj_freq} dump.lammpstrj id type x y z\n"
+                lmp_lines[_dump_idx] = \
+                    f"dump            dpgen_dump all custom {trj_freq} dump.lammpstrj id type x y z\n"
                 lmp_lines = substitute_keywords(lmp_lines, task)
 
                 # revise input of plumed
                 if use_plm:
                     _plm_idx = check_keywords(lmp_lines, ['fix', 'dpgen_plm'])
-                    lmp_lines[_plm_idx] = "fix            dpgen_plm all plumed plumedfile input.plumed outfile output.plumed\n"
+                    lmp_lines[_plm_idx] = \
+                        "fix            dpgen_plm all plumed plumedfile input.plumed outfile output.plumed\n "
                     shutil.copyfile(plm_templ, 'input.plumed')
                     with open('input.plumed') as fp:
                         plm_lines = fp.readlines()
@@ -685,10 +687,9 @@ class DPTask(object):
                 with open('job.json', 'w') as fp:
                     job = rev_mat
                     json.dump(job, fp, indent=4)
-                
-                # dump init structure 
-                    write('conf.lmp', sys_init_stc, format='lammps-data')
 
+                    # dump init structure
+                    write('conf.lmp', sys_init_stc, format='lammps-data')
 
     def fp_group_distance(self, iteration, atom_group):
         """
@@ -741,7 +742,7 @@ class DPTask(object):
                 ele_list_2 = [i for i in range(
                     len(symbol_list)) if symbol_list[i] == ele_group[0]]
                 min_dis = min([stc.get_distance(ii, jj, mic=True)
-                              for ii in ele_list_1 for jj in ele_list_2])
+                               for ii in ele_list_1 for jj in ele_list_2])
                 dis.append(min_dis)
         diss = np.array(dis)
         plt.figure(figsize=[16, 8], dpi=144)
@@ -758,7 +759,7 @@ class DPTask(object):
     def fp_error_test(
             self,
             machine_name,
-            resource_name,
+            resource_dict,
             iteration=None,
             test_model=None
     ):
@@ -766,7 +767,7 @@ class DPTask(object):
 
         Parameters
         ----------
-        resource_name : str
+        resource_dict : dict
         machine_name : str
         iteration : str, optional
             Select the iteration of data for testing. Default: the latest one.
@@ -828,7 +829,7 @@ class DPTask(object):
             work_path=quick_test_dir, model_dir=model_dir)
         if not os.path.exists(os.path.join(quick_test_dir, 'task.md/conf.lmp')):
             _lmp_data = glob(os.path.join(location, n_iter,
-                             '01.model_devi', 'task*', 'conf.lmp'))[0]
+                                          '01.model_devi', 'task*', 'conf.lmp'))[0]
             os.symlink(_lmp_data, os.path.join(
                 quick_test_dir, 'task.md/conf.lmp'))
         logger.info("Quick tests task submitting.")
@@ -842,7 +843,7 @@ class DPTask(object):
             outlog='quick_test.log',
             errlog='quick_test.err',
             machine_name=machine_name,
-            resource_name=resource_name
+            resource_dict=resource_dict
         )
         job.run_submission()
         logger.info("Quick tests finished.")
@@ -876,7 +877,8 @@ class DPTask(object):
         return result_dict
 
     @staticmethod
-    def _fp_error_test_plot(iteration, dft_energy_per_atom, md_energy_per_atom, energy_per_atom_rmse, dft_force, md_force, force_rmse):
+    def _fp_error_test_plot(iteration, dft_energy_per_atom, md_energy_per_atom, energy_per_atom_rmse, dft_force,
+                            md_force, force_rmse):
         from matplotlib.offsetbox import AnchoredText
 
         fig, axs = plt.subplots(1, 2)
