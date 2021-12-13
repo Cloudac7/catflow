@@ -36,7 +36,8 @@ def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
 def multi_fp_task(work_path, fp_command, machine_name, resource_dict, **kwargs):
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
-    fp_tasks = glob(os.path.join(work_path, 'task.*'))
+    task_dir_pattern = kwargs.get('task_dir_pattern', 'task.*')
+    fp_tasks = glob(os.path.join(work_path, task_dir_pattern))
     fp_tasks.sort()
     if len(fp_tasks) == 0:
         return

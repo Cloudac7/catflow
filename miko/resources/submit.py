@@ -1,3 +1,4 @@
+import os
 from miko.resources.config import settings
 from dpdispatcher.submission import Submission, Task, Resources
 from dpdispatcher.machine import Machine
@@ -20,9 +21,13 @@ class JobFactory(object):
         )
 
     def run_submission(self):
+        _origin = os.getcwd()
         self.submission.run_submission()
+        os.chdir(_origin)
 
 
-class ResourcesPool(object):
+class Queues(object):
     def __init__(self, machine_name):
-        self.machine_name = machine_name
+        machine_dict = settings['POOL'][machine_name]
+        queues_dict = machine_dict['queues']
+        self.queues_list = queues_dict.keys()

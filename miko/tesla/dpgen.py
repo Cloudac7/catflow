@@ -537,7 +537,7 @@ class DPTask(object):
             resource_dict,
             iteration=None,
             params=None,
-            files=None,
+            restart=False,
             **kwargs
     ):
         """Run lammps MD tests from trained models.
@@ -553,8 +553,6 @@ class DPTask(object):
             If not selected, the last iteration where training has been finished would be chosen.
         params : str, optional
             Necessary params for MD tests.
-        files : str, optional
-            Extra files attached with the MD runs. Not necessary.
         kwargs : str, optional
             Other optional parameters.
 
@@ -576,33 +574,24 @@ class DPTask(object):
 
         if params is None:
             params = self.param_data
-
-        logger.info("Preparing MD input")
-        template_base = kwargs.get('template_base', None)
-        self._train_generate_md_test(
-            params=params,
-            work_path=test_path,
-            model_path=model_path,
-            template_base=template_base
-        )
-        logger.info("Preparing initial structures")
+        
+        if restart == True:
+            logger.info("Restarting from old checkpoint")
+        else:
+            logger.info("Preparing MD input")
+            template_base = kwargs.get('template_base', None)
+            self._train_generate_md_test(
+                params=params,
+                work_path=test_path,
+                model_path=model_path,
+                template_base=template_base
+            )
 
         if self.step_code < 6:
             md_iter = self.iteration - 1
         else:
             md_iter = self.iteration
         md_iter = 'iter.' + str(md_iter).zfill(6)
-        # for p in glob(os.path.join(test_path, 'task.*')):
-        #     if not os.path.exists(os.path.join(p, 'conf.lmp')):
-        #         _lmp_data = glob(os.path.join(
-        #             location, md_iter, '01.model_devi', 'task*', 'conf.lmp'))[0]
-        #         os.symlink(_lmp_data, os.path.join(p, 'conf.lmp'))
-        #     if files is not None:
-        #         for file in files:
-        #             _file_abs = os.path.abspath(file)
-        #             _file_base = os.path.basename(file)
-        #             if not os.path.exists(os.path.join(p, _file_base)):
-        #                 os.symlink(_file_abs, os.path.join(p, _file_base))
 
         logger.info("Task submitting")
         job = self.md_single_task(
@@ -644,11 +633,10 @@ class DPTask(object):
             for task_counter, task in enumerate(rev_mat):
                 task_name = "task.%03d.%06d" % (sys_idx, task_counter)
                 task_path = os.path.join(work_path, task_name)
+
                 # create task path
                 os.makedirs(task_path, exist_ok=True)
-                # chdir to task path
-                os.chdir(task_path)
-                shutil.copyfile(lmp_templ, 'input.lammps')
+                shutil.copyfile(lmp_templ, os.path.join(task_path, 'input.lammps'))
                 model_list = glob(os.path.join(model_path, 'graph*pb'))
                 model_list.sort()
                 model_names = [os.path.basename(i) for i in model_list]
@@ -658,7 +646,7 @@ class DPTask(object):
                         os.path.join('..', os.path.basename(jj)))
 
                 # revise input of lammps
-                with open('input.lammps') as fp:
+                with open(os.path.join(task_path, 'input.lammps')) as fp:
                     lmp_lines = fp.readlines()
                 _dpmd_idx = check_keywords(lmp_lines, ['pair_style', 'deepmd'])
                 graph_list = ' '.join(task_model_list)
@@ -666,7 +654,7 @@ class DPTask(object):
                     f"pair_style      deepmd {graph_list} out_freq {trj_freq} out_file model_devi.out\n "
                 _dump_idx = check_keywords(lmp_lines, ['dump', 'dpgen_dump'])
                 lmp_lines[_dump_idx] = \
-                    f"dump            dpgen_dump all custom {trj_freq} dump.lammpstrj id type x y z\n"
+                    f"dump            dpgen_dump all custom {trj_freq} dump.lammpstrj id type x y z fx fy fz\n"
                 lmp_lines = substitute_keywords(lmp_lines, task)
 
                 # revise input of plumed
@@ -674,22 +662,21 @@ class DPTask(object):
                     _plm_idx = check_keywords(lmp_lines, ['fix', 'dpgen_plm'])
                     lmp_lines[_plm_idx] = \
                         "fix            dpgen_plm all plumed plumedfile input.plumed outfile output.plumed\n "
-                    shutil.copyfile(plm_templ, 'input.plumed')
-                    with open('input.plumed') as fp:
+                    with open(plm_templ) as fp:
                         plm_lines = fp.readlines()
                     plm_lines = substitute_keywords(plm_lines, task)
-                    with open('input.plumed', 'w') as fp:
+                    with open(os.path.join(task_path, 'input.plumed'), 'w') as fp:
                         fp.write(''.join(plm_lines))
 
                 # dump input of lammps
-                with open('input.lammps', 'w') as fp:
+                with open(os.path.join(task_path, 'input.lammps'), 'w') as fp:
                     fp.write(''.join(lmp_lines))
-                with open('job.json', 'w') as fp:
+                with open(os.path.join(task_path, 'job.json'), 'w') as fp:
                     job = rev_mat
                     json.dump(job, fp, indent=4)
 
-                    # dump init structure
-                    write('conf.lmp', sys_init_stc, format='lammps-data')
+                # dump init structure
+                write(os.path.join(task_path, 'conf.lmp'), sys_init_stc, format='lammps-data')
 
     def fp_group_distance(self, iteration, atom_group):
         """
