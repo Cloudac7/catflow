@@ -55,7 +55,7 @@ class PMFCalculation(object):
 
     def _task_map(self):
         len_temps, len_coords = len(self.temperatures), len(self.reaction_coords)
-        return np.zeros(len_temps, len_coords)
+        return np.zeros([len_temps, len_coords])
 
     def run_workflow(self, **kwargs):
         work_path = os.path.abspath(self.work_base)
