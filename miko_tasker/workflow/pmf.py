@@ -54,8 +54,13 @@ class PMFCalculation(object):
         len_temps, len_coords = len(self.temperatures), len(self.reaction_coords)
         return np.zeros(len_temps, len_coords)
 
-    def workflow_initialize(self, **kwargs):
+    def run_workflow(self, **kwargs):
         work_path = os.path.abspath(self.work_base)
+        if os.path.exists(os.path.join(work_path, 'task_map.out')):
+            try:
+                self.task_map = np.loadtxt('task_map.txt')
+            except Exception:
+                pass
         p = Pool(len(self.temperatures))
         for i, temp in enumerate(self.temperatures):
             logger.info(f'Generating subprocesses for {temp} K')
@@ -63,56 +68,67 @@ class PMFCalculation(object):
                 self.task_iteration,
                 kwds={
                     "work_path": work_path,
-                    "loop_flag": i,
+                    "temp_index": i,
                     "structure": self.init_structure,
                     "kwargs": kwargs
                 }
             )
-            logger.info('All subprocesses submitted')
-            p.close()
-            p.join()
-            logger.info('All subprocesses done.')
+        logger.info('All subprocesses submitted')
+        p.close()
+        p.join()
+        logger.info('All subprocesses done.')
 
-    def task_iteration(self, work_path, loop_flag, structure, flag=0, **kwargs):
+    def task_iteration(self, work_path, structure, temp_index, coord_index=0, **kwargs):
+        np.savetxt(self.task_map, os.path.join(work_path, 'task_map.out'))
+        coordinate = self.reaction_coords[coord_index]
+        temperature = self.temperatures[temp_index]
         num_atoms = len(structure.numbers)
-
-        # first loop
-        conv = LengthConversion("angstrom", "bohr")
-        coord = self.reaction_coords[flag] * conv.value()
-        temperature = self.temperatures[loop_flag]
-        task_list = [self._generate(work_path, coord, temperature, structure, **kwargs)]
-        job = self.job_generator(task_list)
-        logger.info("First pile of tasks submitting.")
-        job.run_submission()
-        self.task_map[loop_flag, flag] = 1
-
-        # prepare for the next loop
-        init_task_name = f'task.{coord}_{temperature}'
+        init_task_name = f'task.{coordinate}_{temperature}'
         init_task_path = os.path.join(work_path, init_task_name)
-        with open(os.path.join(init_task_path, 'pmf-pos-1.xyz')) as f:
-            last = deque(f, num_atoms + 2)
-        with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
-            for q in last:
-                output.write(str(q))
-        self.task_map[loop_flag, flag] = 2
 
-        flag += 1
-        next_structure = read(os.path.join(init_task_path, 'last.xyz'))
-        try:
-            self.task_iteration(work_path, loop_flag, next_structure, flag, **kwargs)
-        except IndexError:
-            logger.info('End loop')
-            logger.info('Workflow finished!')
+        if self.task_map[temp_index, coord_index] == 0:
+            # first loop
+            coordinate = self.reaction_coords[coord_index]
+            temperature = self.temperatures[temp_index]
+            self._task_generate(init_task_path, coordinate, temperature, structure, **kwargs)
+            self.task_map[temp_index, coord_index] = 1
 
-    def _generate(self, work_path, coordinate, temperature, structure, **kwargs):
-        task_name = f'task.{coordinate}_{temperature}'
-        init_task_path = os.path.join(work_path, task_name)
+        if self.task_map[temp_index, coord_index] == 1:
+            # run tasks from
+            task_list = [self._get_task_generated(init_task_path, **kwargs)]
+            job = self.job_generator(task_list)
+            logger.info("First pile of tasks submitting.")
+            job.run_submission()
+            self.task_map[temp_index, coord_index] = 2
+
+        if self.task_map[temp_index, coord_index] == 2:
+            # prepare for the next loop
+            with open(os.path.join(init_task_path, 'pmf-pos-1.xyz')) as f:
+                last = deque(f, num_atoms + 2)
+            with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
+                for q in last:
+                    output.write(str(q))
+            self.task_map[temp_index, coord_index] = 3
+
+        if self.task_map[temp_index, coord_index] == 3:
+            # turn to the next loop
+            next_structure = read(os.path.join(init_task_path, 'last.xyz'))
+            coord_index += 1
+            try:
+                self.task_iteration(work_path, temp_index, next_structure, coord_index, **kwargs)
+            except IndexError:
+                logger.info('End loop')
+                logger.info('Workflow finished!')
+
+    def _task_generate(self, init_task_path, coordinate, temperature, structure, **kwargs):
         os.makedirs(init_task_path, exist_ok=True)
         write(os.path.join(init_task_path, 'init.xyz'), structure)
-        logger.info(f"Writing init.xyz to {task_name}")
+        logger.info(f"Writing init.xyz to {init_task_path}")
+        conv = LengthConversion("angstrom", "bohr")
+        coord = coordinate * conv.value()
 
         input_dict = self.input_dict
-        input_dict["MOTION"]["CONSTRAINT"]["TARGET"] = coordinate
+        input_dict["MOTION"]["CONSTRAINT"]["TARGET"] = coord
         input_dict["MOTION"]["MD"]["TEMPERATURE"] = temperature
         input_dict["MOTION"]["CONSTRAINT"]["INTERMOLECULAR"] = ' '.join(self.reaction_pair)
         cell = self.cell
@@ -132,8 +148,9 @@ class PMFCalculation(object):
         with open(os.path.join(init_task_path, 'input.inp'), 'w') as f:
             output = Cp2kInput(params=input_dict).render()
             f.write(output)
-        logger.info(f"Writing input.inp to {task_name}")
+        logger.info(f"Writing input.inp to {init_task_path}")
 
+    def _get_task_generated(self, task_name, **kwargs):
         forward_files = kwargs.get('forward_files', [])
         forward_files += ['input.inp', 'init.xyz']
         backward_files = kwargs.get(
