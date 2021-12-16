@@ -39,7 +39,10 @@ class PMFCalculation(object):
         self.resource_dict = resource_dict
         self.command = command
         self.input_dict = self.set_input_dict(input_dict)
-        self.kwargs = kwargs
+        if kwargs:
+            self.kwargs = kwargs
+        else:
+            self.kwargs = {}
         self.task_map = self._task_map()
 
     @property
