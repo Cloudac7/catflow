@@ -151,3 +151,6 @@ cython_debug/
 
 # Matplotlib
 result_images
+
+# IDE files
+.idea/
