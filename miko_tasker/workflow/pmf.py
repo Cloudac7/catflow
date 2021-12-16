@@ -4,7 +4,6 @@ import numpy as np
 from ase.io import read, write
 from collections import deque
 from dpdata.unit import *
-from multiprocessing import Pool
 from pymatgen.core.periodic_table import Element
 
 from miko.utils import logger
@@ -44,6 +43,7 @@ class PMFCalculation(object):
             self.kwargs = {}
         self.input_dict = self.set_input_dict(input_dict)
         self.task_map = self._task_map()
+        self.task_list = self._task_list()
 
     @property
     def cell(self):
@@ -54,71 +54,68 @@ class PMFCalculation(object):
             return cell
 
     def _task_map(self):
-        len_temps, len_coords = len(self.temperatures), len(self.reaction_coords)
+        len_temps, len_coords = len(
+            self.temperatures), len(self.reaction_coords)
         return np.zeros([len_temps, len_coords])
+
+    def _task_list(self):
+        len_coords = len(self.reaction_coords)
+        return np.zeros(len_coords)
 
     def run_workflow(self, **kwargs):
         work_path = os.path.abspath(self.work_base)
-        if os.path.exists(os.path.join(work_path, 'task_map.out')):
+        if os.path.exists(os.path.join(work_path, 'task_list.out')):
             try:
-                self.task_map = np.loadtxt('task_map.txt')
+                self.task_map = np.loadtxt('task_list.out')
             except Exception:
                 pass
-        p = Pool(len(self.temperatures))
-        for i, temp in enumerate(self.temperatures):
-            logger.info(f'Generating subprocesses for {temp} K')
-            p.apply_async(
-                self.task_iteration,
-                kwds={
-                    "work_path": work_path,
-                    "temp_index": i,
-                    "structure": self.init_structure,
-                    "kwargs": kwargs
-                }
-            )
-        logger.info('All subprocesses submitted')
-        p.close()
-        p.join()
-        logger.info('All subprocesses done.')
+        self.task_iteration(work_path, self.init_structure, **kwargs)
 
-    def task_iteration(self, work_path, structure, temp_index, coord_index=0, **kwargs):
-        np.savetxt(self.task_map, os.path.join(work_path, 'task_map.out'))
+    def task_iteration(self, work_path, structure, coord_index=0, **kwargs):
+        np.savetxt(os.path.join(work_path, 'task_list.out'), self.task_list)
         coordinate = self.reaction_coords[coord_index]
-        temperature = self.temperatures[temp_index]
         num_atoms = len(structure.numbers)
-        init_task_name = f'task.{coordinate}_{temperature}'
-        init_task_path = os.path.join(work_path, init_task_name)
 
-        if self.task_map[temp_index, coord_index] == 0:
+        if self.task_list[coord_index] == 0:
             # first loop
             coordinate = self.reaction_coords[coord_index]
-            temperature = self.temperatures[temp_index]
-            self._task_generate(init_task_path, coordinate, temperature, structure, **kwargs)
-            self.task_map[temp_index, coord_index] = 1
+            for temperature in self.temperatures:
+                task_name = f'task.{coordinate}_{temperature}'
+                init_task_path = os.path.join(work_path, task_name)
+                self._task_generate(init_task_path, coordinate,
+                                    temperature, structure, **kwargs)
+            self.task_list[coord_index] = 1
 
-        if self.task_map[temp_index, coord_index] == 1:
-            # run tasks from
-            task_list = [self._get_task_generated(init_task_path, **kwargs)]
+        if self.task_list[coord_index] == 1:
+            # run tasks from generated
+            task_names = [
+                f'task.{coordinate}_{temperature}' for temperature in self.temperatures]
+            task_list = [
+                self._get_task_generated(task_name, **kwargs) for task_name in task_names]
             job = self.job_generator(task_list)
             logger.info("First pile of tasks submitting.")
             job.run_submission()
-            self.task_map[temp_index, coord_index] = 2
+            self.task_list[coord_index] = 2
 
-        if self.task_map[temp_index, coord_index] == 2:
+        if self.task_list[coord_index] == 2:
             # prepare for the next loop
-            with open(os.path.join(init_task_path, 'pmf-pos-1.xyz')) as f:
-                last = deque(f, num_atoms + 2)
-            with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
-                for q in last:
-                    output.write(str(q))
-            self.task_map[temp_index, coord_index] = 3
+            for temperature in self.temperatures:
+                task_name = f'task.{coordinate}_{temperature}'
+                init_task_path = os.path.join(work_path, task_name)
+                with open(os.path.join(init_task_path, 'pmf-pos-1.xyz')) as f:
+                    last = deque(f, num_atoms + 2)
+                with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
+                    for q in last:
+                        output.write(str(q))
+            self.task_list[coord_index] = 3
 
-        if self.task_map[temp_index, coord_index] == 3:
+        if self.task_list[coord_index] == 3:
             # turn to the next loop
             next_structure = read(os.path.join(init_task_path, 'last.xyz'))
             coord_index += 1
             try:
-                self.task_iteration(work_path, temp_index, next_structure, coord_index, **kwargs)
+                self.task_iteration(
+                    work_path, next_structure, coord_index, **kwargs)
             except IndexError:
                 logger.info('End loop')
                 logger.info('Workflow finished!')
@@ -131,11 +128,13 @@ class PMFCalculation(object):
         coord = coordinate * conv.value()
 
         input_dict = self.input_dict
-        input_dict["MOTION"]["CONSTRAINT"]["TARGET"] = coord
+        input_dict["MOTION"]["CONSTRAINT"]["COLLECTIVE"]["TARGET"] = coord
         input_dict["MOTION"]["MD"]["TEMPERATURE"] = temperature
-        input_dict["MOTION"]["CONSTRAINT"]["INTERMOLECULAR"] = ' '.join(self.reaction_pair)
+        input_dict["FORCE_EVAL"]["SUBSYS"]["COLVAR"]["DISTANCE"]["ATOMS"] = ' '.join(
+            [str(i+1) for i in self.reaction_pair])
         cell = self.cell
-        input_dict["FORCE_EVAL"]["SUBSYS"]["CELL"]["ABC"] = ' '.join(cell)
+        input_dict["FORCE_EVAL"]["SUBSYS"]["CELL"]["ABC"] = ' '.join(
+            [str(i) for i in cell])
         input_dict["FORCE_EVAL"]["SUBSYS"]["TOPOLOGY"] = {
             "COORD_FILE_FORMAT": "XYZ",
             "COORD_FILE_NAME": "init.xyz"
@@ -158,7 +157,8 @@ class PMFCalculation(object):
         forward_files += ['input.inp', 'init.xyz']
         backward_files = kwargs.get(
             'backward_files',
-            ['pmf-1.ener', 'pmf.LagrangeMultLog', 'pmf-pos-1.xyz', 'pmf-frc-1.xyz', 'output']
+            ['pmf-1.ener', 'pmf.LagrangeMultLog',
+                'pmf-pos-1.xyz', 'pmf-frc-1.xyz', 'output']
         )
         task_dict = {
             "command": self.command,
