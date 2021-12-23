@@ -322,7 +322,11 @@ class DPPMFCalculation(PMFCalculation):
         model_abs_path = os.path.abspath(model_path)
         work_abs_base = os.path.abspath(self.work_base)
         os.symlink(model_abs_path, os.path.join(work_abs_base, 'graph.pb'))
-        self.kwargs["forward_common_files"] += ['graph.pb']
+        fwd_files_flag = self.kwargs.get("forward_common_files", False)
+        if fwd_files_flag is False:
+            self.kwargs["forward_common_files"] = ['graph.pb']
+        else:
+            self.kwargs["forward_common_files"] += ['graph.pb']
 
     def _make_charge_dict(self, structure):
         element_set = set(structure.symbols)
@@ -332,7 +336,7 @@ class DPPMFCalculation(PMFCalculation):
                     "ATOM": element,
                     "CHARGE": 0.0
                 }
-                self.input_dict["FORCE_EVAL"]["MM"]["FORCE_FIELDS"]["CHARGE"].append(_charge_dict)
+                self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["CHARGE"].append(_charge_dict)
 
     def _make_deepmd_dict(self, structure):
         element_set = set(structure.symbols)
@@ -345,10 +349,10 @@ class DPPMFCalculation(PMFCalculation):
                 }
             except KeyError:
                 raise KeyError("Please provide type_map with self.type_map(type_map) method.")
-            self.input_dict["FORCE_EVAL"]["MM"]["FORCE_FIELDS"]["DEEPMD"].append(_deepmd_dict)
+            self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["NONBONDED"]["DEEPMD"].append(_deepmd_dict)
 
     def _preprocess(self, **kwargs):
-        self._link_model(kwargs.get('model_name'))
+        self._link_model(self.kwargs.get('model_name'))
 
     def _task_preprocess(self, task_path, coordinate, temperature, structure, **kwargs):
         self._make_charge_dict(structure)
