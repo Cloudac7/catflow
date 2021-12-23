@@ -1,6 +1,7 @@
 import os
 import numpy as np
 
+from ase import Atoms
 from ase.io import read, write
 from collections import deque
 from dpdata.unit import *
@@ -8,7 +9,88 @@ from pymatgen.core.periodic_table import Element
 
 from miko.utils import logger
 from miko.resources.submit import JobFactory
-from miko_tasker.utils.cp2k import Cp2kInput
+from miko_tasker.utils.cp2k import Cp2kInput, Cp2kInputToDict
+
+_default_input_dict = {
+    "GLOBAL": {
+        "PROJECT": "pmf",
+        "RUN_TYPE": "MD"
+    },
+    "FORCE_EVAL": {
+        "METHOD": "FIST",
+        "PRINT": {
+            "FORCES": {
+                "_": "ON",
+                "EACH": {}
+            }
+        },
+        "MM": {
+            "FORCEFIELD": {
+                "CHARGE": [],
+                "NONBONDED": {
+                    "DEEPMD": []
+                },
+                "IGNORE_MISSING_CRITICAL_PARAMS": True
+            },
+            "POISSON": {
+                "EWALD": {
+                    "EWALD_TYPE": "none"
+                }
+            }
+        },
+        "SUBSYS": {
+            "COLVAR": {
+                "DISTANCE": {
+                    "ATOMS": None
+                }
+            },
+            "CELL": {
+                "ABC": None
+            },
+            "TOPOLOGY": {}
+        }
+    },
+    "MOTION": {
+        "CONSTRAINT": {
+            "COLLECTIVE": {
+                "TARGET": None,
+                "INTERMOLECULAR": True,
+                "COLVAR": 1
+            },
+            "LAGRANGE_MULTIPLIERS": {
+                "_": "ON",
+                "COMMON_ITERATION_LEVELS": 20000000
+            }
+        },
+        "MD": {
+            "ENSEMBLE": "NVT",
+            "STEPS": 20000000,
+            "TIMESTEP": 0.5,
+            "TEMPERATURE": None,
+            "THERMOSTAT": {
+                "NOSE": {
+                    "LENGTH": 3,
+                    "YOSHIDA": 3,
+                    "TIMECON": 1000,
+                    "MTS": 2
+                }
+            }
+        },
+        "PRINT": {
+            "TRAJECTORY": {
+                "EACH": {
+                    "MD": 1
+                }
+            },
+            "FORCES": {},
+            "RESTART_HISTORY": {
+                "EACH": {
+                    "MD": 200000
+                }
+            }
+        }
+    }
+}
 
 
 class PMFCalculation(object):
@@ -41,7 +123,9 @@ class PMFCalculation(object):
             self.kwargs = kwargs
         else:
             self.kwargs = {}
-        self.input_dict = self.set_input_dict(input_dict)
+        if input_dict is None:
+            input_dict = _default_input_dict
+        self.input_dict = input_dict
         self.task_map = self._task_map()
         self.task_list = self._task_list()
 
@@ -56,34 +140,42 @@ class PMFCalculation(object):
     def _task_map(self):
         len_temps, len_coords = len(
             self.temperatures), len(self.reaction_coords)
-        return np.zeros([len_temps, len_coords])
+        return np.zeros([len_temps, len_coords], dtype=int)
 
     def _task_list(self):
         len_coords = len(self.reaction_coords)
-        return np.zeros(len_coords)
+        return np.zeros(len_coords, dtype=int)
 
     def run_workflow(self, **kwargs):
         work_path = os.path.abspath(self.work_base)
         if os.path.exists(os.path.join(work_path, 'task_list.out')):
             try:
-                self.task_map = np.loadtxt('task_list.out')
+                self.task_list = np.loadtxt('task_list.out', dtype=int)
             except Exception:
                 pass
-        self.task_iteration(work_path, self.init_structure, **kwargs)
+        self._preprocess(**kwargs)
+        self.task_iteration(work_path, kwargs.get('structures', self.init_structure), **kwargs)
+        self._postprocess(**kwargs)
 
-    def task_iteration(self, work_path, structure, coord_index=0, **kwargs):
-        np.savetxt(os.path.join(work_path, 'task_list.out'), self.task_list)
+    def task_iteration(self, work_path, structures, coord_index=0, **kwargs):
+        if isinstance(structures, Atoms):
+            structures = [structures for i in self.temperatures]
+        np.savetxt(os.path.join(work_path, 'task_list.out'), self.task_list, fmt="%d")
         coordinate = self.reaction_coords[coord_index]
-        num_atoms = len(structure.numbers)
 
         if self.task_list[coord_index] == 0:
             # first loop
             coordinate = self.reaction_coords[coord_index]
-            for temperature in self.temperatures:
+            for i, temperature in enumerate(self.temperatures):
+                structure = structures[i]
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
+                self._task_preprocess(init_task_path, coordinate,
+                                      temperature, structure, **kwargs)
                 self._task_generate(init_task_path, coordinate,
                                     temperature, structure, **kwargs)
+                self._task_postprocess(init_task_path, coordinate,
+                                       temperature, structure, **kwargs)
             self.task_list[coord_index] = 1
 
         if self.task_list[coord_index] == 1:
@@ -99,7 +191,8 @@ class PMFCalculation(object):
 
         if self.task_list[coord_index] == 2:
             # prepare for the next loop
-            for temperature in self.temperatures:
+            for i, temperature in enumerate(self.temperatures):
+                num_atoms = len(structures[0].numbers)
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
                 with open(os.path.join(init_task_path, 'pmf-pos-1.xyz')) as f:
@@ -111,14 +204,20 @@ class PMFCalculation(object):
 
         if self.task_list[coord_index] == 3:
             # turn to the next loop
-            next_structure = read(os.path.join(init_task_path, 'last.xyz'))
+            next_structures = []
+            for temperature in self.temperatures:
+                task_name = f'task.{coordinate}_{temperature}'
+                init_task_path = os.path.join(work_path, task_name)
+                next_structure = read(os.path.join(init_task_path, 'last.xyz'))
+                next_structures.append(next_structure)
             coord_index += 1
             try:
                 self.task_iteration(
-                    work_path, next_structure, coord_index, **kwargs)
+                    work_path, next_structures, coord_index, **kwargs)
             except IndexError:
                 logger.info('End loop')
                 logger.info('Workflow finished!')
+        self._postprocess()
 
     def _task_generate(self, init_task_path, coordinate, temperature, structure, **kwargs):
         os.makedirs(init_task_path, exist_ok=True)
@@ -131,7 +230,7 @@ class PMFCalculation(object):
         input_dict["MOTION"]["CONSTRAINT"]["COLLECTIVE"]["TARGET"] = coord
         input_dict["MOTION"]["MD"]["TEMPERATURE"] = temperature
         input_dict["FORCE_EVAL"]["SUBSYS"]["COLVAR"]["DISTANCE"]["ATOMS"] = ' '.join(
-            [str(i+1) for i in self.reaction_pair])
+            [str(i + 1) for i in self.reaction_pair])
         cell = self.cell
         input_dict["FORCE_EVAL"]["SUBSYS"]["CELL"]["ABC"] = ' '.join(
             [str(i) for i in cell])
@@ -158,7 +257,7 @@ class PMFCalculation(object):
         backward_files = kwargs.get(
             'backward_files',
             ['pmf-1.ener', 'pmf.LagrangeMultLog',
-                'pmf-pos-1.xyz', 'pmf-frc-1.xyz', 'output']
+             'pmf-pos-1.xyz', 'pmf-frc-1.xyz', 'output']
         )
         task_dict = {
             "command": self.command,
@@ -171,90 +270,17 @@ class PMFCalculation(object):
         logger.info(f"Task {task_dict} generating")
         return task_dict
 
-    def set_input_dict(self, input_dict):
-        _default_input_dict = {
-            "GLOBAL": {
-                "PROJECT": self.kwargs.get('project_name', 'pmf'),
-                "RUN_TYPE": "MD"
-            },
-            "FORCE_EVAL": {
-                "METHOD": "FIST",
-                "PRINT": {
-                    "FORCES": {
-                        "_": "ON",
-                        "EACH": {}
-                    }
-                },
-                "MM": {
-                    "FORCEFIELD": {
-                        "CHARGE": [],
-                        "NONBONDED": {
-                            "DEEPMD": []
-                        },
-                        "IGNORE_MISSING_CRITICAL_PARAMS": True
-                    },
-                    "POISSON": {
-                        "EWALD": {
-                            "EWALD_TYPE": "none"
-                        }
-                    }
-                },
-                "SUBSYS": {
-                    "COLVAR": {
-                        "DISTANCE": {
-                            "ATOMS": None
-                        }
-                    },
-                    "CELL": {
-                        "ABC": None
-                    },
-                    "TOPOLOGY": {}
-                }
-            },
-            "MOTION": {
-                "CONSTRAINT": {
-                    "COLLECTIVE": {
-                        "TARGET": None,
-                        "INTERMOLECULAR": True,
-                        "COLVAR": 1
-                    },
-                    "LAGRANGE_MULTIPLIERS": {
-                        "_": "ON",
-                        "COMMON_ITERATION_LEVELS": 20000000
-                    }
-                },
-                "MD": {
-                    "ENSEMBLE": "NVT",
-                    "STEPS": 20000000,
-                    "TIMESTEP": 0.5,
-                    "TEMPERATURE": None,
-                    "THERMOSTAT": {
-                        "NOSE": {
-                            "LENGTH": 3,
-                            "YOSHIDA": 3,
-                            "TIMECON": 1000,
-                            "MTS": 2
-                        }
-                    }
-                },
-                "PRINT": {
-                    "TRAJECTORY": {
-                        "EACH": {
-                            "MD": 1
-                        }
-                    },
-                    "FORCES": {},
-                    "RESTART_HISTORY": {
-                        "EACH": {
-                            "MD": 200000
-                        }
-                    }
-                }
-            }
-        }
-        if input_dict is None:
-            input_dict = _default_input_dict
-        return input_dict
+    def _preprocess(self, **kwargs):
+        pass
+
+    def _postprocess(self, **kwargs):
+        pass
+
+    def _task_preprocess(self, task_path, coordinate, temperature, structure, **kwargs):
+        pass
+
+    def _task_postprocess(self, task_path, coordinate, temperature, structure, **kwargs):
+        pass
 
     def job_generator(self, task_dict_list):
         submission_dict = {
@@ -266,3 +292,64 @@ class PMFCalculation(object):
 
     def check_point(self):
         pass
+
+    def input_dict_from_file(self, template_file):
+        _cp2k_input = Cp2kInputToDict(template_file)
+        _input_dict = _cp2k_input.get_tree()
+        self.input_dict = _input_dict
+
+
+class DPPMFCalculation(PMFCalculation):
+    @property
+    def type_map(self):
+        return self._type_map
+
+    @type_map.setter
+    def type_map(self, type_map: dict):
+        """set type map for workflow.
+
+        Parameters
+        ----------
+        type_map : dict
+            map dict from each element to type index from DP potential file, e.g.: {"H": 0, "O": 1}.
+        Returns
+        -------
+
+        """
+        self._type_map = type_map
+
+    def _link_model(self, model_path):
+        model_abs_path = os.path.abspath(model_path)
+        work_abs_base = os.path.abspath(self.work_base)
+        os.symlink(model_abs_path, os.path.join(work_abs_base, 'graph.pb'))
+        self.kwargs["forward_common_files"] += ['graph.pb']
+
+    def _make_charge_dict(self, structure):
+        element_set = set(structure.symbols)
+        for element in element_set:
+            if Element(element).is_metal:
+                _charge_dict = {
+                    "ATOM": element,
+                    "CHARGE": 0.0
+                }
+                self.input_dict["FORCE_EVAL"]["MM"]["FORCE_FIELDS"]["CHARGE"].append(_charge_dict)
+
+    def _make_deepmd_dict(self, structure):
+        element_set = set(structure.symbols)
+        for element in element_set:
+            try:
+                _deepmd_dict = {
+                    "ATOMS": element + ' ' + element,
+                    "POT_FILE_NAME": "../graph.pb",
+                    "ATOM_DEEPMD_TYPE": self.type_map[element]
+                }
+            except KeyError:
+                raise KeyError("Please provide type_map with self.type_map(type_map) method.")
+            self.input_dict["FORCE_EVAL"]["MM"]["FORCE_FIELDS"]["DEEPMD"].append(_deepmd_dict)
+
+    def _preprocess(self, **kwargs):
+        self._link_model(kwargs.get('model_name'))
+
+    def _task_preprocess(self, task_path, coordinate, temperature, structure, **kwargs):
+        self._make_charge_dict(structure)
+        self._make_deepmd_dict(structure)

@@ -1,0 +1,96 @@
+&GLOBAL
+  PROJECT AuO
+  RUN_TYPE MD
+&END GLOBAL
+&FORCE_EVAL
+  METHOD FIST
+  &PRINT
+     &FORCES ON
+       &EACH
+       &END EACH 
+     &END FORCES
+  &END PRINT
+  &MM
+    &FORCEFIELD
+      &CHARGE
+        ATOM Au
+        CHARGE 0.0
+      &END
+      &NONBONDED
+      &DEEPMD
+        ATOMS Au Au
+        POT_FILE_NAME ../graph.pb
+        ATOM_DEEPMD_TYPE 0
+      &END DEEPMD
+      &DEEPMD
+        ATOMS O O
+        POT_FILE_NAME ../graph.pb
+        ATOM_DEEPMD_TYPE 1
+      &END DEEPMD
+      &END NONBONDED
+      IGNORE_MISSING_CRITICAL_PARAMS .TRUE.
+    &END FORCEFIELD
+    &POISSON
+      &EWALD
+        EWALD_TYPE none
+      &END EWALD
+    &END POISSON
+  &END MM
+  &SUBSYS
+    &COLVAR
+      &DISTANCE
+        ATOMS  14 15
+      &END DISTANCE
+    &END COLVAR
+    &CELL
+      ABC 15.0 15.0 15.0
+    &END CELL
+    &COORD
+@include init.xyz
+    &END COORD
+    &TOPOLOGY
+    &END TOPOLOGY
+  &END SUBSYS
+&END FORCE_EVAL
+&MOTION
+  &CONSTRAINT
+    &COLLECTIVE
+      TARGET  4.158
+      INTERMOLECULAR T
+      COLVAR 1
+    &END COLLECTIVE
+    &LAGRANGE_MULTIPLIERS ON
+         COMMON_ITERATION_LEVELS 200000
+    &END LAGRANGE_MULTIPLIERS
+  &END CONSTRAINT
+  &MD
+    ENSEMBLE NVT
+    STEPS 200000
+    TIMESTEP 0.5
+    TEMPERATURE 273.0
+    
+    &THERMOSTAT
+      &NOSE
+        LENGTH 3
+        YOSHIDA 3
+        TIMECON 1000.
+        MTS 2
+      &END NOSE
+    &END THERMOSTAT
+  &END MD
+  &PRINT
+    &TRAJECTORY
+      &EACH
+        MD 1
+      &END EACH
+    &END TRAJECTORY
+    &FORCES
+
+    &END FORCES
+    &RESTART_HISTORY
+     &EACH
+       MD 20000
+     &END EACH
+    &END RESTART_HISTORY
+  &END PRINT
+&END MOTION

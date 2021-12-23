@@ -1,0 +1,94 @@
+{
+  "GLOBAL": {
+    "PROJECT": "AuO",
+    "RUN_TYPE": "MD"
+  },
+  "FORCE_EVAL": {
+    "METHOD": "FIST",
+    "PRINT": {
+      "FORCES": {
+        "_": "ON",
+        "EACH": {}
+      }
+    },
+    "MM": {
+      "FORCEFIELD": {
+        "CHARGE": {
+          "ATOM": "Au",
+          "CHARGE": 0.0
+        },
+        "NONBONDED": {
+          "DEEPMD": [
+            {
+              "ATOMS": "Au Au",
+              "POT_FILE_NAME": "../graph.pb",
+              "ATOM_DEEPMD_TYPE": 0
+            },
+            {
+              "ATOMS": "O O",
+              "POT_FILE_NAME": "../graph.pb",
+              "ATOM_DEEPMD_TYPE": 1
+            }
+          ]
+        },
+        "IGNORE_MISSING_CRITICAL_PARAMS": true
+      },
+      "POISSON": {
+        "EWALD": {
+          "EWALD_TYPE": "none"
+        }
+      }
+    },
+    "SUBSYS": {
+      "COLVAR": {
+        "DISTANCE": {
+          "ATOMS": "14 15"
+        }
+      },
+      "CELL": {
+        "ABC": "15.0 15.0 15.0"
+      },
+      "TOPOLOGY": {}
+    }
+  },
+  "MOTION": {
+    "CONSTRAINT": {
+      "COLLECTIVE": {
+        "TARGET": 4.158,
+        "INTERMOLECULAR": true,
+        "COLVAR": 1
+      },
+      "LAGRANGE_MULTIPLIERS": {
+        "_": "ON",
+        "COMMON_ITERATION_LEVELS": 200000
+      }
+    },
+    "MD": {
+      "ENSEMBLE": "NVT",
+      "STEPS": 200000,
+      "TIMESTEP": 0.5,
+      "TEMPERATURE": 273.0,
+      "THERMOSTAT": {
+        "NOSE": {
+          "LENGTH": 3,
+          "YOSHIDA": 3,
+          "TIMECON": 1000,
+          "MTS": 2
+        }
+      }
+    },
+    "PRINT": {
+      "TRAJECTORY": {
+        "EACH": {
+          "MD": 1
+        }
+      },
+      "FORCES": {},
+      "RESTART_HISTORY": {
+        "EACH": {
+          "MD": 20000
+        }
+      }
+    }
+  }
+}
