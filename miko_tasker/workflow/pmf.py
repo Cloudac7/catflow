@@ -127,7 +127,6 @@ class PMFCalculation(object):
             input_dict = _default_input_dict
         self.input_dict = input_dict
         self.task_map = self._task_map()
-        self.task_list = self._task_list()
 
     @property
     def cell(self):
@@ -142,15 +141,11 @@ class PMFCalculation(object):
             self.temperatures), len(self.reaction_coords)
         return np.zeros([len_temps, len_coords], dtype=int)
 
-    def _task_list(self):
-        len_coords = len(self.reaction_coords)
-        return np.zeros(len_coords, dtype=int)
-
     def run_workflow(self, **kwargs):
         work_path = os.path.abspath(self.work_base)
-        if os.path.exists(os.path.join(work_path, 'task_list.out')):
+        if os.path.exists(os.path.join(work_path, 'task_map.out')):
             try:
-                self.task_list = np.loadtxt('task_list.out', dtype=int)
+                self.task_map = np.loadtxt('task_map.out', dtype=int)
             except Exception:
                 pass
         self._preprocess(**kwargs)
@@ -160,13 +155,14 @@ class PMFCalculation(object):
     def task_iteration(self, work_path, structures, coord_index=0, **kwargs):
         if isinstance(structures, Atoms):
             structures = [structures for i in self.temperatures]
-        np.savetxt(os.path.join(work_path, 'task_list.out'), self.task_list, fmt="%d")
+        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
         coordinate = self.reaction_coords[coord_index]
 
-        if self.task_list[coord_index] == 0:
-            # first loop
-            coordinate = self.reaction_coords[coord_index]
-            for i, temperature in enumerate(self.temperatures):
+        for i, temperature in enumerate(self.temperatures):
+            if self.task_map[coord_index][i] == 0:
+                # first loop
+                coordinate = self.reaction_coords[coord_index]
+
                 structure = structures[i]
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
@@ -176,22 +172,21 @@ class PMFCalculation(object):
                                     temperature, structure, **kwargs)
                 self._task_postprocess(init_task_path, coordinate,
                                        temperature, structure, **kwargs)
-            self.task_list[coord_index] = 1
+                self.task_map[coord_index][i] = 1
 
-        if self.task_list[coord_index] == 1:
-            # run tasks from generated
-            task_names = [
-                f'task.{coordinate}_{temperature}' for temperature in self.temperatures]
-            task_list = [
-                self._get_task_generated(task_name, **kwargs) for task_name in task_names]
-            job = self.job_generator(task_list)
-            logger.info("First pile of tasks submitting.")
-            job.run_submission()
-            self.task_list[coord_index] = 2
+        task_list = []
+        for i, temperature in enumerate(self.temperatures):
+            if self.task_map[coord_index][i] == 1:
+                # run tasks from generated
+                task_name = f'task.{coordinate}_{temperature}'
+                task_list.append(self._get_task_generated(task_name, **kwargs))
+        job = self.job_generator(task_list)
+        logger.info("First pile of tasks submitting.")
+        job.run_submission()
+        self.task_map[coord_index][:] = 2
 
-        if self.task_list[coord_index] == 2:
-            # prepare for the next loop
-            for i, temperature in enumerate(self.temperatures):
+        for i, temperature in enumerate(self.temperatures):
+            if self.task_map[coord_index][i] == 2:
                 num_atoms = len(structures[0].numbers)
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
@@ -200,23 +195,24 @@ class PMFCalculation(object):
                 with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
                     for q in last:
                         output.write(str(q))
-            self.task_list[coord_index] = 3
+                self.task_map[coord_index][i] = 3
 
-        if self.task_list[coord_index] == 3:
-            # turn to the next loop
-            next_structures = []
-            for temperature in self.temperatures:
+        next_structures = []
+        for i, temperature in enumerate(self.temperatures):
+            if self.task_map[coord_index][i] == 3:
+                # turn to the next loop
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
                 next_structure = read(os.path.join(init_task_path, 'last.xyz'))
                 next_structures.append(next_structure)
-            coord_index += 1
-            try:
-                self.task_iteration(
-                    work_path, next_structures, coord_index, **kwargs)
-            except IndexError:
-                logger.info('End loop')
-                logger.info('Workflow finished!')
+        coord_index += 1
+
+        try:
+            self.task_iteration(
+                work_path, next_structures, coord_index, **kwargs)
+        except IndexError:
+            logger.info('End loop')
+            logger.info('Workflow finished!')
         self._postprocess()
 
     def _task_generate(self, init_task_path, coordinate, temperature, structure, **kwargs):
@@ -336,6 +332,7 @@ class DPPMFCalculation(PMFCalculation):
                     "ATOM": element,
                     "CHARGE": 0.0
                 }
+                self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["CHARGE"] = []
                 self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["CHARGE"].append(_charge_dict)
 
     def _make_deepmd_dict(self, structure):
@@ -348,7 +345,8 @@ class DPPMFCalculation(PMFCalculation):
                     "ATOM_DEEPMD_TYPE": self.type_map[element]
                 }
             except KeyError:
-                raise KeyError("Please provide type_map with self.type_map(type_map) method.")
+                raise KeyError("Please provide type_map property")
+            self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["NONBONDED"]["DEEPMD"] = []
             self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["NONBONDED"]["DEEPMD"].append(_deepmd_dict)
 
     def _preprocess(self, **kwargs):
