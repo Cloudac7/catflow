@@ -145,7 +145,7 @@ class PMFCalculation(object):
         work_path = os.path.abspath(self.work_base)
         if os.path.exists(os.path.join(work_path, 'task_map.out')):
             try:
-                self.task_map = np.loadtxt('task_map.out', dtype=int)
+                self.task_map = np.loadtxt(os.path.join(work_path, 'task_map.out'), dtype=int)
             except Exception:
                 pass
         self._preprocess(**kwargs)
@@ -155,11 +155,11 @@ class PMFCalculation(object):
     def task_iteration(self, work_path, structures, coord_index=0, **kwargs):
         if isinstance(structures, Atoms):
             structures = [structures for i in self.temperatures]
-        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
         coordinate = self.reaction_coords[coord_index]
+        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[coord_index][i] == 0:
+            if self.task_map[i, coord_index] == 0:
                 # first loop
                 coordinate = self.reaction_coords[coord_index]
 
@@ -172,21 +172,21 @@ class PMFCalculation(object):
                                     temperature, structure, **kwargs)
                 self._task_postprocess(init_task_path, coordinate,
                                        temperature, structure, **kwargs)
-                self.task_map[coord_index][i] = 1
+                self.task_map[i, coord_index] = 1
 
         task_list = []
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[coord_index][i] == 1:
+            if self.task_map[i, coord_index] == 1:
                 # run tasks from generated
                 task_name = f'task.{coordinate}_{temperature}'
                 task_list.append(self._get_task_generated(task_name, **kwargs))
         job = self.job_generator(task_list)
         logger.info("First pile of tasks submitting.")
         job.run_submission()
-        self.task_map[coord_index][:] = 2
+        self.task_map[:, coord_index] = 2
 
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[coord_index][i] == 2:
+            if self.task_map[i, coord_index] == 2:
                 num_atoms = len(structures[0].numbers)
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
@@ -195,18 +195,17 @@ class PMFCalculation(object):
                 with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
                     for q in last:
                         output.write(str(q))
-                self.task_map[coord_index][i] = 3
+                self.task_map[i, coord_index] = 3
 
         next_structures = []
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[coord_index][i] == 3:
+            if self.task_map[i, coord_index] == 3:
                 # turn to the next loop
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
                 next_structure = read(os.path.join(init_task_path, 'last.xyz'))
                 next_structures.append(next_structure)
         coord_index += 1
-
         try:
             self.task_iteration(
                 work_path, next_structures, coord_index, **kwargs)
@@ -326,17 +325,18 @@ class DPPMFCalculation(PMFCalculation):
 
     def _make_charge_dict(self, structure):
         element_set = set(structure.symbols)
+        self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["CHARGE"] = []
         for element in element_set:
             if Element(element).is_metal:
                 _charge_dict = {
                     "ATOM": element,
                     "CHARGE": 0.0
                 }
-                self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["CHARGE"] = []
                 self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["CHARGE"].append(_charge_dict)
 
     def _make_deepmd_dict(self, structure):
         element_set = set(structure.symbols)
+        self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["NONBONDED"]["DEEPMD"] = []
         for element in element_set:
             try:
                 _deepmd_dict = {
@@ -346,7 +346,6 @@ class DPPMFCalculation(PMFCalculation):
                 }
             except KeyError:
                 raise KeyError("Please provide type_map property")
-            self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["NONBONDED"]["DEEPMD"] = []
             self.input_dict["FORCE_EVAL"]["MM"]["FORCEFIELD"]["NONBONDED"]["DEEPMD"].append(_deepmd_dict)
 
     def _preprocess(self, **kwargs):
