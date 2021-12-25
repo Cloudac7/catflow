@@ -173,6 +173,7 @@ class PMFCalculation(object):
                 self._task_postprocess(init_task_path, coordinate,
                                        temperature, structure, **kwargs)
                 self.task_map[i, coord_index] = 1
+        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         task_list = []
         for i, temperature in enumerate(self.temperatures):
@@ -183,7 +184,10 @@ class PMFCalculation(object):
         job = self.job_generator(task_list)
         logger.info("First pile of tasks submitting.")
         job.run_submission()
-        self.task_map[:, coord_index] = 2
+        for i, temperature in enumerate(self.temperatures):
+            if self.task_map[i, coord_index] == 1:
+                self.task_map[:, coord_index] = 2
+        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         for i, temperature in enumerate(self.temperatures):
             if self.task_map[i, coord_index] == 2:
@@ -196,6 +200,7 @@ class PMFCalculation(object):
                     for q in last:
                         output.write(str(q))
                 self.task_map[i, coord_index] = 3
+        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         next_structures = []
         for i, temperature in enumerate(self.temperatures):
