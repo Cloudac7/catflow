@@ -9,6 +9,7 @@ from pymatgen.core.periodic_table import Element
 
 from miko.utils import logger
 from miko.resources.submit import JobFactory
+from miko_tasker.utils.file import tail
 from miko_tasker.utils.cp2k import Cp2kInput, Cp2kInputToDict
 
 _default_input_dict = {
@@ -153,6 +154,7 @@ class PMFCalculation(object):
         self._postprocess(**kwargs)
 
     def task_iteration(self, work_path, structures, coord_index=0, **kwargs):
+        logger.info(f'Start generating task for {self.reaction_coords[coord_index]}')
         if isinstance(structures, Atoms):
             structures = [structures for i in self.temperatures]
         coordinate = self.reaction_coords[coord_index]
@@ -173,7 +175,7 @@ class PMFCalculation(object):
                 self._task_postprocess(init_task_path, coordinate,
                                        temperature, structure, **kwargs)
                 self.task_map[i, coord_index] = 1
-        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
+            np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         task_list = []
         for i, temperature in enumerate(self.temperatures):
@@ -181,26 +183,29 @@ class PMFCalculation(object):
                 # run tasks from generated
                 task_name = f'task.{coordinate}_{temperature}'
                 task_list.append(self._get_task_generated(task_name, **kwargs))
-        job = self.job_generator(task_list)
-        logger.info("First pile of tasks submitting.")
-        job.run_submission()
-        for i, temperature in enumerate(self.temperatures):
-            if self.task_map[i, coord_index] == 1:
-                self.task_map[:, coord_index] = 2
-        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
+        
+        if len(task_list) != 0:
+            job = self.job_generator(task_list)
+            logger.info("New Tasks submitting.")
+            job.run_submission()
+            for i, temperature in enumerate(self.temperatures):
+                if self.task_map[i, coord_index] == 1:
+                    self.task_map[:, coord_index] = 2
+            np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         for i, temperature in enumerate(self.temperatures):
             if self.task_map[i, coord_index] == 2:
                 num_atoms = len(structures[0].numbers)
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
-                with open(os.path.join(init_task_path, 'pmf-pos-1.xyz')) as f:
-                    last = deque(f, num_atoms + 2)
-                with open(os.path.join(init_task_path, 'last.xyz'), 'w') as output:
-                    for q in last:
-                        output.write(str(q))
+                logger.info('Reading end of file')
+                with open(os.path.join(init_task_path, 'pmf-pos-1.xyz'), 'rb') as f:
+                    last = tail(f, num_atoms + 2)
+                logger.info('Making new file')
+                with open(os.path.join(init_task_path, 'last.xyz'), 'wb') as output:
+                    output.write(last)
                 self.task_map[i, coord_index] = 3
-        np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
+            np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         next_structures = []
         for i, temperature in enumerate(self.temperatures):
@@ -210,6 +215,7 @@ class PMFCalculation(object):
                 init_task_path = os.path.join(work_path, task_name)
                 next_structure = read(os.path.join(init_task_path, 'last.xyz'))
                 next_structures.append(next_structure)
+        logger.debug(f"{next_structures}")
         coord_index += 1
         try:
             self.task_iteration(
@@ -267,7 +273,7 @@ class PMFCalculation(object):
             "outlog": kwargs.get('outlog', 'output'),
             "errlog": kwargs.get('errlog', 'err.log'),
         }
-        logger.info(f"Task {task_dict} generating")
+        logger.info(f"{task_name} generating")
         return task_dict
 
     def _preprocess(self, **kwargs):
