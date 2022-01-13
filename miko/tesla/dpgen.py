@@ -672,11 +672,29 @@ class DPTask(object):
                 with open(os.path.join(task_path, 'input.lammps'), 'w') as fp:
                     fp.write(''.join(lmp_lines))
                 with open(os.path.join(task_path, 'job.json'), 'w') as fp:
-                    job = rev_mat
+                    job = task
                     json.dump(job, fp, indent=4)
 
                 # dump init structure
                 write(os.path.join(task_path, 'conf.lmp'), sys_init_stc, format='lammps-data')
+
+    def train_longrunning(self, iteration=None, deepmd_version='2.0', **kwargs):
+        """Generate models with larger decay steps and total batch
+
+        Parameters
+        ----------
+        iteration : int, optional
+            The iteration of model for long running, by default None
+        """
+        from distutils.version import LooseVersion
+        params = self.param_data
+        if LooseVersion(deepmd_version) < LooseVersion('1.0'):
+            logger.info('Preparing input for DeePMD-kit 0.x')
+        elif LooseVersion(deepmd_version) < LooseVersion('2.0'):
+            logger.info('Preparing input for DeePMD-kit 1.x')
+        else:
+            logger.info('Preparing input for DeePMD-kit 2.x')
+        pass
 
     def fp_group_distance(self, iteration, atom_group):
         """
