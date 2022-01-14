@@ -1,25 +1,19 @@
-import json
-import logging
+# import json
+# import logging
 import os
 import shutil
-import time
-import uuid
-import daemon
+# import time
+# import uuid
+from copy import deepcopy
+
+import numpy as np
 from glob import glob
-from ase.io import iread, write
-from multiprocessing import Pool
-from dpgen.dispatcher.Dispatcher import make_dispatcher, Dispatcher
-from paramiko import SSHException
-from dpdispatcher.submission import Submission, Task, Resources
-from dpdispatcher.machine import Machine
+from ase.io import read, iread, write
+# from multiprocessing import Pool
+# from paramiko import SSHException
 
-
-def load_machine_json(path):
-    with open(path, 'r') as f:
-        mdata = json.load(f)
-    machine = Machine.load_from_dict(mdata['machine'])
-    resources = Resources.load_from_dict(mdata['resources'])
-    return machine, resources
+from miko.utils import logger
+from miko.resources.submit import JobFactory
 
 
 def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
@@ -41,79 +35,74 @@ def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
         write(os.path.join(task_path, 'POSCAR'), j, vasp5=True)
 
 
-def multi_fp_task(work_path, machine_data):
+def multi_fp_task(work_path, fp_command, machine_name, resource_dict, **kwargs):
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err']
-    forward_common_files = []
-    fp_command = machine_data['command']
-    fp_group_size = machine_data['group_size']
-    fp_resources = machine_data['resources']
-    mark_failure = fp_resources.get('mark_failure', False)
-    fp_tasks = glob(os.path.join(work_path, 'task.*'))
+    task_dir_pattern = kwargs.get('task_dir_pattern', 'task.*')
+    fp_tasks = glob(os.path.join(work_path, task_dir_pattern))
     fp_tasks.sort()
     if len(fp_tasks) == 0:
         return
     fp_run_tasks = fp_tasks
     run_tasks = [os.path.basename(ii) for ii in fp_run_tasks]
-    dispatcher = make_dispatcher(
-        machine_data['machine'],
-        machine_data['resources'],
-        work_path,
-        run_tasks,
-        fp_group_size)
-    dispatcher.run_jobs(machine_data['resources'],
-                        [fp_command],
-                        work_path,
-                        run_tasks,
-                        fp_group_size,
-                        forward_common_files,
-                        forward_files,
-                        backward_files,
-                        mark_failure=mark_failure,
-                        outlog='fp.log',
-                        errlog='fp.err')
+
+    task_dict_list = [
+        {
+            "command": fp_command,
+            "task_work_path": task,
+            "forward_files": forward_files,
+            "backward_files": backward_files,
+            "outlog": "fp.log",
+            "errlog": "fp.err",
+        } for task in run_tasks
+    ]
+
+    submission_dict = {
+        "work_base": work_path,
+        "forward_common_files": kwargs.get('forward_common_files', []),
+        "backward_common_files": kwargs.get('backward_common_files', [])
+    }
+    job = JobFactory(task_dict_list, submission_dict, machine_name, resource_dict, group_size=1)
+    job.run_submission()
 
 
+def cell_tests(
+        init_structure_path,
+        cell_list,
+        cubic=True,
+        required_files=None,
+        **task_params
+):
+    work_path = os.path.abspath(task_params.get('work_path'))
+    if required_files is None:
+        required_files = {
+            "incar_path": os.path.join(work_path, "INCAR"),
+            "potcar_path": os.path.join(work_path, "POTCAR")
+        }
+    if cubic is False:
+        for c in cell_list:
+            if np.array(c).shape != (3, 3):
+                raise Exception("should provide 3 vectors as cell")
+    init_structure = read(os.path.abspath(init_structure_path))
+    for idx, cell in enumerate(cell_list):
+        task_path = os.path.join(os.path.abspath(work_path), f'task.{str(idx).zfill(3)}')
+        os.makedirs(task_path, exist_ok=True)
+        s = deepcopy(init_structure)
+        s.set_cell(cell)
+        s.set_pbc([1, 1, 1])
+        write(os.path.join(task_path, 'POSCAR'), s, vasp5=True)
+        assert ('incar_path' in required_files.keys()) & ('potcar_path' in required_files.keys())
+        for path in required_files.values():
+            shutil.copy(
+                path,
+                os.path.join(task_path, os.path.basename(path))
+            )
+    multi_fp_task(**task_params)
+
+
+# TODO: fix fp_tasks for DPDispatcher
+"""
 def fp_tasks(ori_fp_tasks, work_path, machine_data, group_size=1):
-    """Submit single point energy tasks at one time.
-
-    Submitting multiple VASP tasks in the work directory to remote or local servers.
-
-    Args:
-        ori_fp_tasks: A list of path containing `INPUT FILES`.
-        work_path: A local path for creating work directory.
-        machine_data: The machine data, read as a dict.
-            For example:
-                {
-                    "machine": {
-                        "batch": "lsf",
-                        "hostname": "localhost",
-                        "port": 22,
-                        "username": "username",
-                        "work_path": "/remote/work/path"
-                    },
-                    "resources": {
-                        "cvasp": False,
-                        "task_per_node": 24,
-                        "numb_node": 1,
-                        "node_cpu": 24,
-                        "exclude_list": [],
-                        "with_mpi": True,
-                        "source_list": [
-                        ],
-                        "module_list": [
-                            "intel/17u5",
-                            "mpi/intel/17u5"
-                        ],
-                        "time_limit": "12:00:00",
-                        "partition": "medium",
-                        "_comment": "that's Bel"
-                    },
-                    "command": "/some/work/path/vasp_std",
-                    "group_size": 25
-                }
-        group_size: Set the group size for tasks.
-    """
     forward_files = ['POSCAR', 'INCAR', 'POTCAR']
     backward_files = ['OUTCAR', 'vasprun.xml', 'fp.log', 'fp.err', 'tag_0_finished']
     forward_common_files = []
@@ -169,7 +158,7 @@ def fp_tasks(ori_fp_tasks, work_path, machine_data, group_size=1):
                 backward_files,
                 machine_data
             ))
-        logging.info('Waiting for all tasks done...')
+        logger.info('Waiting for all tasks done...')
         p.close()
         p.join()
         shutil.rmtree(work_path)
@@ -188,7 +177,7 @@ def fp_await_submit(item, forward_common_files=None, forward_files=None, backwar
         backward_files,
         machine_data
     )
-    logging.info(f'Task {item["uuid"]} finished.')
+    logger.info(f'Task {item["uuid"]} finished.')
 
 
 def fp_submit(work_path, run_tasks,
@@ -219,34 +208,4 @@ def fp_submit(work_path, run_tasks,
             else:
                 time.sleep(0.1)
                 break
-
-
-def _make_dispatcher(mdata, mdata_resource=None, work_path=None, run_tasks=None, group_size=None, **kwargs):
-    if 'cloud_resources' in mdata:
-        if mdata['cloud_resources']['cloud_platform'] == 'ali':
-            from dpgen.dispatcher.ALI import ALI
-            dispatcher = ALI(mdata, mdata_resource, work_path, run_tasks, group_size, mdata['cloud_resources'])
-            dispatcher.init()
-            return dispatcher
-        elif mdata['cloud_resources']['cloud_platform'] == 'ucloud':
-            pass
-    else:
-        hostname = mdata.get('hostname', None)
-        if hostname:
-            context_type = 'ssh'
-        else:
-            context_type = 'local'
-        try:
-            batch_type = mdata['batch']
-        except KeyError:
-            batch_type = mdata['machine_type']
-        lazy_local = (mdata.get('lazy-local', False)) or (mdata.get('lazy_local', False))
-        if lazy_local and context_type == 'local':
-            context_type = 'lazy-local'
-        disp = Dispatcher(
-            remote_profile=mdata,
-            context_type=context_type,
-            batch_type=batch_type,
-            job_record=kwargs.get('job_record', 'jr.json')
-        )
-        return disp
+"""
