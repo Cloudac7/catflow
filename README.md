@@ -1,7 +1,7 @@
 # Miko-Analyzer
 
 [![Python package](https://github.com/Cloudac7/miko-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/Cloudac7/miko-analyzer/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/Cloudac7/miko-analyzer/badge.svg?branch=dev)](https://coveralls.io/github/Cloudac7/miko-analyzer?branch=dev)
+[![Coverage Status](https://coveralls.io/repos/github/Cloudac7/miko-analyzer/badge.svg?branch=master)](https://coveralls.io/github/Cloudac7/miko-analyzer?branch=master)
 
 > コードで占う巫女。
 > Miko using code to perform divinition.
