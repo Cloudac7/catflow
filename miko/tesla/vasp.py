@@ -81,7 +81,7 @@ def cell_tests(
         }
     if cubic is False:
         for c in cell_list:
-            if np.array(c).shape is not (3, 3):
+            if np.array(c).shape != (3, 3):
                 raise Exception("should provide 3 vectors as cell")
     init_structure = read(os.path.abspath(init_structure_path))
     for idx, cell in enumerate(cell_list):
