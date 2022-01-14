@@ -1,12 +1,14 @@
 # import json
 # import logging
 import os
-# import shutil
+import shutil
 # import time
 # import uuid
+from copy import deepcopy
 
+import numpy as np
 from glob import glob
-from ase.io import iread, write
+from ase.io import read, iread, write
 # from multiprocessing import Pool
 # from paramiko import SSHException
 
@@ -62,6 +64,40 @@ def multi_fp_task(work_path, fp_command, machine_name, resource_dict, **kwargs):
     }
     job = JobFactory(task_dict_list, submission_dict, machine_name, resource_dict, group_size=1)
     job.run_submission()
+
+
+def cell_tests(
+        init_structure_path,
+        cell_list,
+        cubic=True,
+        required_files=None,
+        **task_params
+):
+    work_path = os.path.abspath(task_params.get('work_path'))
+    if required_files is None:
+        required_files = {
+            "incar_path": os.path.join(work_path, "INCAR"),
+            "potcar_path": os.path.join(work_path, "POTCAR")
+        }
+    if cubic is False:
+        for c in cell_list:
+            if np.array(c).shape is not (3, 3):
+                raise Exception("should provide 3 vectors as cell")
+    init_structure = read(os.path.abspath(init_structure_path))
+    for idx, cell in enumerate(cell_list):
+        task_path = os.path.join(os.path.abspath(work_path), f'task.{str(idx).zfill(3)}')
+        os.makedirs(task_path, exist_ok=True)
+        s = deepcopy(init_structure)
+        s.set_cell(cell)
+        s.set_pbc([1, 1, 1])
+        write(os.path.join(task_path, 'POSCAR'), s, vasp5=True)
+        assert ('incar_path' in required_files.keys()) & ('potcar_path' in required_files.keys())
+        for path in required_files.values():
+            shutil.copy(
+                path,
+                os.path.join(task_path, os.path.basename(path))
+            )
+    multi_fp_task(**task_params)
 
 
 # TODO: fix fp_tasks for DPDispatcher

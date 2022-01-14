@@ -21,7 +21,7 @@ def parse_template(test_job, sys_idx):
 
 def check_keywords(lmp_lines: list, key: list):
     found = []
-    regex_pattern = r'^' + '\s+'.join(key)
+    regex_pattern = r'^' + r'\s+'.join(key)
     for idx, line in enumerate(lmp_lines):
         words = line.split()
         if re.match(regex_pattern, line):
