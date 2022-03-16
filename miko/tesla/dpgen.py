@@ -8,6 +8,7 @@ import seaborn as sns
 from glob import glob
 
 import shutil
+from collections import Iterable, Sized
 from ase.io import read, write
 from matplotlib import pyplot as plt
 
@@ -175,6 +176,7 @@ class DPTask(object):
             log=False,
             group_by='temps',
             select=None,
+            select_value=None,
             **kwargs):
         """
         Generate a plot of model deviation in each iteration.
@@ -189,120 +191,116 @@ class DPTask(object):
             For example, if `group_by='temps'`, then `temps=[100., 200., 300.]` should also be passed to this function.
             Default: "temps".
         :param select: Choose which param selected as plot zone.
+        :param select_value: the dependence of `select`. Different from `group_by`, please pass only one number.
         :param kwargs: Include other params, such as:
             `temps`: please use the value of `group_by`, whose default input is `"temps"`.
-            `select_value`: the dependence of `select`. Different from `group_by`, please pass only one number.
             `label_unit`: the unit of `select_value`, such as 'Å'.
             `step`: control the step of each point along x axis, in prevention of overlap.
             Parameters of `canvas_style`: please refer to `miko.util.canvas_style`.
         :return: A plot for different desired values.
         """
         flatmdf = None
-        location = os.path.join(
-            self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
-        if os.path.exists(location):
-            df = self.md_set_load_pkl(iteration=iteration)
-        else:
-            df = self.md_set_pd(iteration=iteration)
         try:
-            plot_items = kwargs.get(group_by, None)
-            if isinstance(plot_items, (list, tuple)):
-                num_item = len(plot_items)
-            elif isinstance(plot_items, (int, float)):
-                num_item = 1
-                plot_items = [plot_items]
-            elif isinstance(plot_items, str):
-                num_item = 1
-                plot_items = [int(plot_items)]
-            else:
-                raise TypeError(
-                    "The value of `group_by` dependence should exist.")
-            label_unit = kwargs.get('label_unit', None)
-            canvas_style(**kwargs)
-            fig = plt.figure(figsize=[16, 6 * num_item],
-                             constrained_layout=True)
-            gs = fig.add_gridspec(num_item, 3)
+            df = self.md_set_load_pkl(iteration=iteration)
+        except FileNotFoundError:
+            df = self.md_set_pd(iteration=iteration)
 
-            for i, item in enumerate(plot_items):
-                if select is not None:
-                    select_value = kwargs.get('select_value', None)
-                    if select_value is not None:
-                        df = df[df[select] == select_value]
+        plot_items = kwargs.get(group_by)
+        if isinstance(plot_items, str):
+            num_item = 1
+            plot_items = [int(plot_items)]
+        elif isinstance(plot_items, (int, float)):
+            num_item = 1
+            plot_items = [plot_items]
+        elif isinstance(plot_items, Sized):
+            num_item = len(plot_items)
+        else:
+            logger.error('The values chosen for plotting not exists.')
+            raise TypeError(
+                'Please pass values to be plotted with `group_by` parameter')
+
+        label_unit = kwargs.get('label_unit')
+        canvas_style(**kwargs)
+        fig = plt.figure(figsize=[16, 6 * num_item],
+                         constrained_layout=True)
+        gs = fig.add_gridspec(num_item, 3)
+
+        for i, item in enumerate(plot_items):
+            try:
+                if all([select, select_value]):
+                    df = df[df[select] == select_value]
+            except KeyError:
+                logger.error(f'Please choose existing parameter for `select`')
+                return None
+            try:
                 partdata = df[df[group_by] == item]
-                # left part
-                fig_left = fig.add_subplot(gs[i, :-1])
-                parts = partdata[partdata['iter'] ==
-                                 'iter.' + str(iteration).zfill(6)]
-                for j, [item, part] in enumerate(parts.groupby(group_by)):
-                    mdf = np.array(list(part['max_devi_f']))[
-                          :, ::kwargs.get('step', None)]
-                    t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
-                    dupt = np.tile(
-                        np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
-                    flatmdf = np.ravel(mdf)
-                    logger.info(
-                        f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
-                    sns.scatterplot(
-                        x=dupt,
-                        y=flatmdf,
-                        color='red',
-                        alpha=0.5,
-                        ax=fig_left,
-                        label=f'{item} {label_unit}'
-                    )
-                if x_limit is not None:
-                    fig_left.set_xlim(0, x_limit)
-                else:
-                    x_limit = fig_left.get_xlim()[1]
-                    fig_left.set_xlim(0, x_limit)
-                if y_limit is not None:
-                    if not log:
-                        fig_left.set_ylim(0, y_limit)
-                    else:
-                        fig_left.set_yscale('log')
-                else:
-                    y_limit = fig_left.get_ylim()[1]
-                    if not log:
-                        fig_left.set_ylim(0, y_limit)
-                    else:
-                        fig_left.set_yscale('log')
-                fig_left.axhline(f_trust_lo, linestyle='dashed')
-                fig_left.axhline(f_trust_hi, linestyle='dashed')
-                if fig_left.is_last_row():
-                    fig_left.set_xlabel('Simulation Steps')
-                if fig_left.is_first_col():
-                    fig_left.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
-                fig_left.legend()
-                if fig_left.is_first_row():
-                    fig_left.set_title(f'Iteration {iteration}')
+            except KeyError:
+                logger.error(f'Please choose existing parameter for `group_by`')
+                return None
 
-                # right part
-                fig_right = fig.add_subplot(gs[i, -1])
-                sns.histplot(
+            # left part
+            fig_left = fig.add_subplot(gs[i, :-1])
+            parts = partdata[partdata['iter'] ==
+                             'iter.' + str(iteration).zfill(6)]
+            for j, [item, part] in enumerate(parts.groupby(group_by)):
+                mdf = np.array(list(part['max_devi_f']))[
+                      :, ::kwargs.get('step')]
+                t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
+                dupt = np.tile(
+                    np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
+                flatmdf = np.ravel(mdf)
+                logger.info(
+                    f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
+                sns.scatterplot(
+                    x=dupt,
                     y=flatmdf,
-                    bins=50,
-                    kde=True,
-                    stat='density',
                     color='red',
-                    ec=None,
                     alpha=0.5,
-                    ax=fig_right
+                    ax=fig_left,
+                    label=f'{item} {label_unit}'
                 )
-                if fig_right.is_first_row():
-                    fig_right.set_title('Distribution of Deviation')
-                if not log:
-                    fig_right.set_ylim(0, y_limit)
-                else:
-                    fig_right.set_yscale('log')
-                fig_right.axhline(f_trust_lo, linestyle='dashed')
-                fig_right.axhline(f_trust_hi, linestyle='dashed')
-                fig_right.set_xticklabels([])
-                fig_right.set_yticklabels([])
-            return plt
-        except Exception as e:
-            logger.exception(e)
-            logger.error('Please choose proper `group_by` with in dict.')
-            return None
+            if x_limit is None:
+                x_limit = fig_left.get_xlim()[1]
+            fig_left.set_xlim(0, x_limit)
+            if y_limit is None:
+                y_limit = fig_left.get_ylim()[1]
+            if log:
+                fig_left.set_yscale('log')
+            else:
+                fig_left.set_ylim(0, y_limit)
+            fig_left.axhline(f_trust_lo, linestyle='dashed')
+            fig_left.axhline(f_trust_hi, linestyle='dashed')
+            if fig_left.is_last_row():
+                fig_left.set_xlabel('Simulation Steps')
+            if fig_left.is_first_col():
+                fig_left.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
+            fig_left.legend()
+            if fig_left.is_first_row():
+                fig_left.set_title(f'Iteration {iteration}')
+
+            # right part
+            fig_right = fig.add_subplot(gs[i, -1])
+            sns.histplot(
+                y=flatmdf,
+                bins=50,
+                kde=True,
+                stat='density',
+                color='red',
+                ec=None,
+                alpha=0.5,
+                ax=fig_right
+            )
+            if fig_right.is_first_row():
+                fig_right.set_title('Distribution of Deviation')
+            if not log:
+                fig_right.set_ylim(0, y_limit)
+            else:
+                fig_right.set_yscale('log')
+            fig_right.axhline(f_trust_lo, linestyle='dashed')
+            fig_right.axhline(f_trust_hi, linestyle='dashed')
+            fig_right.set_xticklabels([])
+            fig_right.set_yticklabels([])
+        return plt
 
     def md_multi_iter(
             self,
