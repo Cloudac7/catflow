@@ -1,9 +1,11 @@
 import json
 import os
 import sys
+
+import numpy as np
 from miko.utils import logger
 from miko.resources.submit import settings
-from dpgen.remote.decide_machine import convert_mdata
+# from dpgen.remote.decide_machine import convert_mdata
 from dpgen.generator.run import *
 
 
@@ -147,24 +149,51 @@ class CLWorkFlow(object):
 
     def check_converge(self):
         if self.main_step == 1:
-            model_devi_jobs = self.params['model_devi_jobs']
-            if self.stage >= len(model_devi_jobs):
-                return False
+            if self.real_step == 0:
+                model_devi_jobs = self.params['model_devi_jobs']
+                if self.stage >= len(model_devi_jobs):
+                    return False
+            else:
+                return True
         else:
             return True
 
     def run_loop(self, record="miko.record"):
-        max_stage = 10000
-        num_steps = 9
-
-        self.read_record()
+        self.read_record(record)
         while self.check_converge():
             self.run_step()
 
 
 class ClusterReactionWorkflow(CLWorkFlow):
     def check_converge(self):
-        pass
+        if self.main_step == 1:
+            if self.real_step == 0:
+                last_model_devi_job = self.params.get('model_devi_jobs')[-1]
+                last_sys_idx = last_model_devi_job.get('sys_idx')
+                conv_flags = np.zeros_like(last_sys_idx, dtype=int)
+                for i, idx in enumerate(last_sys_idx):
+                    logger.info(f'Checking convergancy for iteration {self.stage}')
+                    accu_ratio = self._check_index_converge(idx)
+                    logger.info(f'idx {idx} reach accuracy ratio: {accu_ratio}')
+                    if accu_ratio >= 0.97:
+                        conv_flags[i] = 1
+                if 1 in conv_flags:
+                    logger.info('Not all idxs reach 97% accuracy')
+                    logger.info('Continue training process')
+                    self.update_params()
+                    return True
+                else:
+                    logger.info('Model accuracy converged.')
+                    return False
+            else:
+                return True
+        else:
+            return True
+
+    def _check_index_converge(self, index):
+        # TODO: check accu in each sys_idx
+        return 1
 
     def update_params(self):
+        # TODO: update self.params, generating new model_devi_jobs
         pass
