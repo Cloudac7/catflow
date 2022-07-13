@@ -97,6 +97,7 @@ class CLWorkFlow(object):
         self.machine_pool = Path(machine_pool).resolve()
         self.stage = 0
         self.step = 0
+        self.params = self.get_data(self.param_file)
 
     @staticmethod
     def get_data(json_file):
@@ -107,10 +108,6 @@ class CLWorkFlow(object):
     def record_stage(record_file_path, stage, step):
         record_array = np.array([stage, step])
         np.savetxt(record_file_path, record_array, fmt="%d")
-
-    @property
-    def params(self):
-        return self.get_data(self.param_file)
 
     @property
     def machine(self):
