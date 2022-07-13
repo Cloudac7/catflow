@@ -25,3 +25,6 @@ def tail(f, lines=20):
         block_number -= 1
     all_read_text = b''.join(reversed(blocks))
     return b'\n'.join(all_read_text.splitlines()[-total_lines_wanted:])
+
+def count_lines(file):
+    return sum(1 for line in file)
