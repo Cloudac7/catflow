@@ -1,0 +1,132 @@
+{
+    "type_map": [
+      "O",
+      "Pt"
+    ],
+    "mass_map": [
+      16.00,
+      195.00
+    ],
+    "init_data_prefix": "/data/ypliu/project/Pt/cluster_with_o2/",
+    "init_data_sys": [
+      "15/673/1.35/dpmd_npy",
+      "15/673/1.43/dpmd_npy",
+      "15/673/1.53/dpmd_npy"
+    ],
+    "init_batch_size": [
+      "auto",
+      "auto",
+      "auto"
+    ],
+    "sys_configs_prefix": "/data/ypliu/project/Pt/cluster_with_o2/",
+    "sys_configs": [
+      ["22/init/IS/*/POSCAR"],
+      ["22/init/FS/*/POSCAR"],
+      ["22/init/TS/*/POSCAR"]
+    ],
+    "sys_batch_size": [
+      "auto", "auto", "auto"
+    ],
+    "_comment": " that's all ",
+    "numb_models": 4,
+    "train_param": "input.json",
+    "default_training_param": {
+      "model": {
+        "descriptor": {
+          "type": "se_e2_a",
+          "sel": [
+            3,
+            26
+          ],
+          "rcut_smth": 0.50,
+          "rcut": 7.00,
+          "neuron": [
+            25,
+            50,
+            100
+          ],
+          "resnet_dt": false,
+          "axis_neuron": 16,
+          "type_one_side": true
+        },
+        "fitting_net": {
+          "neuron": [
+            240,
+            240,
+            240
+          ],
+          "resnet_dt": true,
+          "type": "ener"
+        }
+      },
+      "learning_rate": {
+        "type": "exp",
+        "start_lr": 0.001,
+        "decay_steps": 2000
+      },
+      "loss": {
+        "start_pref_e": 0.1,
+        "limit_pref_e": 1,
+        "start_pref_f": 200,
+        "limit_pref_f": 1,
+        "start_pref_v": 0,
+        "limit_pref_v": 0
+      },
+      "training": {
+        "numb_steps": 400000,
+        "disp_file": "lcurve.out",
+        "disp_freq": 2000,
+        "numb_test": 4,
+        "save_freq": 2000,
+        "save_ckpt": "model.ckpt"
+      }
+    },
+    "_comment": " 01.model_devi ",
+    "_comment": "model_devi_skip: the first x frames of the recorded frames",
+    "model_devi_dt": 0.0005,
+    "model_devi_skip": 1,
+    "model_devi_f_trust_lo": 0.2,
+    "model_devi_f_trust_hi": 1.0,
+    "_comment": "modify according to the error distribution of system",
+    "model_devi_e_trust_lo": 1e10,
+    "model_devi_e_trust_hi": 1e10,
+    "model_devi_clean_traj": false,
+    "model_devi_plumed": true,
+    "model_devi_jobs": [
+      {
+        "template": {
+          "lmp": "lmp/input-restrain.lammps",
+          "plm": "lmp/input.plumed"
+        },
+        "sys_idx": [0, 1],
+        "traj_freq": 600,
+        "_idx": 0,
+        "rev_mat": {
+          "lmp": {
+            "V_NSTEPS": [30000],
+            "V_TEMP": [
+              200, 400, 600, 800, 1000, 1200, 1400
+            ]
+          }
+        },
+        "sys_rev_mat": {
+          "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+          "1": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}}
+        }
+      }
+    ],
+    "_comment": " 02.fp ",
+    "fp_style": "vasp",
+    "shuffle_poscar": false,
+    "fp_task_max": 20,
+    "_comment": "the maximum number of stcs to calc.",
+    "fp_task_min": 0,
+    "fp_pp_path": "/data/ypliu/project/Pt/pot",
+    "ratio_failed": 0.25,
+    "fp_pp_files": [
+      "POTCAR_O",
+      "POTCAR_Pt"
+    ],
+    "fp_incar": "/data/ypliu/project/Pt/cluster_with_o2/dpgen/INCAR",
+    "_comment": " that's all "
+  }
