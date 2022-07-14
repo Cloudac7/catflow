@@ -5,6 +5,7 @@ import dpdata
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from pathlib import Path
 from glob import glob
 
 import shutil
@@ -15,7 +16,7 @@ from matplotlib import pyplot as plt
 from miko.utils import logger
 from miko.resources.submit import JobFactory
 from miko.utils import LogFactory
-from miko.utils import canvas_style
+from miko.graph.plotting import canvas_style, AxesInit
 from miko.utils.lammps import *
 
 
@@ -23,49 +24,119 @@ class DPTask(object):
     """DPTask is a class reading a DP-GEN directory, where the DP-GEN task run.
     """
 
-    def __init__(self, path, param_file, machine_file, record_file):
+    def __init__(
+        self,
+        path: str,
+        param_file: str,
+        machine_file: str,
+        record_file: str,
+        deepmd_version: str = '2.0'
+    ):
+        """Generate a class of tesla task.
+
+        Args:
+            path (str): The path of the tesla task.
+            param_file (str): The param json file name.
+            machine_file (str): The machine json file name.
+            record_file (str): The record file name.
+            deepmd_version (str): DeepMD-kit version used.
         """
-        Generate a class of tesla task.
-        :param path: The path of the tesla task.
-        :param param_file: The param json file name.
-        :param machine_file: The machine json file name.
-        :param record_file: The record file name.
-        """
-        self.path = os.path.abspath(path)
+        #TODO: refactor with pathlib
+        #TODO: split the huge class with more functional models
+        self.path = Path(path).resolve()
         self.param_file = param_file
         self.machine_file = machine_file
         self.record_file = record_file
+        self.deepmd_version = deepmd_version
         self._load_task()
 
-    def train_lcurve(self, iteration=None, model=0, test=True, **kwargs):
+    def _load_task(self):
+        self._read_record()
+        self._read_param_data()
+        self._read_machine_data()
+        if self.step_code in [0, 3, 6]:
+            self.state = 'Waiting'
+        elif self.step_code in [1, 4, 7]:
+            self.state = 'Parsing'
+        else:
+            self.state = 'Stopped'
+        if self.step_code < 3:
+            self.step = 'Training'
+        elif self.step_code < 6:
+            self.step = 'Exploring'
+        else:
+            self.step = 'Labeling'
+
+    def _read_record(self):
+        _record_path = self.path / self.record_file
+        with open(_record_path) as f:
+            _final_step = f.readlines()[-1]
+        self.iteration = int(_final_step.split()[0])
+        self.step_code = int(_final_step.split()[1])
+
+    def _read_param_data(self):
+        _param_path = os.path.join(self.path, self.param_file)
+        with open(_param_path) as f:
+            self.param_data = json.load(f)
+
+    def _read_machine_data(self):
+        _param_path = os.path.join(self.path, self.machine_file)
+        with open(_param_path) as f:
+            self.machine_data = json.load(f)
+
+    def analyzer(self, Analyzer):
+        return Analyzer(self)
+
+
+class DPTrainingAnalyzer:
+    def __init__(self, dp_task: DPTask) -> None:
+        self.dp_task = dp_task
+        for key in dp_task.__dict__:
+            setattr(self, key, dp_task.__dict__[key])
+
+    def _iteration_dir(self, iteration=None):
         if iteration is None:
             if self.step_code < 2:
                 iteration = self.iteration - 1
             else:
                 iteration = self.iteration
-        n_iter = 'iter.' + str(iteration).zfill(6)
-        lcurve_path = os.path.join(
-            self.path, n_iter, f'00.train/{str(model).zfill(3)}/lcurve.out')
+        return 'iter.' + str(iteration).zfill(6)
 
-        step = np.loadtxt(lcurve_path, usecols=0)
-        if test:
-            energy_train = np.loadtxt(lcurve_path, usecols=4)
-            energy_test = np.loadtxt(lcurve_path, usecols=3)
-            force_train = np.loadtxt(lcurve_path, usecols=6)
-            force_test = np.loadtxt(lcurve_path, usecols=5)
+    def load_lcurve(self, iteration=None, model=0):
+        n_iter = self._iteration_dir(iteration)
+        lcurve_path = self.path / n_iter / \
+            f'00.train/{str(model).zfill(3)}/lcurve.out'
+
+        from distutils.version import LooseVersion
+
+        if LooseVersion(self.deepmd_version) < LooseVersion('2.0'):
+            return {
+                'step': np.loadtxt(lcurve_path, usecols=0),
+                'energy_train': np.loadtxt(lcurve_path, usecols=4),
+                'energy_test': np.loadtxt(lcurve_path, usecols=3),
+                'force_train': np.loadtxt(lcurve_path, usecols=6),
+                'force_test': np.loadtxt(lcurve_path, usecols=5),
+            }
         else:
-            energy_train = np.loadtxt(lcurve_path, usecols=2)
-            force_train = np.loadtxt(lcurve_path, usecols=3)
+            return {
+                'step': np.loadtxt(lcurve_path, usecols=0),
+                'energy_train': np.loadtxt(lcurve_path, usecols=2),
+                'force_train': np.loadtxt(lcurve_path, usecols=3)
+            }
+
+    def plot_lcurve(self, iteration=None, model=0, test=True, **kwargs):
+        lcurve_data = self.load_lcurve(iteration=iteration, model=model)
 
         canvas_style(**kwargs)
         fig, axs = plt.subplots(2, 1)
         fig.suptitle("DeepMD training and tests error")
 
         # energy figure
-        axs[0].scatter(step[10:], energy_train[10:], alpha=0.4, label='train')
-        if test:
-            axs[0].scatter(step[10:], energy_test[10:],
-                           alpha=0.4, label='tests')
+        step = lcurve_data['step']
+        for key in lcurve_data.keys():
+            if key.startswith('energy_'):
+                axs[0].scatter(step[10:], lcurve_data[key][10:],
+                               alpha=0.4, label=key.pop('energy_'))
         axs[0].hlines(0.005, step[0], step[-1], linestyles='--',
                       colors='red', label='5 meV')
         axs[0].hlines(0.01, step[0], step[-1], linestyles='--',
@@ -76,10 +147,10 @@ class DPTask(object):
         axs[0].legend()
 
         # force figure
-        axs[1].scatter(step[10:], force_train[10:], alpha=0.4, label='train')
-        if test:
-            axs[1].scatter(step[10:], force_test[10:],
-                           alpha=0.4, label='tests')
+        for key in lcurve_data.keys():
+            if key.startswith('force_'):
+                axs[0].scatter(step[10:], lcurve_data[key][10:],
+                               alpha=0.4, label=key.pop('force_'))
         axs[1].hlines(0.05, step[0], step[-1], linestyles='--',
                       colors='red', label='50 meV/Å')
         axs[1].hlines(0.1, step[0], step[-1], linestyles='--',
@@ -89,7 +160,34 @@ class DPTask(object):
         axs[1].set_xlabel('Number of training batch')
         axs[1].set_ylabel('$F$(eV/Å)')
         axs[1].legend()
+
         return fig
+
+    def train_longrunning(self, iteration=None, deepmd_version='2.0', **kwargs):
+        #TODO: finish or refactor
+        """Generate models with larger decay steps and total batch
+
+        Parameters
+        ----------
+        iteration : int, optional
+            The iteration of model for long running, by default None
+        """
+        from distutils.version import LooseVersion
+        params = self.param_data
+        if LooseVersion(deepmd_version) < LooseVersion('1.0'):
+            logger.info('Preparing input for DeePMD-kit 0.x')
+        elif LooseVersion(deepmd_version) < LooseVersion('2.0'):
+            logger.info('Preparing input for DeePMD-kit 1.x')
+        else:
+            logger.info('Preparing input for DeePMD-kit 2.x')
+        pass
+
+
+class DPExplorationAnalyzer:
+    def __init__(self, dp_task: DPTask) -> None:
+        self.dp_task = dp_task
+        for key in dp_task.__dict__:
+            setattr(self, key, dp_task.__dict__[key])
 
     def md_make_set(self, iteration=None):
         location = self.path
@@ -676,23 +774,12 @@ class DPTask(object):
                 # dump init structure
                 write(os.path.join(task_path, 'conf.lmp'), sys_init_stc, format='lammps-data')
 
-    def train_longrunning(self, iteration=None, deepmd_version='2.0', **kwargs):
-        """Generate models with larger decay steps and total batch
 
-        Parameters
-        ----------
-        iteration : int, optional
-            The iteration of model for long running, by default None
-        """
-        from distutils.version import LooseVersion
-        params = self.param_data
-        if LooseVersion(deepmd_version) < LooseVersion('1.0'):
-            logger.info('Preparing input for DeePMD-kit 0.x')
-        elif LooseVersion(deepmd_version) < LooseVersion('2.0'):
-            logger.info('Preparing input for DeePMD-kit 1.x')
-        else:
-            logger.info('Preparing input for DeePMD-kit 2.x')
-        pass
+class DPLabelingAnalyzer:
+    def __init__(self, dp_task: DPTask) -> None:
+        self.dp_task = dp_task
+        for key in dp_task.__dict__:
+            setattr(self, key, dp_task.__dict__[key])
 
     def fp_group_distance(self, iteration, atom_group):
         """
@@ -987,37 +1074,3 @@ class DPTask(object):
             "cp2k": "cp2k/output",
         }
         return styles.get(self.param_data['fp_style'], None)
-
-    def _load_task(self):
-        self._read_record()
-        self._read_param_data()
-        self._read_machine_data()
-        if self.step_code in [0, 3, 6]:
-            self.state = 'Waiting'
-        elif self.step_code in [1, 4, 7]:
-            self.state = 'Parsing'
-        else:
-            self.state = 'Stopped'
-        if self.step_code < 3:
-            self.step = 'Training'
-        elif self.step_code < 6:
-            self.step = 'Exploring'
-        else:
-            self.step = 'Labeling'
-
-    def _read_record(self):
-        _record_path = os.path.join(self.path, self.record_file)
-        with open(_record_path) as f:
-            _final_step = f.readlines()[-1]
-        self.iteration = int(_final_step.split()[0])
-        self.step_code = int(_final_step.split()[1])
-
-    def _read_param_data(self):
-        _param_path = os.path.join(self.path, self.param_file)
-        with open(_param_path) as f:
-            self.param_data = json.load(f)
-
-    def _read_machine_data(self):
-        _param_path = os.path.join(self.path, self.machine_file)
-        with open(_param_path) as f:
-            self.machine_data = json.load(f)

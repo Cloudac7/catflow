@@ -1,5 +1,4 @@
 import json
-import pytest
 from miko.utils.lammps import *
 
 
