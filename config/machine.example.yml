@@ -1,0 +1,71 @@
+name:
+  - 'chenglab191'
+  - 'chenglab52'
+  - 'chenglab205'
+
+chenglab191:
+  machine:
+    batch_type: "LSF"
+    context_type: "SSHContext"
+    local_root: "."
+    remote_root: "/data/ypliu/dprun"
+    remote_profile:
+      hostname: "172.27.127.191"
+      username: "ypliu"
+      port: 6666
+  resources:
+    vasp_53:
+      number_node: 2
+      cpu_per_node: 32
+      gpu_per_node: 0
+      kwargs:
+        gpu_usage: FALSE
+      custom_flags:
+        - "#BSUB -J label"
+        - "#BSUB -W 12:00"
+      queue_name: "53-medium"
+      group_size: 10
+      module_list:
+        - "intel/17.5.239"
+        - "mpi/intel/2017.5.239"
+        - "vasp/5.4.4"
+    vasp_52:
+      number_node: 2
+      cpu_per_node: 28
+      gpu_per_node: 0
+      kwargs:
+        gpu_usage: FALSE
+      custom_flags:
+        - "#BSUB -J label"
+        - "#BSUB -W 12:00"
+      queue_name: "52-medium"
+      group_size: 10
+      module_list:
+        - "intel/17.5.239"
+        - "mpi/intel/2017.5.239"
+        - "vasp/5.4.4"
+chenglab205:
+  machine:
+    batch_type: "LSF"
+    context_type: "SSHContext"
+    local_root: "."
+    remote_root: "/bigdata/ypliu/dprun/md"
+    remote_profile:
+      hostname: "210.34.15.205"
+      username: "ypliu"
+  resources:
+    lammps:
+      number_node: 1
+      cpu_per_node: 4
+      gpu_per_node: 1
+      kwargs:
+        gpu_usage: TRUE
+        gpu_new_syntax: TRUE
+        gpu_exclusive: FALSE
+      custom_flags:
+        - "#BSUB -J test"
+        - "#BSUB -W 24:00"
+      queue_name: "gpu"
+      group_size: 10
+      module_list:
+        - "deepmd/2.0"
