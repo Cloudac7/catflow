@@ -5,7 +5,7 @@ from itertools import product
 
 import numpy as np
 
-from miko.utils import logger
+from .log_factory import logger
 
 def dict_lists_combination(ori_dict: dict):
     keys = ori_dict.keys()
