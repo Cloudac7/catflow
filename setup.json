@@ -21,7 +21,8 @@
         "seaborn",
         "six",
         "tqdm",
-        "voluptuous"
+        "voluptuous",
+        "proplot"
     ],
     "entry_points": {
         "console_scripts": [
