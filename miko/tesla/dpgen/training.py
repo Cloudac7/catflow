@@ -43,7 +43,7 @@ class DPTrainingAnalyzer(DPAnalyzer):
         for key in lcurve_data.keys():
             if key.startswith('energy_'):
                 axs[0].scatter(step[10:], lcurve_data[key][10:],
-                               alpha=0.4, label=key.pop('energy_'))
+                               alpha=0.4, label=key.replace('energy_', ''))
         axs[0].hlines(0.005, step[0], step[-1], linestyles='--',
                       colors='red', label='5 meV')
         axs[0].hlines(0.01, step[0], step[-1], linestyles='--',

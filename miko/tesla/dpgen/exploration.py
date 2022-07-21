@@ -24,7 +24,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def make_set(self, iteration=None):
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         all_data = []
-        for task in (self.path / n_iter / '01.model_devi/task*').glob():
+        for task in Path.glob(self.path / n_iter / '01.model_devi/task*'):
             # read model_devi.out
             steps, max_devi_f, max_devi_e = \
                 read_model_deviation(task / 'model_devi.out')
