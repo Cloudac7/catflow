@@ -14,7 +14,7 @@ from miko.utils import logger
 from miko.utils.lammps import *
 from miko.graph.plotting import canvas_style, AxesInit
 from miko.resources.submit import JobFactory
-from miko.tesla.dpgen import DPAnalyzer
+from miko.tesla.dpgen.base import DPAnalyzer
 
 
 class DPExplorationAnalyzer(DPAnalyzer):
@@ -142,7 +142,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 `temps`: please use the value of `group_by`, whose default input is `"temps"`.
                 `label_unit`: the unit of `select_value`, such as 'Å'.
                 `step`: control the step of each point along x axis, in prevention of overlap.
-                Parameters of `canvas_style`: please refer to `miko.util.canvas_style`.
+                Parameters of `canvas_style`: please refer to `miko.graph.plotting.canvas_style`.
 
         Raises:
             TypeError: _description_
