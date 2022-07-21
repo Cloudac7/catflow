@@ -57,7 +57,7 @@ class DPTrainingAnalyzer(DPAnalyzer):
         for key in lcurve_data.keys():
             if key.startswith('force_'):
                 axs[0].scatter(step[10:], lcurve_data[key][10:],
-                               alpha=0.4, label=key.pop('force_'))
+                               alpha=0.4, label=key.replace('force_'))
         axs[1].hlines(0.05, step[0], step[-1], linestyles='--',
                       colors='red', label='50 meV/Å')
         axs[1].hlines(0.1, step[0], step[-1], linestyles='--',
