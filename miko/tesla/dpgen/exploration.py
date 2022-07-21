@@ -16,112 +16,59 @@ from miko.graph.plotting import canvas_style, AxesInit
 from miko.resources.submit import JobFactory
 from miko.tesla.dpgen import DPAnalyzer
 
+
 class DPExplorationAnalyzer(DPAnalyzer):
     """Analyzer for exploration tasks.
     """
+
     def make_set(self, iteration=None):
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         all_data = []
         for task in (self.path / n_iter / '01.model_devi/task*').glob():
-            step = np.loadtxt(task / 'model_devi.out', usecols=0)
-            dump_freq = step[1] - step[0]
-            max_devi_f = np.loadtxt(task / 'model_devi.out', usecols=4)
-            max_devi_e = np.loadtxt(task / 'model_devi.out', usecols=3)
-            with open(task / 'input.lammps', 'r') as f:
-                lines = f.readlines()
-            temp = float(lines[3].split()[3])
-            start, final = 0, 0
-            with open(task / 'model_devi.log', 'r') as f:
-                for i, line in enumerate(f):
-                    key_line = line.strip()
-                    if 'Step Temp' in key_line:
-                        start = i + 1
-                    elif 'Loop time of' in key_line:
-                        final = i
-            with open(task / 'model_devi.log', 'r') as f:
-                if dump_freq > 10:
-                    step = int(dump_freq / 10)
-                    lines = f.readlines()[start:final:step]
-                else:
-                    lines = f.readlines()[start:final]
-            pot_energy = np.array(
-                [p.split()[2] for p in lines if 'WARNING' not in p]).astype('float')
+            # read model_devi.out
+            steps, max_devi_f, max_devi_e = \
+                read_model_deviation(task / 'model_devi.out')
+
+            # load job config
             try:
                 with open(task / 'job.json', 'r') as f:
                     job_dict = json.load(f)
-            except Exception as e:
-                print(e)
+            except Exception as err:
+                logger.error(err)
                 job_dict = {}
+
+            # gather result_dict
             result_dict = {
-                'iter': n_iter,
-                'temps': temp,
+                'iteration': n_iter,
                 'max_devi_e': max_devi_e,
                 'max_devi_f': max_devi_f,
-                'task': task,
-                't_freq': dump_freq,
-                'pot_energy': pot_energy
+                'task_path': task,
+                'steps': steps
             }
             all_dict = {**result_dict, **job_dict}
             all_data.append(all_dict)
         return all_data
 
-    def make_set_pd(self, iteration=None):
-        all_data = self.md_make_set(iteration=iteration)
+    def make_set_dataframe(self, iteration=None):
+        all_data = self.make_set(iteration=iteration)
         df = pd.DataFrame(all_data)
         return df
 
-    def make_set_pkl(self, iteration=None):
-        df = self.md_set_pd(iteration=iteration)
-        save_path = self.path
-        os.makedirs(name=f'{save_path}/data_pkl', exist_ok=True)
-        df.to_pickle(
-            f'{save_path}/data_pkl/data_{str(iteration).zfill(2)}.pkl')
-
-    def md_set_load_pkl(self, iteration):
-        pkl_path = os.path.join(
-            self.path, f'data_pkl/data_{str(iteration).zfill(2)}.pkl')
-        df = pd.read_pickle(pkl_path)
+    def make_set_pickle(self, iteration=None):
+        df = self.make_set_dataframe(iteration=iteration)
+        save_path = self.path / 'model_devi_each_iter'
+        os.makedirs(name=save_path, exist_ok=True)
+        df.to_pickle(save_path / f'data_{str(iteration).zfill(6)}.pkl')
         return df
 
-    def md_single_iter(
-            self,
-            iteration,
-            f_trust_lo=0.10,
-            f_trust_hi=0.30,
-            x_limit=None,
-            y_limit=None,
-            log=False,
-            group_by='temps',
-            select=None,
-            select_value=None,
-            **kwargs):
-        """
-        Generate a plot of model deviation in each iteration.
-        :param iteration: The iteration
-        :param f_trust_lo: The lower limit of max_deviation_force.
-        :param f_trust_hi: The higher limit of max_deviation_force.
-        :param x_limit: Choose the limit of x axis.
-        :param y_limit: Choose the limit of y axis.
-        :param log: Choose whether log scale used. Default: False.
-        :param group_by: Choose which the plots are grouped by, which should be included.
-            For value of group_by, a list, int or str containing desired value(s) should be included as kwargs.
-            For example, if `group_by='temps'`, then `temps=[100., 200., 300.]` should also be passed to this function.
-            Default: "temps".
-        :param select: Choose which param selected as plot zone.
-        :param select_value: the dependence of `select`. Different from `group_by`, please pass only one number.
-        :param kwargs: Include other params, such as:
-            `temps`: please use the value of `group_by`, whose default input is `"temps"`.
-            `label_unit`: the unit of `select_value`, such as 'Å'.
-            `step`: control the step of each point along x axis, in prevention of overlap.
-            Parameters of `canvas_style`: please refer to `miko.util.canvas_style`.
-        :return: A plot for different desired values.
-        """
-        flatmdf = None
-        try:
-            df = self.md_set_load_pkl(iteration=iteration)
-        except FileNotFoundError:
-            df = self.md_set_pd(iteration=iteration)
-
+    def load_from_pickle(self, iteration):
+        pkl_path = self.path / \
+            f'model_devi_each_iter/data_{str(iteration).zfill(6)}.pkl'
+        df = pd.read_pickle(pkl_path)
+        return df
+    
+    @staticmethod
+    def _convert_group_by(group_by: str, **kwargs):
         plot_items = kwargs.get(group_by)
         if isinstance(plot_items, str):
             num_item = 1
@@ -134,7 +81,85 @@ class DPExplorationAnalyzer(DPAnalyzer):
         else:
             logger.error('The values chosen for plotting not exists.')
             raise TypeError(
-                'Please pass values to be plotted with `group_by` parameter')
+                'Please pass values to be plotted with `group_by` value as variable name')
+        return num_item, plot_items
+
+    @staticmethod
+    def select_dataset(dataset, select, select_value):
+        try:
+            df = dataset[dataset[select] == select_value]
+        except KeyError as err:
+            logger.error(f'Please choose existing parameter for `select`')
+            raise err
+        return df
+
+    @staticmethod
+    def extract_group_dataset(dataset, group_item, group_by='temps'):
+        try:
+            part_data = dataset[dataset[group_by] == group_item]
+        except KeyError as err:
+            logger.error(
+                f'Please choose existing parameter for `group_by`')
+            raise err
+        return part_data
+    
+    @staticmethod
+    def extract_iteration_dataset(dataset, iteration_dir=None):
+        try:
+            parts = dataset[dataset['iteration'] == iteration_dir]
+        except KeyError as err:
+            logger.error(f'Please choose existing iteration as input.')
+            raise err
+        return parts
+    
+    def plot_single_iteration(
+            self,
+            iteration=None,
+            f_trust_lo=0.10,
+            f_trust_hi=0.30,
+            x_limit=None,
+            y_limit=None,
+            log=False,
+            group_by='temps',
+            select=None,
+            select_value=None,
+            **kwargs):
+        """Generate a plot of model deviation in each iteration.
+
+        Args:
+            iteration (_type_): The iteration. Defaults to current iteration.
+            f_trust_lo (float, optional): The lower limit of max_deviation_force. Defaults to 0.10.
+            f_trust_hi (float, optional): The higher limit of max_deviation_force. Defaults to 0.30.
+            x_limit (_type_, optional): Choose the limit of x axis. Defaults to None.
+            y_limit (_type_, optional): Choose the limit of y axis. Defaults to None.
+            log (bool, optional): Choose whether log scale used. Defaults to False.
+            group_by (str, optional): Choose which the plots are grouped by, which should be included. 
+                Should be corresponding to keys in model_devi_job. Defaults to 'temps'.
+            select (_type_, optional): Choose which param selected as plot zone. Defaults to None.
+            select_value (_type_, optional): The dependence of `select`. 
+                Different from `group_by`, please pass only one number. Defaults to None.
+            kwargs (_type_, optional): Additional keyword arguments. Include other params, such as:
+                `temps`: please use the value of `group_by`, whose default input is `"temps"`.
+                `label_unit`: the unit of `select_value`, such as 'Å'.
+                `step`: control the step of each point along x axis, in prevention of overlap.
+                Parameters of `canvas_style`: please refer to `miko.util.canvas_style`.
+
+        Raises:
+            TypeError: _description_
+
+        Returns:
+            _type_: A plot for different desired values.
+        """
+
+        iteration_code = self._iteration_control_code(control_step=2, iteration=iteration)
+
+        flatmdf = None
+        try:
+            df = self.load_from_pickle(iteration=iteration_code)
+        except FileNotFoundError:
+            df = self.make_set_pickle(iteration=iteration_code)
+
+        num_item, plot_items = self._convert_group_by(group_by, **kwargs)
 
         label_unit = kwargs.get('label_unit')
         canvas_style(**kwargs)
@@ -143,39 +168,30 @@ class DPExplorationAnalyzer(DPAnalyzer):
         gs = fig.add_gridspec(num_item, 3)
 
         for i, item in enumerate(plot_items):
-            try:
-                if all([select, select_value]):
-                    df = df[df[select] == select_value]
-            except KeyError:
-                logger.error(f'Please choose existing parameter for `select`')
-                return None
-            try:
-                partdata = df[df[group_by] == item]
-            except KeyError:
-                logger.error(f'Please choose existing parameter for `group_by`')
-                return None
+            if all([select, select_value]):
+                df = self.select_dataset(df, select, select_value)
+            partdata = self.extract_group_dataset(df, item, group_by)
+            parts = self.extract_iteration_dataset(
+                partdata, self._iteration_dir(control_step=2, iteration=iteration)
+            )
+            steps = np.array(list(parts['steps']))[:, ::kwargs.get('step')]
+            mdf = np.array(list(parts['max_devi_f']))[:, ::kwargs.get('step')]
 
             # left part
             fig_left = fig.add_subplot(gs[i, :-1])
-            parts = partdata[partdata['iter'] ==
-                             'iter.' + str(iteration).zfill(6)]
-            for j, [item, part] in enumerate(parts.groupby(group_by)):
-                mdf = np.array(list(part['max_devi_f']))[
-                      :, ::kwargs.get('step')]
-                t_freq = np.average(part['t_freq']) * kwargs.get('step', 1)
-                dupt = np.tile(
-                    np.arange(mdf.shape[1]) * t_freq, mdf.shape[0])
-                flatmdf = np.ravel(mdf)
-                logger.info(
-                    f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
-                sns.scatterplot(
-                    x=dupt,
-                    y=flatmdf,
-                    color='red',
-                    alpha=0.5,
-                    ax=fig_left,
-                    label=f'{item} {label_unit}'
-                )
+
+            ######################### plotting part #########################
+            logger.info(
+                f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
+            sns.scatterplot(
+                x=steps,
+                y=mdf,
+                color='red',
+                alpha=0.5,
+                ax=fig_left,
+                label=f'{item} {label_unit}'
+            )
+            
             if x_limit is None:
                 x_limit = fig_left.get_xlim()[1]
             fig_left.set_xlim(0, x_limit)
@@ -280,7 +296,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     if select_value is not None:
                         df = df[df[select] == select_value]
                 partdata = df[df[group_by] == item]
-                parts = partdata[partdata['iter'] == 'iter.' + str(k).zfill(6)]
+                parts = partdata[partdata['iteration']
+                                 == 'iter.' + str(k).zfill(6)]
                 for j, [item, part] in enumerate(parts.groupby(group_by)):
                     mdf = np.array(list(part['max_devi_f']))
                     t_freq = np.average(part['t_freq'])
@@ -351,7 +368,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     if select_value is not None:
                         df = df[df[select] == select_value]
                 part_data = df[df[group_by] == item]
-                parts = part_data[part_data['iter']
+                parts = part_data[part_data['iteration']
                                   == 'iter.' + str(k).zfill(6)]
                 for j, [temp, part] in enumerate(parts.groupby(group_by)):
                     mdf = np.array(list(part['max_devi_f']))
@@ -489,7 +506,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
         if params is None:
             params = self.param_data
-        
+
         if restart == True:
             logger.info("Restarting from old checkpoint")
         else:
@@ -551,7 +568,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
                 # create task path
                 os.makedirs(task_path, exist_ok=True)
-                shutil.copyfile(lmp_templ, os.path.join(task_path, 'input.lammps'))
+                shutil.copyfile(lmp_templ, os.path.join(
+                    task_path, 'input.lammps'))
                 model_list = glob(os.path.join(model_path, 'graph*pb'))
                 model_list.sort()
                 model_names = [os.path.basename(i) for i in model_list]
@@ -591,4 +609,5 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     json.dump(job, fp, indent=4)
 
                 # dump init structure
-                write(os.path.join(task_path, 'conf.lmp'), sys_init_stc, format='lammps-data')
+                write(os.path.join(task_path, 'conf.lmp'),
+                      sys_init_stc, format='lammps-data')

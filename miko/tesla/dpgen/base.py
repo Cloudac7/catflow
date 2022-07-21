@@ -77,12 +77,16 @@ class DPAnalyzer(ABC):
         for key in dp_task.__dict__:
             setattr(self, key, dp_task.__dict__[key])
 
-    def _iteration_dir(self, control_step, iteration=None):
+    def _iteration_control_code(self, control_step, iteration=None):
         if iteration is None:
             if self.step_code < control_step:
                 iteration = self.iteration - 1
             else:
                 iteration = self.iteration
+        return iteration
+
+    def _iteration_dir(self, **kwargs):
+        iteration = self._iteration_control_code(**kwargs)
         return 'iter.' + str(iteration).zfill(6)
 
     @classmethod

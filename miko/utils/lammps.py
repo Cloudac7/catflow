@@ -1,7 +1,11 @@
 import os
 import re
+from pathlib import Path
 from itertools import product
 
+import numpy as np
+
+from miko.utils import logger
 
 def dict_lists_combination(ori_dict: dict):
     keys = ori_dict.keys()
@@ -52,3 +56,34 @@ def convert_init_structures(test_job, sys_idx):
     init_stc_path = os.path.join(test_job['md_sys_configs_prefix'], test_job['md_sys_configs'][sys_idx])
     stc = read(init_stc_path, format=test_job['md_sys_configs_format'])
     return stc
+
+
+def read_model_deviation(model_devi_path: Path):
+    model_devi_path = model_devi_path.resolve()
+    try:
+        steps = np.loadtxt(model_devi_path, usecols=0)
+        max_devi_f = np.loadtxt(model_devi_path, usecols=4)
+        max_devi_e = np.loadtxt(model_devi_path, usecols=3)
+    except FileNotFoundError as err:
+        logger.error('Please select an existing model_devi.out')
+        raise err
+    return steps, max_devi_f, max_devi_e
+
+def read_dump_energy(lammps_log_path: Path):
+    start, final = 0, 0
+    with open(lammps_log_path, 'r') as f:
+        for i, line in enumerate(f):
+            key_line = line.strip()
+            if 'Step Temp' in key_line:
+                start = i + 1
+            elif 'Loop time of' in key_line:
+                final = i
+    with open(lammps_log_path, 'r') as f:
+        lines = f.readlines()[start:final]
+    pot_energy = np.array(
+        [p.split()[2] for p in lines if 'WARNING' not in p]).astype('float')
+    kin_energy = np.array(
+        [p.split()[3] for p in lines if 'WARNING' not in p]).astype('float')
+    tot_energy = np.array(
+        [p.split()[4] for p in lines if 'WARNING' not in p]).astype('float')
+    return pot_energy, kin_energy, tot_energy
