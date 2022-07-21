@@ -1,0 +1,55 @@
+{
+	"api_version": "1.0",
+	"deepmd_version": "2.0.1",
+	"train" :[
+		{
+			"command": "dp",
+			"machine": {
+				"batch_type": "Shell",
+				"context_type": "local",
+				"local_root" : "./",
+				"remote_root": "/home/ecust/lws"
+			},
+			"resources": {
+				"number_node": 1,
+				"cpu_per_node": 4,
+				"gpu_per_node": 1,
+				"group_size": 1
+			}
+		}
+	],
+	"model_devi":[
+		{
+			"command": "mpirun -n 4 lmpdplws -i input.lammps",
+			"machine": {
+				"batch_type": "Shell",
+				"context_type": "local",
+				"local_root" : "./",
+				"remote_root": "/home/ecust/lws"
+			},
+			"resources": {
+				"number_node": 1,
+				"cpu_per_node": 4,
+				"gpu_per_node": 1,
+				"group_size": 5
+			}
+		}
+	],
+	"fp":[
+		{
+			"command": "mpirun -n 4 vasplws",
+			"machine": {
+				"batch_type": "Shell",
+				"context_type": "local",
+				"local_root" : "./",
+				"remote_root": "/home/ecust/lws"
+			},
+			"resources": {
+				"number_node": 1,
+				"cpu_per_node": 4,
+				"gpu_per_node": 1,
+				"group_size": 125
+			}
+		}
+	]
+}

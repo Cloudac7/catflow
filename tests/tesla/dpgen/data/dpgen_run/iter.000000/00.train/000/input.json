@@ -1,0 +1,67 @@
+{
+    "model": {
+        "type_map": [
+            "H",
+            "C"
+        ],
+        "descriptor": {
+            "type": "se_a",
+            "sel": [
+                16,
+                4
+            ],
+            "rcut_smth": 0.5,
+            "rcut": 5.0,
+            "neuron": [
+                120,
+                120,
+                120
+            ],
+            "resnet_dt": true,
+            "axis_neuron": 12,
+            "seed": 1367858907
+        },
+        "fitting_net": {
+            "neuron": [
+                25,
+                50,
+                100
+            ],
+            "resnet_dt": false,
+            "seed": 775299395
+        }
+    },
+    "learning_rate": {
+        "type": "exp",
+        "start_lr": 0.001,
+        "decay_steps": 5000
+    },
+    "loss": {
+        "start_pref_e": 0.02,
+        "limit_pref_e": 2,
+        "start_pref_f": 1000,
+        "limit_pref_f": 1,
+        "start_pref_v": 0.0,
+        "limit_pref_v": 0.0
+    },
+    "training": {
+        "stop_batch": 2000,
+        "disp_file": "lcurve.out",
+        "disp_freq": 1000,
+        "numb_test": 4,
+        "save_freq": 1000,
+        "save_ckpt": "model.ckpt",
+        "disp_training": true,
+        "time_training": true,
+        "profiling": false,
+        "profiling_file": "timeline.json",
+        "_comment": "that's all",
+        "systems": [
+            "../data.init/init/CH4.POSCAR.01x01x01/02.md/sys-0004-0001/deepmd"
+        ],
+        "batch_size": [
+            7
+        ],
+        "seed": 416027696
+    }
+}

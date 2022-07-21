@@ -1,7 +1,7 @@
 import json
 import os
 import shutil
-from collections import Iterable, Sized
+from collections.abc import Iterable, Sized
 from glob import glob
 
 import numpy as np
@@ -55,6 +55,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
         return df
 
     def make_set_pickle(self, iteration=None):
+        if iteration is None:
+            iteration = self._iteration_control_code(control_step=2, iteration=iteration)
         df = self.make_set_dataframe(iteration=iteration)
         save_path = self.path / 'model_devi_each_iter'
         os.makedirs(name=save_path, exist_ok=True)
@@ -174,15 +176,16 @@ class DPExplorationAnalyzer(DPAnalyzer):
             parts = self.extract_iteration_dataset(
                 partdata, self._iteration_dir(control_step=2, iteration=iteration)
             )
-            steps = np.array(list(parts['steps']))[:, ::kwargs.get('step')]
-            mdf = np.array(list(parts['max_devi_f']))[:, ::kwargs.get('step')]
+            steps = np.array(list(parts['steps'])).flatten()
+            mdf = np.array(list(parts['max_devi_f'])).flatten()
+            logger.info(type(mdf))
 
             # left part
             fig_left = fig.add_subplot(gs[i, :-1])
 
             ######################### plotting part #########################
             logger.info(
-                f"max devi of F is :{max(flatmdf)} ev/Å at {group_by}={item} {label_unit}.")
+                f"max devi of F is :{mdf.max()} ev/Å at {group_by}={item} {label_unit}.")
             sns.scatterplot(
                 x=steps,
                 y=mdf,
@@ -203,18 +206,18 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 fig_left.set_ylim(0, y_limit)
             fig_left.axhline(f_trust_lo, linestyle='dashed')
             fig_left.axhline(f_trust_hi, linestyle='dashed')
-            if fig_left.is_last_row():
+            if fig_left.get_subplotspec().is_last_row():
                 fig_left.set_xlabel('Simulation Steps')
-            if fig_left.is_first_col():
+            if fig_left.get_subplotspec().is_first_col():
                 fig_left.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
             fig_left.legend()
-            if fig_left.is_first_row():
+            if fig_left.get_subplotspec().is_first_row():
                 fig_left.set_title(f'Iteration {iteration}')
 
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
             sns.histplot(
-                y=flatmdf,
+                y=mdf,
                 bins=50,
                 kde=True,
                 stat='density',
@@ -223,7 +226,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 alpha=0.5,
                 ax=fig_right
             )
-            if fig_right.is_first_row():
+            if fig_right.get_subplotspec().is_first_row():
                 fig_right.set_title('Distribution of Deviation')
             if not log:
                 fig_right.set_ylim(0, y_limit)

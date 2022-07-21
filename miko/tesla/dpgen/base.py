@@ -9,9 +9,9 @@ class DPTask(object):
     def __init__(
         self,
         path: str,
-        param_file: str,
-        machine_file: str,
-        record_file: str,
+        param_file: str = 'param.json',
+        machine_file: str = 'machine.json',
+        record_file: str = 'record.dpgen',
         deepmd_version: str = '2.0'
     ):
         """Generate a class of tesla task.
