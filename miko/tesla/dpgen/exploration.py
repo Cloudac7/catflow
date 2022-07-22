@@ -56,7 +56,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             with open(self.path / n_iter / 'cur_job.json', 'r') as f:
                 job_dict = json.load(f)
         except Exception as err:
-            logger.error(err)
+            logger.warning(err)
             job_dict = {}
         return job_dict
 
@@ -235,7 +235,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'plot_item': plot_item,
                 'label_unit': kwargs.get('label_unit'),
                 'x_limit': x_limit,
-                'y_limit': y_limit,
+                'y_limit': fig_left.get_ylim(),
                 'use_log': use_log,
                 'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                 'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
