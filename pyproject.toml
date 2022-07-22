@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+
+[project]
+name = "miko-analyzer"
+authors = [
+    {email = "scottryuu@outlook.com"},
+    {name = "Cloudac7"}
+]
+
+description = "Analyzing tool for Deep Potential based chemical research."
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["one", "two"]
+license = {text = "Apache License, Version 2.0"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "ase",
+    "click",
+    "dscribe",
+    "dpdata",
+    "dpdispatcher",
+    "dynaconf",
+    "matplotlib",
+    "mdanalysis",
+    "numba",
+    "numpy",
+    "requests",
+    "scipy",
+    "seaborn",
+    "tqdm",
+    "proplot"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-datadir",
+    "coverage",
+    "coveralls"
+]
+
+[project.urls]
+repository = "https://github.com/cloudac7/miko-analysis"
+
+[project.entry_points]
+miko = "miko.main:cli"
