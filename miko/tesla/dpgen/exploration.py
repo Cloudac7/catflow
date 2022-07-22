@@ -1,5 +1,6 @@
 import json
 import os
+from re import A
 import shutil
 from collections.abc import Iterable, Sized
 from glob import glob
@@ -48,6 +49,16 @@ class DPExplorationAnalyzer(DPAnalyzer):
             all_dict = {**result_dict, **job_dict}
             all_data.append(all_dict)
         return all_data
+
+    def get_cur_job(self, iteration):
+        n_iter = self._iteration_dir(control_step=2, iteration=iteration)
+        try:
+            with open(self.path / n_iter / 'cur_job.json', 'r') as f:
+                job_dict = json.load(f)
+        except Exception as err:
+            logger.error(err)
+            job_dict = {}
+        return job_dict
 
     def make_set_dataframe(self, iteration=None):
         all_data = self.make_set(iteration=iteration)
@@ -113,6 +124,37 @@ class DPExplorationAnalyzer(DPAnalyzer):
             logger.error(f'Please choose existing iteration as input.')
             raise err
         return parts
+
+    def _data_prepareation(self, plot_item, iteration=None, group_by="temps", select=None, select_value=None, **kwargs):
+        iteration_code = self._iteration_control_code(control_step=2, iteration=iteration)
+        try:
+            df = self.load_from_pickle(iteration=iteration_code)
+        except FileNotFoundError:
+            df = self.make_set_pickle(iteration=iteration_code)
+
+        label_unit = kwargs.get('label_unit')
+
+        if all([select, select_value]):
+            df = self.select_dataset(df, select, select_value)
+        partdata = self.extract_group_dataset(df, plot_item, group_by)
+        parts = self.extract_iteration_dataset(
+            partdata, self._iteration_dir(control_step=2, iteration=iteration)
+        )
+        steps = np.array(list(parts['steps'])).flatten()
+        mdf = np.array(list(parts['max_devi_f'])).flatten()
+        logger.info(
+            f"max devi of F is :{mdf.max()} ev/Å at {group_by}={plot_item} {label_unit}.")
+        return steps, mdf
+
+    def _read_model_devi_trust_level(self, trust_level_key, iteration=None):
+        cur_job = self.get_cur_job(iteration)
+        trust_level = cur_job.get(trust_level_key)
+        if trust_level is None:
+            trust_level = self.param_data[trust_level_key]
+        # Is average OK for different systems? 
+        if isinstance(trust_level, Iterable):
+            trust_level = np.mean(trust_level)
+        return trust_level
     
     def plot_single_iteration(
             self,
@@ -121,7 +163,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             f_trust_hi=0.30,
             x_limit=None,
             y_limit=None,
-            log=False,
+            use_log=False,
             group_by='temps',
             select=None,
             select_value=None,
@@ -132,9 +174,9 @@ class DPExplorationAnalyzer(DPAnalyzer):
             iteration (_type_): The iteration. Defaults to current iteration.
             f_trust_lo (float, optional): The lower limit of max_deviation_force. Defaults to 0.10.
             f_trust_hi (float, optional): The higher limit of max_deviation_force. Defaults to 0.30.
-            x_limit (_type_, optional): Choose the limit of x axis. Defaults to None.
-            y_limit (_type_, optional): Choose the limit of y axis. Defaults to None.
-            log (bool, optional): Choose whether log scale used. Defaults to False.
+            x_limit (float, List[float], optional): Choose the limit of x axis. Defaults to None.
+            y_limit (float, List[float], optional): Choose the limit of y axis. Defaults to None.
+            use_log (bool, optional): Choose whether log scale used. Defaults to False.
             group_by (str, optional): Choose which the plots are grouped by, which should be included. 
                 Should be corresponding to keys in model_devi_job. Defaults to 'temps'.
             select (_type_, optional): Choose which param selected as plot zone. Defaults to None.
@@ -143,7 +185,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
             kwargs (_type_, optional): Additional keyword arguments. Include other params, such as:
                 `temps`: please use the value of `group_by`, whose default input is `"temps"`.
                 `label_unit`: the unit of `select_value`, such as 'Å'.
-                `step`: control the step of each point along x axis, in prevention of overlap.
                 Parameters of `canvas_style`: please refer to `miko.graph.plotting.canvas_style`.
 
         Raises:
@@ -155,7 +196,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
         iteration_code = self._iteration_control_code(control_step=2, iteration=iteration)
 
-        flatmdf = None
         try:
             df = self.load_from_pickle(iteration=iteration_code)
         except FileNotFoundError:
@@ -169,73 +209,39 @@ class DPExplorationAnalyzer(DPAnalyzer):
                          constrained_layout=True)
         gs = fig.add_gridspec(num_item, 3)
 
-        for i, item in enumerate(plot_items):
-            if all([select, select_value]):
-                df = self.select_dataset(df, select, select_value)
-            partdata = self.extract_group_dataset(df, item, group_by)
-            parts = self.extract_iteration_dataset(
-                partdata, self._iteration_dir(control_step=2, iteration=iteration)
-            )
-            steps = np.array(list(parts['steps'])).flatten()
-            mdf = np.array(list(parts['max_devi_f'])).flatten()
-            logger.info(type(mdf))
+        for i, plot_item in enumerate(plot_items):
+            steps, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
 
             # left part
             fig_left = fig.add_subplot(gs[i, :-1])
-
-            ######################### plotting part #########################
-            logger.info(
-                f"max devi of F is :{mdf.max()} ev/Å at {group_by}={item} {label_unit}.")
-            sns.scatterplot(
-                x=steps,
-                y=mdf,
-                color='red',
-                alpha=0.5,
-                ax=fig_left,
-                label=f'{item} {label_unit}'
-            )
+            fig_left_args = {
+                'x': steps, 
+                'y': mdf, 
+                'plot_item': plot_item,
+                'label_unit': kwargs.get('label_unit'),
+                'x_limit': x_limit,
+                'y_limit': y_limit,
+                'use_log': use_log,
+                'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
+                'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                'iteration': iteration,
+            }
+            PlottingExploartion.plot_mdf_time_curve(fig_left, fig_left_args)
             
-            if x_limit is None:
-                x_limit = fig_left.get_xlim()[1]
-            fig_left.set_xlim(0, x_limit)
-            if y_limit is None:
-                y_limit = fig_left.get_ylim()[1]
-            if log:
-                fig_left.set_yscale('log')
-            else:
-                fig_left.set_ylim(0, y_limit)
-            fig_left.axhline(f_trust_lo, linestyle='dashed')
-            fig_left.axhline(f_trust_hi, linestyle='dashed')
-            if fig_left.get_subplotspec().is_last_row():
-                fig_left.set_xlabel('Simulation Steps')
-            if fig_left.get_subplotspec().is_first_col():
-                fig_left.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
-            fig_left.legend()
-            if fig_left.get_subplotspec().is_first_row():
-                fig_left.set_title(f'Iteration {iteration}')
-
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
-            sns.histplot(
-                y=mdf,
-                bins=50,
-                kde=True,
-                stat='density',
-                color='red',
-                ec=None,
-                alpha=0.5,
-                ax=fig_right
-            )
-            if fig_right.get_subplotspec().is_first_row():
-                fig_right.set_title('Distribution of Deviation')
-            if not log:
-                fig_right.set_ylim(0, y_limit)
-            else:
-                fig_right.set_yscale('log')
-            fig_right.axhline(f_trust_lo, linestyle='dashed')
-            fig_right.axhline(f_trust_hi, linestyle='dashed')
-            fig_right.set_xticklabels([])
-            fig_right.set_yticklabels([])
+            fig_right_args = {
+                'y': mdf, 
+                'plot_item': plot_item,
+                'label_unit': kwargs.get('label_unit'),
+                'x_limit': x_limit,
+                'y_limit': y_limit,
+                'use_log': use_log,
+                'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
+                'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                'iteration': iteration,
+            }
+            PlottingExploartion.plot_mdf_distribution(fig_right, fig_right_args, orientation='horizontal')
         return plt
 
     def md_multi_iter(
@@ -614,3 +620,97 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 # dump init structure
                 write(os.path.join(task_path, 'conf.lmp'),
                       sys_init_stc, format='lammps-data')
+
+
+class PlottingExploartion:
+    @staticmethod
+    def plot_mdf_time_curve(ax: plt.Axes, args):
+        plot_item = args.get('plot_item')
+        label_unit = args.get('label_unit')
+        x = args.get('x')
+        y = args.get('y')
+        x_limit = args.get('x_limit')
+        y_limit = args.get('y_limit')
+        f_trust_lo = args.get('f_trust_lo')
+        f_trust_hi = args.get('f_trust_hi')
+        iteration = args.get('iteration')
+
+        sns.scatterplot(x, y, color='red', alpha=0.5, ax=ax, label=f'{plot_item} {label_unit}')
+            
+        PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
+        if args.get('use_log', False) == True:
+            ax.set_yscale('log')
+        else:
+            PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
+        
+        if f_trust_lo is not None:
+            ax.axhline(f_trust_lo, linestyle='dashed')
+        if f_trust_hi is not None:
+            ax.axhline(f_trust_hi, linestyle='dashed')
+        if ax.get_subplotspec().is_last_row():
+            ax.set_xlabel('Simulation Steps')
+        if ax.get_subplotspec().is_first_col():
+            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
+        ax.legend()
+        if iteration is None:
+            if ax.get_subplotspec().is_first_row():
+                ax.set_title(f'Iteration {iteration}')
+        return ax
+
+    @staticmethod
+    def plot_mdf_distribution(ax: plt.Axes, args, orientation='vertical'):
+        data = args.get('data')
+        x_limit = args.get('x_limit')
+        y_limit = args.get('y_limit')
+        f_trust_lo = args.get('f_trust_lo')
+        f_trust_hi = args.get('f_trust_hi')
+
+        if orientation == 'vertical':
+            sns.histplot(
+                x=data, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
+            )
+            ax.axvline(f_trust_lo, linestyle='dashed')
+            ax.axvline(f_trust_hi, linestyle='dashed')
+        elif orientation == 'horizontal':
+            sns.histplot(
+                y=data, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
+            )
+            ax.axhline(f_trust_lo, linestyle='dashed')
+            ax.axhline(f_trust_hi, linestyle='dashed')
+        else:
+            raise ValueError('Invalid orientation')
+        
+        if ax.get_subplotspec().is_first_row():
+            ax.set_title('Distribution of Deviation')
+            
+        PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
+        if args.get('use_log', False) == True:
+            ax.set_yscale('log')
+        else:
+            PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
+        
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        return ax
+
+    @staticmethod
+    def _plot_set_axis_limits(ax: plt.Axes, limitation, limitation_type):
+        limitation_dict = {
+            'x_limit': ax.set_xlim,
+            'y_limit': ax.set_ylim,
+        }
+        _func = limitation_dict[limitation_type]
+        if limitation is not None:
+            if isinstance(limitation, (int, float)):
+                _func(0, limitation)
+            elif isinstance(limitation, Iterable):
+                if len(limitation) > 2:
+                    raise ValueError("Limitation should be a value \
+                        or a set with no more than 2 elements.")
+                elif len(limitation) == 1:
+                    _func(0, limitation[0])
+                else:
+                    _func(limitation)
+            else:
+                raise ValueError("Limitation should be a value \
+                    or a set with no more than 2 elements.")
