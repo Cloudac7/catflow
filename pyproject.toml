@@ -49,5 +49,5 @@ test = [
 [project.urls]
 repository = "https://github.com/cloudac7/miko-analysis"
 
-[project.entry_points]
+[project.scripts]
 miko = "miko.main:cli"
