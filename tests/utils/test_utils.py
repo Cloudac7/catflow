@@ -1,3 +1,4 @@
+import json
 from miko.utils.lammps import *
 
 
@@ -22,3 +23,25 @@ def test_dict_lists_combination():
         {"param1": 2, "param2": 4, "param3": 6},
     ]
     assert dict_lists_combination(ori_dict) == prod_dict_list
+
+
+def test_parse_template(datadir):
+    contents = (datadir / 'conf-lammps.json').read_text()
+    conf_dict = json.loads(contents)
+    print(conf_dict)
+
+
+def test_check_keywords():
+    pass
+
+
+def test_substitute_keywords():
+    pass
+
+
+def test_insert_plm_into_lmp():
+    pass
+
+
+def test_convert_init_structures():
+    pass

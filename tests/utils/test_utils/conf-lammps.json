@@ -1,0 +1,31 @@
+{
+  "type_map": ["O", "Pt"],
+  "mass_map": [16.00, 195.00],
+  "numb_models": 4,
+  "model_devi_dt": 0.0005,
+  "model_devi_plumed": true,
+  "md_test": {
+    "template": {
+      "lmp": "lmp/input.lammps",
+      "plm": "lmp/input.plumed"
+    },
+    "sys_idx": [0, 1, 2, 3],
+    "traj_freq": 10,
+    "rev_mat": {
+      "V_NSTEPS": [2000000],
+      "V_TEMP": [300, 600]
+    },
+    "sys_rev_mat": {
+      "0": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]},
+      "1": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]},
+      "2": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}
+    }
+  },
+  "md_sys_configs_prefix": "~/project/Pt/cluster_with_o2/",
+  "md_sys_configs": [
+    "22/init/IS/0/POSCAR",
+    "22/init/TS/0/POSCAR",
+    "22/init/FS/0/POSCAR"
+  ],
+  "md_sys_configs_format": "vasp"
+}
