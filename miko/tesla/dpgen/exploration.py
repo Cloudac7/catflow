@@ -194,16 +194,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             _type_: A plot for different desired values.
         """
 
-        iteration_code = self._iteration_control_code(control_step=2, iteration=iteration)
-
-        try:
-            df = self.load_from_pickle(iteration=iteration_code)
-        except FileNotFoundError:
-            df = self.make_set_pickle(iteration=iteration_code)
-
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
 
-        label_unit = kwargs.get('label_unit')
         canvas_style(**kwargs)
         fig = plt.figure(figsize=[16, 6 * num_item],
                          constrained_layout=True)
@@ -234,7 +226,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'y': mdf, 
                 'plot_item': plot_item,
                 'label_unit': kwargs.get('label_unit'),
-                'x_limit': x_limit,
                 'y_limit': fig_left.get_ylim(),
                 'use_log': use_log,
                 'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
