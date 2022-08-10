@@ -53,7 +53,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def get_cur_job(self, iteration):
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         try:
-            with open(self.path / n_iter / 'cur_job.json', 'r') as f:
+            with open(self.path / n_iter / '01.model_devi' / 'cur_job.json', 'r') as f:
                 job_dict = json.load(f)
         except Exception as err:
             logger.warning(err)
@@ -219,6 +219,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'iteration': iteration,
             }
             PlottingExploartion.plot_mdf_time_curve(fig_left, fig_left_args)
+            global_ylim = fig_left.get_ylim()
             
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
@@ -226,7 +227,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'y': mdf, 
                 'plot_item': plot_item,
                 'label_unit': kwargs.get('label_unit'),
-                'y_limit': fig_left.get_ylim(),
+                'y_limit': global_ylim,
                 'use_log': use_log,
                 'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                 'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
