@@ -659,14 +659,14 @@ class PlottingExploartion:
 
         if orientation == 'vertical':
             sns.histplot(
-                data=args, x="x", bins=50, 
+                data=args, x="data", bins=50, 
                 kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                data=args, y="y", bins=50, 
+                data=args, y="data", bins=50, 
                 kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
