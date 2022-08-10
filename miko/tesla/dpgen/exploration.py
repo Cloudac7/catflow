@@ -159,8 +159,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def plot_single_iteration(
             self,
             iteration=None,
-            f_trust_lo=0.10,
-            f_trust_hi=0.30,
             x_limit=None,
             y_limit=None,
             use_log=False,
@@ -240,14 +238,10 @@ class DPExplorationAnalyzer(DPAnalyzer):
             self,
             iterations,
             group_by='temps',
-            select=None,
             f_trust_lo=0.10,
             f_trust_hi=0.30,
-            x_lower_limit=0,
-            x_higher_limit=1e3,
-            y_limit=None,
-            x_log=False,
-            y_log=False,
+            select=None,
+            select_value=None,
             **kwargs
     ):
         """
@@ -267,65 +261,23 @@ class DPExplorationAnalyzer(DPAnalyzer):
         :param y_log: Choose whether use log scale for y axis.
         :return: A plot for different iterations.
         """
-        frames = []
-        for it in iterations:
-            location = os.path.join(
-                self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
-            if os.path.exists(location):
-                frames.append(self.md_set_load_pkl(iteration=it))
-            else:
-                frames.append(self.md_set_pd(iteration=it))
-        items = kwargs.get(group_by, None)
-        if isinstance(items, (list, tuple)):
-            num_items = len(items)
-        elif isinstance(items, (int, float)):
-            num_items = 1
-            items = [items]
-        elif isinstance(items, str):
-            num_items = 1
-            items = [int(items)]
-        else:
-            raise TypeError("temps should be a value or a list of value.")
+
+        num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
-        df = pd.concat(frames)
-        plt.figure(figsize=[24, 8 * num_items])
-        for i, item in enumerate(items):
-            ax = plt.subplot(num_items, 1, i + 1)
-            for k in iterations:
-                if select is not None:
-                    select_value = kwargs.get('select_value', None)
-                    if select_value is not None:
-                        df = df[df[select] == select_value]
-                partdata = df[df[group_by] == item]
-                parts = partdata[partdata['iteration']
-                                 == 'iter.' + str(k).zfill(6)]
-                for j, [item, part] in enumerate(parts.groupby(group_by)):
-                    mdf = np.array(list(part['max_devi_f']))
-                    t_freq = np.average(part['t_freq'])
-                    dupt = np.tile(range(mdf.shape[1]) * t_freq, mdf.shape[0])
-                    flatmdf = np.ravel(mdf)
-                    plt.scatter(dupt, flatmdf, s=80, alpha=0.3,
-                                label=f'iter {int(k)}', marker='o')
-            if x_higher_limit is None:
-                x_higher_limit = ax.get_xlim()[1]
-            plt.xlim(x_lower_limit, x_higher_limit)
-            if y_limit is None:
-                y_limit = ax.get_ylim()[1]
-            plt.ylim(0, y_limit)
-            if x_log:
-                plt.xscale('log')
-            if y_log:
-                plt.yscale('log')
-            plt.axhline(f_trust_lo, linestyle='dashed')
-            plt.axhline(f_trust_hi, linestyle='dashed')
-            plt.xlabel('Simulation time (fs)', fontsize=24)
-            plt.ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
-            plt.xticks(fontsize=24)
-            plt.yticks(fontsize=24)
-            plt.legend(fontsize=24)
-            plt.title(f'{item} {label_unit}', fontsize=24)
-        plt.tight_layout()
-        return plt
+        
+        fig = plt.figure(figsize=[24, 8 * num_item], constrained_layout=True)
+        for i, plot_item in enumerate(plot_items):
+            for iteration in iterations:
+                ax = fig.add_subplot(num_item, 1, i + 1)
+                step, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
+                ax.scatter(step, mdf, s=80, alpha=0.3, label=f'iter {int(iteration)}', marker='o')
+                ax.axhline(f_trust_lo, linestyle='dashed')
+                ax.axhline(f_trust_hi, linestyle='dashed')
+                ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
+            ax.set_xlabel('Simulation time (fs)', fontsize=24)
+            if ax.get_subplotspec().is_first_row():
+                ax.set_title(f'Iteration {iteration}')
+        return fig
 
     def multi_iter_distribution(
             self,
