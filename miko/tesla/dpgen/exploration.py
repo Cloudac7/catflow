@@ -265,16 +265,17 @@ class DPExplorationAnalyzer(DPAnalyzer):
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
         
-        fig = plt.figure(figsize=[24, 8 * num_item], constrained_layout=True)
+        fig = plt.figure(figsize=[12, 8 * num_item], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
+            ax = fig.add_subplot(num_item, 1, i + 1)
             for iteration in iterations:
-                ax = fig.add_subplot(num_item, 1, i + 1)
                 step, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
                 ax.scatter(step, mdf, s=80, alpha=0.3, label=f'iter {int(iteration)}', marker='o')
                 ax.axhline(f_trust_lo, linestyle='dashed')
                 ax.axhline(f_trust_hi, linestyle='dashed')
-                ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
+            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.set_xlabel('Simulation time (fs)', fontsize=24)
+            ax.legend()
             if ax.get_subplotspec().is_first_row():
                 ax.set_title(f'Iteration {iteration}')
         return fig
