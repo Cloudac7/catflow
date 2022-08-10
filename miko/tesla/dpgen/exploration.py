@@ -627,7 +627,7 @@ class PlottingExploartion:
         f_trust_hi = args.get('f_trust_hi')
         iteration = args.get('iteration')
 
-        sns.scatterplot(x, y, color='red', alpha=0.5, ax=ax, label=f'{plot_item} {label_unit}')
+        sns.scatterplot(data=args, x='x', y='y', color='red', alpha=0.5, ax=ax, label=f'{plot_item} {label_unit}')
             
         PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
         if args.get('use_log', False) == True:
@@ -651,7 +651,7 @@ class PlottingExploartion:
 
     @staticmethod
     def plot_mdf_distribution(ax: plt.Axes, args, orientation='vertical'):
-        data = args.get('data')
+        #data = args.get('data')
         x_limit = args.get('x_limit')
         y_limit = args.get('y_limit')
         f_trust_lo = args.get('f_trust_lo')
@@ -659,14 +659,14 @@ class PlottingExploartion:
 
         if orientation == 'vertical':
             sns.histplot(
-                data=data, x="Distribution of Deviation", bins=50, 
+                data=args, x="x", bins=50, 
                 kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                data=data, y="Distribution of Deviation", bins=50, 
+                data=args, y="y", bins=50, 
                 kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
