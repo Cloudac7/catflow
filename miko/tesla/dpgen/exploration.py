@@ -224,7 +224,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
             fig_right_args = {
-                'y': mdf, 
+                'data': mdf, 
                 'plot_item': plot_item,
                 'label_unit': kwargs.get('label_unit'),
                 'y_limit': global_ylim,
@@ -659,13 +659,15 @@ class PlottingExploartion:
 
         if orientation == 'vertical':
             sns.histplot(
-                x=data, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
+                data=data, x="Distribution of Deviation", bins=50, 
+                kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                y=data, bins=50, kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
+                data=data, y="Distribution of Deviation", bins=50, 
+                kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
