@@ -16,6 +16,7 @@ from miko.resources.submit import settings
 # from dpgen.remote.decide_machine import convert_mdata
 
 from ase.io import read, write
+from dpgen.remote.decide_machine import convert_mdata
 from dpgen.generator.run import \
     make_train, run_train, post_train, \
     make_model_devi, run_model_devi, post_model_devi, \
@@ -111,7 +112,7 @@ class CLWorkFlow(object):
 
     @property
     def machine(self):
-        return self.get_data(self.machine_pool)
+        return convert_mdata(self.get_data(self.machine_pool))
 
     @property
     def work_path(self):
@@ -119,11 +120,11 @@ class CLWorkFlow(object):
 
     @property
     def main_step(self):
-        return self.step / 3
+        return int(self.step) // 3
 
     @property
     def real_step(self):
-        return self.step % 3
+        return int(self.step) % 3
 
     @property
     def main_step_dict(self):
@@ -134,16 +135,17 @@ class CLWorkFlow(object):
         }
 
     def get_work_step(self, step_code):
-        step = self.main_step_dict.get(step_code)
+        main_step_dict = self.main_step_dict
+        step = main_step_dict.get(step_code)
         return step
 
     def read_record(self, record="miko.record"):
         record_file_path = Path(record).resolve()
         try:
-            stage_rec = np.loadtxt(record_file_path)
+            stage_rec = np.loadtxt(record_file_path, dtype=int)
             self.stage = stage_rec[0]
             self.step = stage_rec[1]
-            logger.info("continue from stage {0:03d} step {1:02d}".format(
+            logger.info("continue from stage {0} step {1}".format(
                 self.stage, self.step))
         except FileNotFoundError or NameError:
             logger.debug("record file not found")
@@ -151,8 +153,12 @@ class CLWorkFlow(object):
             self.record_stage(record_file_path, self.stage, self.step)
 
     def run_step(self):
+        logger.info("now stage: {0}, step: {1}".format(
+                self.stage, self.step))
+        logger.info("now main step: {}".format(self.main_step))
+        logger.info("now real step: {}".format(self.real_step))
         stage_class = self.get_work_step(self.main_step)
-        stage_task = stage_class(self.params, self.stage, self.machine_pool)
+        stage_task = stage_class(self.params, self.stage, self.machine)
         step_task = stage_task.sub_step_dict.get(self.real_step)
         step_task()
 
@@ -174,9 +180,11 @@ class CLWorkFlow(object):
             return True
 
     def run_loop(self, record="miko.record"):
-        self.read_record(record)
+        record_file_path = Path(record).resolve()
+        self.read_record(record_file_path)
         while self.check_converge():
             self.run_step()
+            self.record_stage(record_file_path, self.stage, self.step)
 
     def render_params(self, param_file=None):
         params = self.params
@@ -224,6 +232,11 @@ class ClusterReactionWorkflow(CLWorkFlow):
                     logger.info('Continue training process')
                     self.update_params()
                     return True
+                elif self.stage <= self.workflow_settings.get('start_from_iter', 0):
+                    # prevent not starting
+                    logger.info('First iteration')
+                    self.update_params()
+                    return True
                 else:
                     # all accu, finish exploration
                     logger.info('Model accuracy converged.')
@@ -269,11 +282,10 @@ class ClusterReactionWorkflow(CLWorkFlow):
         accu_ratio = accu_count / all_count
         return accu_ratio
 
-    @classmethod
-    def _check_shuffled_log(cls, shuffled_logs):
+    def _check_shuffled_log(self, shuffled_logs):
         shuffled_logs = glob(
             os.path.join(
-                f'iter.{str(cls.stage - 1).zfill(6)}',
+                f'iter.{str(self.stage - 1).zfill(6)}',
                 '02.fp',
                 shuffled_logs
             )
@@ -299,8 +311,7 @@ class ClusterReactionWorkflow(CLWorkFlow):
         updater.model_devi_job_generator()
         self.render_params()
 
-    @classmethod
-    def guess_trust_level(cls, stage=None):
+    def guess_trust_level(self, stage=None):
         """guess trust level from training step each iteration
 
         Args:
@@ -311,7 +322,7 @@ class ClusterReactionWorkflow(CLWorkFlow):
         """
 
         if stage is None:
-            stage = cls.stage
+            stage = self.stage
         mean_l2_error = 0.20
 
         try:
@@ -324,7 +335,7 @@ class ClusterReactionWorkflow(CLWorkFlow):
 
         logger.info(
             f"f_trust_lo: {round(mean_l2_error, 2)}, f_trust_hi: {round(mean_l2_error, 2) * 3.0}")
-        return round(mean_l2_error, 2), round(mean_l2_error, 2) * 3.0
+        return round(mean_l2_error, 2), round(mean_l2_error * 3.0, 2)
 
 
 class ClusterReactionUpdater:
@@ -375,18 +386,20 @@ class ClusterReactionUpdater:
         if ts_flag == False:
             center_idx = int(len(exploration_track) / 2 - 1)
             if cur_job["sys_rev_mat"] == {}:
+                cur_job["sys_idx"].append(is_sys_idx)
                 cur_job["sys_rev_mat"][str(is_sys_idx)] = {
                     "lmp": {
-                        "V_DIS1": [is_coord],
-                        "V_DIS2": [is_coord, is_coord + 2 * exploration_step],
+                        "V_DIS1": [round(is_coord, 3)],
+                        "V_DIS2": [round(is_coord, 3), round(is_coord + 2 * exploration_step, 3)],
                         "V_FORCE": [10],
                     },
                     "_type": "IS"
                 }
+                cur_job["sys_idx"].append(fs_sys_idx)
                 cur_job["sys_rev_mat"][str(fs_sys_idx)] = {
                     "lmp": {
-                        "V_DIS1": [fs_coord],
-                        "V_DIS2": [fs_coord, fs_coord - 2 * exploration_step],
+                        "V_DIS1": [round(fs_coord, 3)],
+                        "V_DIS2": [round(fs_coord, 3), round(fs_coord - 2 * exploration_step, 3)],
                         "V_FORCE": [10]
                     },
                     "_type": "FS"
