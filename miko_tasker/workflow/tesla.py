@@ -247,9 +247,15 @@ class ClusterReactionWorkflow(CLWorkFlow):
                         self.update_params()
                         return True
                     else:
-                        # all accu, finish exploration
-                        logger.info('Model accuracy converged.')
-                        return False
+                        finished_exploration = last_model_devi_job["_finished_exploration"]
+                        if finished_exploration:
+                            # all accu, finish exploration
+                            logger.info('Model accuracy converged.')
+                            return False
+                        else:
+                            logger.info("Exploration not ending, try again.")
+                            self.update_params()
+                            return True
             else:
                 return True
         else:
@@ -344,8 +350,8 @@ class ClusterReactionWorkflow(CLWorkFlow):
             logger.info("Training task not found. Use default values.")
 
         logger.info(
-            f"f_trust_lo: {round(mean_l2_error, 2)}, f_trust_hi: {round(mean_l2_error, 2) * 3.0}")
-        return round(mean_l2_error, 2), round(mean_l2_error * 3.0, 2)
+            f"f_trust_lo: {round(mean_l2_error * 0.9, 2)}, f_trust_hi: {round(mean_l2_error * 3.0, 2)}")
+        return round(mean_l2_error * 0.9, 2), round(mean_l2_error * 3.0, 2)
 
 
 class ClusterReactionUpdater:
@@ -397,6 +403,7 @@ class ClusterReactionUpdater:
             ts_flag = True
             ts_coord = self.workflow.TS['coordination']
 
+        add_new_flag = 0
         if ts_flag == False:
             center_idx = int(len(exploration_track) / 2 - 1)
             if cur_job["sys_rev_mat"] == {}:
@@ -418,6 +425,8 @@ class ClusterReactionUpdater:
                     },
                     "_type": "FS"
                 }
+                add_new_flag += 2
+                cur_job["_finished_exploration"] = False
             else:
                 for key in cur_job['sys_rev_mat'].keys():
                     cur_job['sys_rev_mat'][key]['lmp']['V_DIS2'] = cur_job['sys_rev_mat'][key]['lmp']['V_DIS1']
@@ -427,12 +436,14 @@ class ClusterReactionUpdater:
                 is_coords = [i['lmp']['V_DIS1'][0]
                              for i in cur_job['sys_rev_mat'].values() if i.get('_type') == 'IS']
                 logger.info(f"explored IS coords: {is_coords}")
-
+                
+                finished_exploration = True
                 for new_coord in [
                     round(max(is_coords) + exploration_step, 3),
                     round(max(is_coords) + 2 * exploration_step, 3)
                 ]:
                     if new_coord < self.exploration_track[center_idx]:
+                        finished_exploration = False
                         is_sys_idx = self._pick_new_structure(new_coord, task_list, distances)
                         logger.debug(f"add new sys_idx: {is_sys_idx}")
                         if is_sys_idx is not None:
@@ -447,6 +458,7 @@ class ClusterReactionUpdater:
                                 },
                                 "_type": "IS"
                             }
+                            add_new_flag += 1
 
                 fs_coords = [i['lmp']['V_DIS1'][0]
                              for i in cur_job['sys_rev_mat'].values() if i.get('_type') == 'FS']
@@ -457,6 +469,7 @@ class ClusterReactionUpdater:
                     round(min(fs_coords) - 2 * exploration_step, 3)
                 ]:
                     if new_coord >= self.exploration_track[center_idx]:
+                        finished_exploration = False
                         fs_sys_idx = self._pick_new_structure(new_coord, task_list, distances)
                         if fs_sys_idx is not None:
                             logger.info(
@@ -470,6 +483,13 @@ class ClusterReactionUpdater:
                                 },
                                 "_type": "FS"
                             }
+                            add_new_flag += 1
+                cur_job["_finished_exploration"] = finished_exploration
+        
+        #TODO: generator for TS
+
+        if add_new_flag == 0:
+            cur_job["rev_mat"]["lmp"]["V_NSTEPS"] = [i * 2 for i in cur_job["rev_mat"]["lmp"]["V_NSTEPS"]]
 
     def _distances(self):
         task_list = []
