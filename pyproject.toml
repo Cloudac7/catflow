@@ -13,8 +13,7 @@ authors = [
 
 description = "Analyzing tool for Deep Potential based chemical research."
 readme = "README.md"
-requires-python = ">=3.8"
-keywords = ["one", "two"]
+requires-python = ">=3.7"
 license = {text = "Apache License, Version 2.0"}
 classifiers = [
     "Programming Language :: Python :: 3",
