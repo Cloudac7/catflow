@@ -50,4 +50,4 @@ test = [
 repository = "https://github.com/cloudac7/miko-analysis"
 
 [project.scripts]
-miko = "miko.main:cli"
+miko = "miko.cmdline.base:cli"

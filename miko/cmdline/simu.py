@@ -1,13 +1,12 @@
 import click
-import logging
 import time
 import json
-from importlib.metadata import entry_points
 
-from miko.tesla import DPTask
-# from miko.tesla.vasp import fp_tasks
+from miko.tesla.dpgen import DPTask
+from miko.tesla.dpgen.exploration import DPExplorationAnalyzer
+from miko.utils.log_factory import logger
 from miko.utils.message import task_reminder
-
+from .base import cli
 
 def read_params(task_path, param='param.json', machine='machine.json', record='record.tesla'):
     """
@@ -24,10 +23,11 @@ def read_params(task_path, param='param.json', machine='machine.json', record='r
         machine_file=machine,
         record_file=record
     )
-    return long_task
+    long_task_analyzer = DPExplorationAnalyzer(long_task)
+    return long_task_analyzer
 
 
-@click.group()
+@cli.group()
 def simu_cli():
     pass
 
@@ -48,13 +48,12 @@ def simu(input_settings, task_path, param, machine, record):
     machine: machine file name\n
     record: record file name\n
     """
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
-    logging.getLogger("paramiko").setLevel(logging.WARNING)
+    logger.info("Loading tasks...")
     with open(input_settings) as f:
         settings = json.load(f)
     params = settings['params']
-    long_task = read_params(task_path, param, machine, record)
-    long_task.train_model_test(
+    long_task_ana = read_params(task_path, param, machine, record)
+    long_task_ana.train_model_test(
         iteration=settings['iteration'],
         params=params,
         files=settings['input'],
@@ -69,53 +68,3 @@ def simu(input_settings, task_path, param, machine, record):
         secret=settings['secret'],
         text=mes_text
     )
-
-
-@click.group()
-def fprun_cli():
-    pass
-
-
-# @fprun_cli.command()
-# @click.option('--input-settings', '-i', type=click.Path(exists=True), required=True,
-#               help='A json containing input parameters of the fp calculations.')
-# def fprun(input_settings):
-#     """Command line for submitting VASP tasks."""
-#     with open(input_settings) as f:
-#         settings = json.load(f)
-#     fp_tasks(
-#         ori_fp_tasks=settings['ori_fp_tasks'],
-#         work_path=settings['work_path'],
-#         machine_data=settings,
-#         group_size=settings['group_size']
-#     )
-#
-#     webhook = settings.get('webhook', None)
-#     if webhook is not None:
-#         mes_text = "# 完成情况 \n\n"
-#         mes_text += "您的单点能任务已经全部完成，请登陆服务器查看\n\n"
-#         mes_text += "时间：" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-#         task_reminder(
-#             webhook=settings['webhook'],
-#             secret=settings['secret'],
-#             text=mes_text
-#         )
-#
-#
-
-display_eps = entry_points(group='miko.tasker')
-try:
-    display = display_eps[0].load()
-except IndexError:
-    @click.group()
-    def tasker_cli():
-        pass
-
-cli = click.CommandCollection(sources=[
-    simu_cli,
-    fprun_cli,
-    tasker_cli
-])
-
-if __name__ == '__main__':
-    cli()
