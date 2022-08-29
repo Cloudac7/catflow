@@ -13,12 +13,9 @@ def tasker():
 
 
 @tasker.command()
-@click.argument('param', type=click.Path(exists=True), required=True,
-                help='params required for DP-GEN loop')
-@click.argument('machine', type=click.Path(exists=True), required=True,
-                help='machine pool for tasks to be submitted.')
-@click.argument('configure', type=click.Path(exists=True), required=True,
-                help='A yaml containing input parameters of the workflow.')
+@click.argument('param', type=click.Path(exists=True), required=True)
+@click.argument('machine', type=click.Path(exists=True), required=True)
+@click.argument('configure', type=click.Path(exists=True), required=True)
 @click.argument('record', type=click.Path(exists=True), default='record.tesla')
 def tesla(param, machine, configure, record):
     task = CLWorkFlow(
@@ -30,12 +27,9 @@ def tesla(param, machine, configure, record):
 
 
 @tasker.command()
-@click.argument('param', type=click.Path(exists=True), required=True,
-                help='params required for DP-GEN loop')
-@click.argument('machine', type=click.Path(exists=True), required=True,
-                help='machine pool for tasks to be submitted.')
-@click.argument('configure', type=click.Path(exists=True), required=True,
-                help='A yaml containing input parameters of the workflow.')
+@click.argument('param', type=click.Path(exists=True), required=True)
+@click.argument('machine', type=click.Path(exists=True), required=True)
+@click.argument('configure', type=click.Path(exists=True), required=True)
 @click.argument('record', type=click.Path(exists=True), default='record.tesla')
 def tesla_cluster(param, machine, configure, record):
     task = ClusterReactionWorkflow(
