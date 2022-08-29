@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=61.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 
 [project]
-name = "miko-analyzer"
+name = "miko-tasker"
 authors = [
     {email = "scottryuu@outlook.com"},
     {name = "Cloudac7"}
@@ -13,7 +13,7 @@ authors = [
 
 description = "Analyzing tool for Deep Potential based chemical research."
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 keywords = ["one", "two"]
 license = {text = "Apache License, Version 2.0"}
 classifiers = [
@@ -24,8 +24,8 @@ dependencies = [
     "click",
     "dscribe",
     "dpdata",
-    "dpdispatcher",
-    "dpgen",
+    "dpdispatcher>=0.4.15",
+    "dpgen>=0.10.6",
     "dynaconf",
     "numpy",
     "pymatgen"
@@ -43,5 +43,5 @@ test = [
 [project.urls]
 repository = "https://github.com/cloudac7/miko-tasker"
 
-[project.entry-points."miko.cmdline.tasker:tasker_cli"]
+[project.entry-points."miko.cmdline.tasker"]
 tasker_cli = "miko_tasker.cmdline.tasker:tasker_cli"
