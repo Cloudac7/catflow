@@ -27,7 +27,7 @@ def read_params(task_path, param='param.json', machine='machine.json', record='r
     return long_task_analyzer
 
 
-@cli.group()
+@click.group()
 def simu_cli():
     pass
 
