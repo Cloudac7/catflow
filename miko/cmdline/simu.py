@@ -6,7 +6,6 @@ from miko.tesla.dpgen import DPTask
 from miko.tesla.dpgen.exploration import DPExplorationAnalyzer
 from miko.utils.log_factory import logger
 from miko.utils.message import task_reminder
-from .base import cli
 
 def read_params(task_path, param='param.json', machine='machine.json', record='record.tesla'):
     """
