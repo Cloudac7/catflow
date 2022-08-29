@@ -143,7 +143,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         steps = np.array(list(parts['steps'])).flatten()
         mdf = np.array(list(parts['max_devi_f'])).flatten()
         logger.info(
-            f"max devi of F is :{mdf.max()} ev/Å at {group_by}={plot_item} {label_unit}.")
+            f"f_max = {mdf.max()} ev/Å at {group_by}={plot_item} {label_unit} at iter {iteration_code}.")
         return steps, mdf
 
     def _read_model_devi_trust_level(self, trust_level_key, iteration=None):
@@ -234,7 +234,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             PlottingExploartion.plot_mdf_distribution(fig_right, fig_right_args, orientation='horizontal')
         return plt
 
-    def md_multi_iter(
+    def plot_multiple_iterations(
             self,
             iterations,
             group_by='temps',
@@ -265,22 +265,23 @@ class DPExplorationAnalyzer(DPAnalyzer):
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
         
-        fig = plt.figure(figsize=[12, 8 * num_item], constrained_layout=True)
+        canvas_style(**kwargs)
+        fig, axs = plt.subplots(nrows=num_item, figsize=[12, 8 * num_item], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
-            ax = fig.add_subplot(num_item, 1, i + 1)
+            ax = axs[i]
             for iteration in iterations:
                 step, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
                 ax.scatter(step, mdf, s=80, alpha=0.3, label=f'iter {int(iteration)}', marker='o')
-                ax.axhline(f_trust_lo, linestyle='dashed')
-                ax.axhline(f_trust_hi, linestyle='dashed')
+            ax.axhline(f_trust_lo, linestyle='dashed')
+            ax.axhline(f_trust_hi, linestyle='dashed')
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.set_xlabel('Simulation time (fs)', fontsize=24)
             ax.legend()
             if ax.get_subplotspec().is_first_row():
-                ax.set_title(f'Iteration {iteration}')
+                ax.set_title(f'Iteration {",".join(iterations)}')
         return fig
 
-    def multi_iter_distribution(
+    def plot_multi_iter_distribution(
             self,
             iterations,
             group_by='temps',
@@ -292,6 +293,24 @@ class DPExplorationAnalyzer(DPAnalyzer):
             y_limit=0.6,
             **kwargs
     ):
+        num_item, plot_items = self._convert_group_by(group_by, **kwargs)
+        label_unit = kwargs.get('label_unit', 'K')
+        
+        canvas_style(**kwargs)
+        fig, axs = plt.subplots(nrows=num_item, figsize=[12, 12], constrained_layout=True)
+        for i, plot_item in enumerate(plot_items):
+            ax = axs[i]
+            for iteration in iterations:
+                step, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
+                ax.scatter(step, mdf, s=80, alpha=0.3, label=f'iter {int(iteration)}', marker='o')
+            ax.axhline(f_trust_lo, linestyle='dashed')
+            ax.axhline(f_trust_hi, linestyle='dashed')
+            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
+            ax.set_xlabel('Simulation time (fs)', fontsize=24)
+            ax.legend()
+            if ax.get_subplotspec().is_first_row():
+                ax.set_title(f'Iteration {",".join(iterations)}')
+        #return fig
         frames = []
         for it in iterations:
             location = os.path.join(

@@ -2,6 +2,8 @@ import click
 import logging
 import time
 import json
+from importlib.metadata import entry_points
+
 from miko.tesla import DPTask
 # from miko.tesla.vasp import fp_tasks
 from miko.utils.message import task_reminder
@@ -100,9 +102,19 @@ def fprun_cli():
 #         )
 #
 #
+
+display_eps = entry_points(group='miko.tasker')
+try:
+    display = display_eps[0].load()
+except IndexError:
+    @click.group()
+    def tasker_cli():
+        pass
+
 cli = click.CommandCollection(sources=[
     simu_cli,
-    fprun_cli
+    fprun_cli,
+    tasker_cli
 ])
 
 if __name__ == '__main__':
