@@ -43,4 +43,4 @@ test = [
 repository = "https://github.com/cloudac7/miko-tasker"
 
 [project.entry-points."miko.cmdline"]
-tasker_cli = "miko_tasker.cmdline.tasker:tasker_cli"
+tasker_cli = "miko_tasker.cmdline.base:tasker_cli"

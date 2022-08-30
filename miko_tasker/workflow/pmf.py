@@ -1,5 +1,9 @@
+import json
 import os
 import numpy as np
+
+from pathlib import Path
+from yaml import load, SafeLoader
 
 from ase import Atoms
 from ase.io import read, write
@@ -92,6 +96,66 @@ _default_input_dict = {
         }
     }
 }
+
+
+class PMFFactory(object):
+    def __init__(
+            self,
+            param_file: str,
+            machine_pool: str,
+            conf_file: str
+    ):
+        self.param_file = Path(param_file).resolve()
+        self.machine_pool = Path(machine_pool).resolve()
+        self.conf_file = Path(conf_file).resolve()
+
+        self.params = self.get_data(param_file)
+        input_dict = self.params
+        if input_dict is None:
+            input_dict = _default_input_dict
+        self.input_dict = input_dict
+
+        self.machine = self.get_data(machine_pool)
+        self.machine_name = self.machine["machine_name"]
+        self.resource_dict = self.machine["resource"]
+        self.command = self.machine["command"]
+
+        workflow_settings = self.set_workflow(self.conf_file)
+        self.workflow_settings = workflow_settings
+        for key in workflow_settings.keys():
+            setattr(self, key, workflow_settings[key])
+        
+        self.kwargs = workflow_settings.get("kwargs", {})
+        self.task_map = self._task_map()
+
+    @staticmethod
+    def get_data(json_file):
+        with open(json_file, 'r', encoding='utf-8') as fp:
+            return json.load(fp)
+
+    def set_workflow(self, conf_file):
+        with open(conf_file) as f:
+            conf = load(f, Loader=SafeLoader)
+        return conf
+
+    @property
+    def init_structure(self):
+        return read(self.init_structure_file)
+
+    def generate(self):
+        wf = PMFCalculation(
+            reaction_coords=self.reaction_coords,
+            temperatures=self.temperatures,
+            reaction_pair=self.reaction_pair,
+            init_structure=self.init_structure,
+            work_base=self.work_base,
+            machine_name=self.machine_name,
+            resource_dict=self.resource_dict,
+            command=self.command,
+            input_dict=self.input_dict,
+            **self.kwargs
+        )
+        return wf
 
 
 class PMFCalculation(object):
@@ -303,6 +367,24 @@ class PMFCalculation(object):
         _cp2k_input = Cp2kInputToDict(template_file)
         _input_dict = _cp2k_input.get_tree()
         self.input_dict = _input_dict
+
+
+class DPPMFFactory(PMFFactory):
+    def generate(self):
+        wf = DPPMFCalculation(
+            reaction_coords=self.reaction_coords,
+            temperatures=self.temperatures,
+            reaction_pair=self.reaction_pair,
+            init_structure=self.init_structure,
+            work_base=self.work_base,
+            machine_name=self.machine_name,
+            resource_dict=self.resource_dict,
+            command=self.command,
+            input_dict=self.input_dict,
+            **self.kwargs
+        )
+        wf.type_map = self.workflow_settings["type_map"]
+        return wf
 
 
 class DPPMFCalculation(PMFCalculation):
