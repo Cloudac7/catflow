@@ -12,8 +12,6 @@ import numpy as np
 
 from miko.utils import logger
 from miko_tasker.utils.file import count_lines
-from miko.resources.submit import settings
-# from dpgen.remote.decide_machine import convert_mdata
 
 from ase.io import read, write
 from dpgen.remote.decide_machine import convert_mdata
