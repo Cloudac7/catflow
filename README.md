@@ -14,7 +14,19 @@ A simple workflow designed for free energy calculation from Potential of Mean Fo
 
 ### Usage
 
-For a quick start, just configure your machine and write the Python script, naming as `run.py` for example, like below:
+#### Commandline
+
+First, prepare a json file containing a dict including CP2K input and a json file containing machine configuration, a yaml file for workflow settings in detial.
+
+Then, just type command like this:
+
+```bash
+miko tasker pmf params.json machine.json workflow_settings.yml
+```
+
+#### Script
+
+Also for a quick start, just configure your machine and write the Python script, naming as `run.py` for example, like below:
 
 ```python
 from multiprocessing import Pool

@@ -79,10 +79,6 @@ class FPCalculation(TeslaWorkStep):
         return post_fp(self.step_code, self.params)
 
 
-class LongTrain(TeslaWorkStep):
-    pass
-
-
 class CLWorkFlow(object):
     def __init__(self, param_file, machine_pool):
         """initialize the concurrent learning workflow
@@ -249,6 +245,10 @@ class ClusterReactionWorkflow(CLWorkFlow):
                         if finished_exploration:
                             # all accu, finish exploration
                             logger.info('Model accuracy converged.')
+                            if self.params.get("auto_long_train", False) == True:
+                                logger.info('Long train task starts.')
+                                long_train_task = LongTrain(self)
+                                long_train_task.run_long_train()
                             return False
                         else:
                             logger.info("Exploration not ending, try again.")
@@ -524,3 +524,22 @@ class ClusterReactionUpdater:
         sys_idx = self.workflow.workflow_settings[cv_type]['sys_idx']
         coord = self.workflow.workflow_settings[cv_type]['coordination']
         return sys_idx, coord
+
+class LongTrain:
+    """Final step for CLWorkFlow"""
+    def __init__(self, wf: CLWorkFlow) -> None:
+        self.workflow = wf
+
+    def update_params(self):
+        decay_steps = self.workflow.params["default_training_param"]["learning_rate"]["decay_steps"] 
+        self.workflow.params["default_training_param"]["learning_rate"]["decay_steps"] = int(decay_steps) * 10
+        numb_steps = self.workflow.params["default_training_param"]["training"]["numb_steps"]
+        self.workflow.params["default_training_param"]["training"]["numb_steps"] = numb_steps * 10
+
+    def run_long_train(self):
+        self.update_params()
+
+        train_task = DPTrain(self.workflow.params, self.workflow.stage, self.workflow.machine)
+        for i in range(3):
+            train_sub_task = train_task.sub_step_dict.get(i)
+            train_sub_task()
