@@ -126,7 +126,6 @@ class PMFFactory(object):
             setattr(self, key, workflow_settings[key])
         
         self.kwargs = workflow_settings.get("kwargs", {})
-        self.task_map = self._task_map()
 
     @staticmethod
     def get_data(json_file):
