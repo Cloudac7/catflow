@@ -19,6 +19,7 @@ def pmf(param, machine, configure):
 @click.argument('configure', type=click.Path(exists=True), required=True)
 def dppmf(param, machine, configure):
     """Run potential of mean force calculation based on DP."""
-    wf = DPPMFFactory(param_file=param, machine_pool=machine,
+    wf_factory = DPPMFFactory(param_file=param, machine_pool=machine,
                       conf_file=configure)
+    wf = wf_factory.generate()
     wf.run_workflow()
