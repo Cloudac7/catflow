@@ -28,6 +28,7 @@ dependencies = [
     "dpdispatcher",
     "dynaconf",
     "matplotlib>=3.4.0",
+    "mkdocstrings[python]>=0.18",
     "mdanalysis",
     "numba",
     "numpy",

@@ -72,6 +72,8 @@ class DPTask(object):
 
 
 class DPAnalyzer(ABC):
+    """Base class to be implemented as analyzer for `DPTask`
+    """
     def __init__(self, dp_task: DPTask) -> None:
         self.dp_task = dp_task
         for key in dp_task.__dict__:
