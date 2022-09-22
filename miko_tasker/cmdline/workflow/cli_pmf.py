@@ -8,8 +8,9 @@ from miko_tasker.workflow.pmf import PMFFactory, DPPMFFactory
 @click.argument('configure', type=click.Path(exists=True), required=True)
 def pmf(param, machine, configure):
     """Run potential of mean force calculation."""
-    wf = DPPMFFactory(param_file=param, machine_pool=machine,
+    wf_factory = PMFFactory(param_file=param, machine_pool=machine,
                       conf_file=configure)
+    wf = wf_factory.generate()
     wf.run_workflow()
 
 
