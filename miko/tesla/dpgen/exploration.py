@@ -22,7 +22,15 @@ class DPExplorationAnalyzer(DPAnalyzer):
     """Analyzer for exploration tasks.
     """
 
-    def make_set(self, iteration=None):
+    def make_set(self, iteration: int = None) -> dict:
+        """Dump dataset for easy analysis as list of dict
+
+        Args:
+            iteration (int, optional): iteration to be dumped. Defaults to None, dumping the latest iteration.
+
+        Returns:
+            List[dict]: all model deviation results
+        """
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         all_data = []
         for task in (self.path / n_iter).glob('01.model_devi/task*'):
@@ -50,7 +58,15 @@ class DPExplorationAnalyzer(DPAnalyzer):
             all_data.append(all_dict)
         return all_data
 
-    def get_cur_job(self, iteration):
+    def get_cur_job(self, iteration: int) -> dict:
+        """Get `cur_job.json` for the selected iteration
+
+        Args:
+            iteration (int): the iteration to get
+
+        Returns:
+            dict: current job parameters
+        """
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         try:
             with open(self.path / n_iter / '01.model_devi' / 'cur_job.json', 'r') as f:
@@ -60,21 +76,46 @@ class DPExplorationAnalyzer(DPAnalyzer):
             job_dict = {}
         return job_dict
 
-    def make_set_dataframe(self, iteration=None):
+    def make_set_dataframe(self, iteration: int = None) -> pd.DataFrame:
+        """Dump dataset for easy analysis as `pandas.Dataframe`
+
+        Args:
+            iteration (int, optional): iteration to be dumped. Defaults to None, dumping the latest iteration.
+
+        Returns:
+            pd.DataFrame: Dataframe containing all model deviation logs.
+        """
         all_data = self.make_set(iteration=iteration)
         df = pd.DataFrame(all_data)
         return df
 
-    def make_set_pickle(self, iteration=None):
-        if iteration is None:
-            iteration = self._iteration_control_code(control_step=2, iteration=iteration)
+    def make_set_pickle(self, iteration: int = None) -> pd.DataFrame:
+        """Dump pickle from `self.make_set_dataframe` for quick load.
+           Default to `<dpgen_task_path>/model_devi_each_iter/data_<iter>.pkl`
+
+        Args:
+            iteration (int, optional): iteration to be dumped. Defaults to None, dumping the latest iteration.
+
+        Returns:
+            pd.DataFrame: DataFrame containing all model deviation logs.
+        """
         df = self.make_set_dataframe(iteration=iteration)
         save_path = self.path / 'model_devi_each_iter'
         os.makedirs(name=save_path, exist_ok=True)
+        if iteration is None:
+            iteration = self._iteration_control_code(control_step=2, iteration=iteration)
         df.to_pickle(save_path / f'data_{str(iteration).zfill(6)}.pkl')
         return df
 
-    def load_from_pickle(self, iteration):
+    def load_from_pickle(self, iteration: int) -> pd.DataFrame:
+        """Load DataFrame from pickle file.
+
+        Args:
+            iteration (int): the iteration to get
+
+        Returns:
+            pd.DataFrame: DataFrame containing all model deviation logs.
+        """
         pkl_path = self.path / \
             f'model_devi_each_iter/data_{str(iteration).zfill(6)}.pkl'
         df = pd.read_pickle(pkl_path)
@@ -232,7 +273,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'iteration': iteration,
             }
             PlottingExploartion.plot_mdf_distribution(fig_right, fig_right_args, orientation='horizontal')
-        return plt
+        return fig
 
     def plot_multiple_iterations(
             self,
