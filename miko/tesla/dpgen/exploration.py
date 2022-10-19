@@ -5,6 +5,9 @@ import shutil
 from collections.abc import Iterable, Sized
 from glob import glob
 
+from typing import Union, List
+from matplotlib.figure import Figure
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -103,7 +106,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
         save_path = self.path / 'model_devi_each_iter'
         os.makedirs(name=save_path, exist_ok=True)
         if iteration is None:
-            iteration = self._iteration_control_code(control_step=2, iteration=iteration)
+            iteration = self._iteration_control_code(
+                control_step=2, iteration=iteration)
         df.to_pickle(save_path / f'data_{str(iteration).zfill(6)}.pkl')
         return df
 
@@ -120,7 +124,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             f'model_devi_each_iter/data_{str(iteration).zfill(6)}.pkl'
         df = pd.read_pickle(pkl_path)
         return df
-    
+
     @staticmethod
     def _convert_group_by(group_by: str, **kwargs):
         plot_items = kwargs.get(group_by)
@@ -156,7 +160,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 f'Please choose existing parameter for `group_by`')
             raise err
         return part_data
-    
+
     @staticmethod
     def extract_iteration_dataset(dataset, iteration_dir=None):
         try:
@@ -167,7 +171,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
         return parts
 
     def _data_prepareation(self, plot_item, iteration=None, group_by="temps", select=None, select_value=None, **kwargs):
-        iteration_code = self._iteration_control_code(control_step=2, iteration=iteration)
+        iteration_code = self._iteration_control_code(
+            control_step=2, iteration=iteration)
         try:
             df = self.load_from_pickle(iteration=iteration_code)
         except FileNotFoundError:
@@ -192,21 +197,22 @@ class DPExplorationAnalyzer(DPAnalyzer):
         trust_level = cur_job.get(trust_level_key)
         if trust_level is None:
             trust_level = self.param_data[trust_level_key]
-        # Is average OK for different systems? 
+        # Is average OK for different systems?
         if isinstance(trust_level, Iterable):
             trust_level = np.mean(trust_level)
         return trust_level
-    
+
     def plot_single_iteration(
             self,
-            iteration=None,
-            x_limit=None,
-            y_limit=None,
-            use_log=False,
-            group_by='temps',
-            select=None,
-            select_value=None,
-            **kwargs):
+            iteration: int = None,
+            x_limit: Union[float, List[float]] = None,
+            y_limit: Union[float, List[float]] = None,
+            use_log: bool = False,
+            group_by: str = 'temps',
+            select: str = None,
+            select_value: str = None,
+            **kwargs
+    ) -> Figure:
         """Generate a plot of model deviation in each iteration.
 
         Args:
@@ -226,9 +232,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 `label_unit`: the unit of `select_value`, such as 'Å'.
                 Parameters of `canvas_style`: please refer to `miko.graph.plotting.canvas_style`.
 
-        Raises:
-            TypeError: _description_
-
         Returns:
             _type_: A plot for different desired values.
         """
@@ -241,13 +244,14 @@ class DPExplorationAnalyzer(DPAnalyzer):
         gs = fig.add_gridspec(num_item, 3)
 
         for i, plot_item in enumerate(plot_items):
-            steps, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
+            steps, mdf = self._data_prepareation(
+                plot_item, iteration, group_by, select, select_value, **kwargs)
 
             # left part
             fig_left = fig.add_subplot(gs[i, :-1])
             fig_left_args = {
-                'x': steps, 
-                'y': mdf, 
+                'x': steps,
+                'y': mdf,
                 'plot_item': plot_item,
                 'label_unit': kwargs.get('label_unit'),
                 'x_limit': x_limit,
@@ -259,11 +263,11 @@ class DPExplorationAnalyzer(DPAnalyzer):
             }
             PlottingExploartion.plot_mdf_time_curve(fig_left, fig_left_args)
             global_ylim = fig_left.get_ylim()
-            
+
             # right part
             fig_right = fig.add_subplot(gs[i, -1])
             fig_right_args = {
-                'data': mdf, 
+                'data': mdf,
                 'plot_item': plot_item,
                 'label_unit': kwargs.get('label_unit'),
                 'y_limit': global_ylim,
@@ -272,7 +276,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
                 'iteration': iteration,
             }
-            PlottingExploartion.plot_mdf_distribution(fig_right, fig_right_args, orientation='horizontal')
+            PlottingExploartion.plot_mdf_distribution(
+                fig_right, fig_right_args, orientation='horizontal')
         return fig
 
     def plot_multiple_iterations(
@@ -305,14 +310,17 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
-        
+
         canvas_style(**kwargs)
-        fig, axs = plt.subplots(nrows=num_item, figsize=[12, 8 * num_item], constrained_layout=True)
+        fig, axs = plt.subplots(nrows=num_item, figsize=[
+                                12, 8 * num_item], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
             ax = axs[i]
             for iteration in iterations:
-                step, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
-                ax.scatter(step, mdf, s=80, alpha=0.3, label=f'iter {int(iteration)}', marker='o')
+                step, mdf = self._data_prepareation(
+                    plot_item, iteration, group_by, select, select_value, **kwargs)
+                ax.scatter(step, mdf, s=80, alpha=0.3,
+                           label=f'iter {int(iteration)}', marker='o')
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
@@ -327,6 +335,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             iterations,
             group_by='temps',
             select=None,
+            select_value=None,
             f_trust_lo=0.10,
             f_trust_hi=0.30,
             x_lower_limit=1,
@@ -336,22 +345,34 @@ class DPExplorationAnalyzer(DPAnalyzer):
     ):
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
-        
+
         canvas_style(**kwargs)
-        fig, axs = plt.subplots(nrows=num_item, figsize=[12, 12], constrained_layout=True)
+        fig, axs = plt.subplots(nrows=num_item, figsize=[
+                                12, 12], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
             ax = axs[i]
             for iteration in iterations:
-                step, mdf = self._data_prepareation(plot_item, iteration, group_by, select, select_value, **kwargs)
-                ax.scatter(step, mdf, s=80, alpha=0.3, label=f'iter {int(iteration)}', marker='o')
+                step, mdf = self._data_prepareation(
+                    plot_item, iteration, group_by, select, select_value, **kwargs)
+                ax_args = {
+                    'data': mdf,
+                    'plot_item': plot_item,
+                    'label_unit': kwargs.get('label_unit'),
+                    'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
+                    'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                    'iteration': iteration,
+                }
+                PlottingExploartion.plot_mdf_distribution(
+                    ax, ax_args, orientation='vertical')
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
-            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
-            ax.set_xlabel('Simulation time (fs)', fontsize=24)
+            ax.set_ylabel('Distribution', fontsize=24)
+            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.legend()
             if ax.get_subplotspec().is_first_row():
                 ax.set_title(f'Iteration {",".join(iterations)}')
-        #return fig
+        return fig
+
         frames = []
         for it in iterations:
             location = os.path.join(
@@ -407,225 +428,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
         plt.tight_layout()
         return plt
 
-    def md_single_task(
-            self,
-            work_path,
-            model_path,
-            machine_name,
-            resource_dict,
-            numb_models=4,
-            **kwargs
-    ):
-        """Submit your own md task with the help of DPDispatcher.
-
-        Parameters
-        ----------
-        work_path : str
-            The dir contains your md tasks.
-        model_path : str
-            The path of models contained for calculation.
-        machine_name : str
-            machine name to use
-        resource_dict : dict
-            resource dict
-        numb_models : int, optional
-            The number of models selected., by default 4
-
-        Returns
-        -------
-        JobFactory
-            To generate job to be submitted.
-        """
-        mdata = self.machine_data['model_devi'][0]
-        folder_list = kwargs.get('folder_list', ["task.*"])
-        all_task = []
-        for i in folder_list:
-            _task = glob(os.path.join(work_path, i))
-            _task.sort()
-            all_task += _task
-        lmp_exec = mdata['command']
-        command = lmp_exec + " -i input.lammps"
-        run_tasks_ = all_task
-        run_tasks = [os.path.basename(ii) for ii in run_tasks_]
-
-        model_names = kwargs.get(
-            'model_names', [f'graph.{str(i).zfill(3)}.pb' for i in range(numb_models)])
-        for ii in model_names:
-            if not os.path.exists(os.path.join(work_path, ii)):
-                os.symlink(os.path.join(model_path, ii),
-                           os.path.join(work_path, ii))
-        forward_files = kwargs.get(
-            'forward_files', ['conf.lmp', 'input.lammps', 'traj'])
-        backward_files = kwargs.get(
-            'backward_files', ['model_devi.out', 'model_devi.log', 'traj'])
-
-        task_dict_list = [
-            {
-                "command": command,
-                "task_work_path": task,
-                "forward_files": forward_files,
-                "backward_files": backward_files,
-                "outlog": kwargs.get('outlog', 'model_devi.log'),
-                "errlog": kwargs.get('errlog', 'model_devi.log'),
-            } for task in run_tasks
-        ]
-
-        submission_dict = {
-            "work_base": work_path,
-            "forward_common_files": model_names,
-            "backward_common_files": kwargs.get('backward_common_files', [])
-        }
-        return JobFactory(task_dict_list, submission_dict, machine_name, resource_dict)
-
-    def train_model_test(
-            self,
-            machine_name,
-            resource_dict,
-            iteration=None,
-            params=None,
-            restart=False,
-            **kwargs
-    ):
-        """Run lammps MD tests from trained models.
-
-        Parameters
-        ----------
-        machine_name : str
-            machine name
-        resource_dict : dict
-            resource name
-        iteration : str, optional
-            Select the iteration for training. 
-            If not selected, the last iteration where training has been finished would be chosen.
-        params : str, optional
-            Necessary params for MD tests.
-        kwargs : str, optional
-            Other optional parameters.
-
-        Returns
-        -------
-
-        """
-        location = os.path.abspath(self.path)
-        logger.info(f"Task path: {location}")
-
-        if iteration is None:
-            if self.step_code < 2:
-                iteration = self.iteration - 1
-            else:
-                iteration = self.iteration
-        n_iter = 'iter.' + str(iteration).zfill(6)
-        model_path = os.path.join(location, n_iter, '00.train')
-        test_path = os.path.join(location, n_iter, '04.model_test')
-
-        if params is None:
-            params = self.param_data
-
-        if restart == True:
-            logger.info("Restarting from old checkpoint")
-        else:
-            logger.info("Preparing MD input")
-            template_base = kwargs.get('template_base', None)
-            self._train_generate_md_test(
-                params=params,
-                work_path=test_path,
-                model_path=model_path,
-                template_base=template_base
-            )
-
-        if self.step_code < 6:
-            md_iter = self.iteration - 1
-        else:
-            md_iter = self.iteration
-        md_iter = 'iter.' + str(md_iter).zfill(6)
-
-        logger.info("Task submitting")
-        job = self.md_single_task(
-            work_path=test_path,
-            model_path=model_path,
-            machine_name=machine_name,
-            resource_dict=resource_dict,
-            numb_models=self.param_data['numb_models'],
-            forward_files=kwargs.get(
-                "forward_files", ['conf.lmp', 'input.lammps']),
-            backward_files=kwargs.get("backward_files",
-                                      ['model_devi.out', 'md_test.log', 'md_test.err', 'dump.lammpstrj']),
-            outlog=kwargs.get("outlog", 'md_test.log'),
-            errlog=kwargs.get("errlog", 'md_test.err')
-        )
-        job.run_submission()
-        logger.info("MD Test finished.")
-
-    def _train_generate_md_test(self, params, work_path, model_path, template_base=None):
-        cur_job = params['md_test']
-        use_plm = params.get('model_devi_plumed', False)
-        trj_freq = cur_job.get('traj_freq', False)
-
-        if template_base is None:
-            template_base = self.path
-
-        lmp_templ = cur_job['template']['lmp']
-        lmp_templ = os.path.abspath(os.path.join(template_base, lmp_templ))
-        plm_templ = None
-
-        if use_plm:
-            plm_templ = cur_job['template']['plm']
-            plm_templ = os.path.abspath(os.path.join(template_base, plm_templ))
-
-        sys_idxs = cur_job.get('sys_idx')
-        for sys_idx in sys_idxs:
-            sys_init_stc = convert_init_structures(params, sys_idx)
-            templ, rev_mat = parse_template(cur_job, sys_idx)
-            for task_counter, task in enumerate(rev_mat):
-                task_name = "task.%03d.%06d" % (sys_idx, task_counter)
-                task_path = os.path.join(work_path, task_name)
-
-                # create task path
-                os.makedirs(task_path, exist_ok=True)
-                shutil.copyfile(lmp_templ, os.path.join(
-                    task_path, 'input.lammps'))
-                model_list = glob(os.path.join(model_path, 'graph*pb'))
-                model_list.sort()
-                model_names = [os.path.basename(i) for i in model_list]
-                task_model_list = []
-                for jj in model_names:
-                    task_model_list.append(
-                        os.path.join('..', os.path.basename(jj)))
-
-                # revise input of lammps
-                with open(os.path.join(task_path, 'input.lammps')) as fp:
-                    lmp_lines = fp.readlines()
-                _dpmd_idx = check_keywords(lmp_lines, ['pair_style', 'deepmd'])
-                graph_list = ' '.join(task_model_list)
-                lmp_lines[_dpmd_idx] = \
-                    f"pair_style      deepmd {graph_list} out_freq {trj_freq} out_file model_devi.out\n "
-                _dump_idx = check_keywords(lmp_lines, ['dump', 'dpgen_dump'])
-                lmp_lines[_dump_idx] = \
-                    f"dump            dpgen_dump all custom {trj_freq} dump.lammpstrj id type x y z fx fy fz\n"
-                lmp_lines = substitute_keywords(lmp_lines, task)
-
-                # revise input of plumed
-                if use_plm:
-                    _plm_idx = check_keywords(lmp_lines, ['fix', 'dpgen_plm'])
-                    lmp_lines[_plm_idx] = \
-                        "fix            dpgen_plm all plumed plumedfile input.plumed outfile output.plumed\n "
-                    with open(plm_templ) as fp:
-                        plm_lines = fp.readlines()
-                    plm_lines = substitute_keywords(plm_lines, task)
-                    with open(os.path.join(task_path, 'input.plumed'), 'w') as fp:
-                        fp.write(''.join(plm_lines))
-
-                # dump input of lammps
-                with open(os.path.join(task_path, 'input.lammps'), 'w') as fp:
-                    fp.write(''.join(lmp_lines))
-                with open(os.path.join(task_path, 'job.json'), 'w') as fp:
-                    job = task
-                    json.dump(job, fp, indent=4)
-
-                # dump init structure
-                write(os.path.join(task_path, 'conf.lmp'),
-                      sys_init_stc, format='lammps-data')
-
 
 class PlottingExploartion:
     @staticmethod
@@ -640,14 +442,15 @@ class PlottingExploartion:
         f_trust_hi = args.get('f_trust_hi')
         iteration = args.get('iteration')
 
-        sns.scatterplot(data=args, x='x', y='y', color='red', alpha=0.5, ax=ax, label=f'{plot_item} {label_unit}')
-            
+        sns.scatterplot(data=args, x='x', y='y', color='red',
+                        alpha=0.5, ax=ax, label=f'{plot_item} {label_unit}')
+
         PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
         if args.get('use_log', False) == True:
             ax.set_yscale('log')
         else:
             PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
-        
+
         if f_trust_lo is not None:
             ax.axhline(f_trust_lo, linestyle='dashed')
         if f_trust_hi is not None:
@@ -672,30 +475,30 @@ class PlottingExploartion:
 
         if orientation == 'vertical':
             sns.histplot(
-                data=args, x="data", bins=50, 
+                data=args, x="data", bins=50,
                 kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                data=args, y="data", bins=50, 
+                data=args, y="data", bins=50,
                 kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
         else:
             raise ValueError('Invalid orientation')
-        
+
         if ax.get_subplotspec().is_first_row():
             ax.set_title('Distribution of Deviation')
-            
+
         PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
         if args.get('use_log', False) == True:
             ax.set_yscale('log')
         else:
             PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
-        
+
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         return ax
