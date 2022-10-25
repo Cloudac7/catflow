@@ -517,7 +517,8 @@ class ClusterReactionUpdater:
         new_sys_item = [
             str(new_structure_path.relative_to(sys_configs_prefix))]
         self.workflow.params["sys_configs"].append(new_sys_item)
-        self.workflow.params["sys_batch_size"].append("auto")
+        if self.workflow.params.get("sys_batch_size"):
+            self.workflow.params["sys_batch_size"].append("auto")
         return len(self.workflow.params["sys_configs"]) - 1
 
     def _get_cv_setting(self, cv_type):
