@@ -25,7 +25,7 @@ def tesla(param, machine, record="miko.record"):
 @click.argument('param', type=click.Path(exists=True), required=True)
 @click.argument('machine', type=click.Path(exists=True), required=True)
 @click.argument('configure', type=click.Path(exists=True), required=True)
-@click.argument('record', type=click.Path(exists=True), default='miko.record')
+@click.argument('record', type=click.Path(), default='miko.record')
 def tesla_cluster(param, machine, configure, record="miko.record"):
     """Start TESLA workflow run for reaction at clusters. \f
 
