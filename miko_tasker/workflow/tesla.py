@@ -214,7 +214,7 @@ class ClusterReactionWorkflow(CLWorkFlow):
                     last_model_devi_job = model_devi_jobs[-1]
                 except IndexError:
                     last_model_devi_job = {}
-                last_sys_idx = last_model_devi_job.get('sys_idx')
+                last_sys_idx = last_model_devi_job.get('sys_idx', [])
                 if len(last_sys_idx) == 0:
                     logger.info('Empty model_devi_job found')
                     self.update_params()
@@ -404,8 +404,13 @@ class ClusterReactionUpdater:
         add_new_flag = 0
         if ts_flag == False:
             center_idx = int(len(exploration_track) / 2 - 1)
-            if cur_job["sys_rev_mat"] == {}:
-                cur_job["sys_idx"].append(is_sys_idx)
+            if cur_job.get("sys_rev_mat", {}) == {}:
+                cur_job["sys_rev_mat"] = {}
+                try:
+                    cur_job["sys_idx"].append(is_sys_idx)
+                except KeyError:
+                    cur_job["sys_idx"] = []
+                    cur_job["sys_idx"].append(is_sys_idx)
                 cur_job["sys_rev_mat"][str(is_sys_idx)] = {
                     "lmp": {
                         "V_DIS1": [round(is_coord, 3)],
@@ -491,7 +496,8 @@ class ClusterReactionUpdater:
 
     def _distances(self):
         task_list = []
-        for i in range(self.workflow.workflow_settings['start_from_iter'], self.workflow.stage):
+        start_iter = self.workflow.workflow_settings.get('start_xfrom_iter', 0)
+        for i in range(start_iter, self.workflow.stage):
             task_list += sorted((self.workflow.work_path / f"iter.{str(i).zfill(6)}").glob(
                 '02.fp/task.*.*/POSCAR'))
         distances = []
