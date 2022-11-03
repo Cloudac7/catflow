@@ -1,4 +1,6 @@
 import os
+import yaml
+from yaml.loader import SafeLoader
 
 
 def tail(f, lines=20):

@@ -1,3 +1,50 @@
 IS: {coordination: 1.4, sys_idx: 0}
 FS: {coordination: 4.0, sys_idx: 1}
 reaction_atoms_pair: [0, 1]
+
+job_template:
+  template:
+    lmp: "lmp/input-restrain.lammps"
+    plm: "lmp/input.plumed"
+  sys_idx: [0, 1, 2]
+  traj_freq: 600
+  rev_mat: 
+    lmp: 
+      V_NSTEPS: [3000]
+      V_TEMP: 
+        - 400
+        - 600
+        - 800
+        - 1000
+        - 1200
+
+pmf_job_template:
+  template: 
+    lmp: "lmp/input-restrain.lammps"
+    plm: "lmp/input.plumed"
+  sys_idx: [0,1]
+  traj_freq: 1000
+  rev_mat": 
+    lmp: 
+      V_NSTEPS: [3000]
+      V_TEMP: [400,600,800,1000,1200]
+  sys_rev_mat: 
+    "0":
+      lmp: 
+        V_DIS1: [1.4]
+        V_DIS2: [1.6]
+        V_FORCE: [10]
+    "1":
+      lmp: 
+        V_DIS1: [3.8]
+        V_DIS2: [3.8]
+        V_FORCE: [10]
+
+metad_job_template:
+  template: {"lmp":"lmp/input-meta.lammps", "plm":"lmp/input-meta.plumed"}
+  sys_idx: [53]
+  traj_freq: 1000
+  rev_mat": 
+    lmp: 
+      V_NSTEPS: [1000000]
+      V_TEMP: [400,600,800,1000,1200]
