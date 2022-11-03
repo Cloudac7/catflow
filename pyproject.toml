@@ -27,7 +27,9 @@ dependencies = [
     "dpgen>=0.10.6",
     "dynaconf",
     "numpy",
-    "pymatgen"
+    "pymatgen",
+    "matplotlib<=3.4.3",
+    "pyyaml"
 ]
 dynamic = ["version"]
 

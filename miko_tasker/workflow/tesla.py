@@ -79,8 +79,8 @@ class FPCalculation(TeslaWorkStep):
         return post_fp(self.step_code, self.params)
 
 
-class CLWorkFlow(object):
-    def __init__(self, param_file, machine_pool):
+class CLWorkflow(object):
+    def __init__(self, param_file, machine_pool, conf_file=None):
         """initialize the concurrent learning workflow
 
         Parameters
@@ -90,9 +90,23 @@ class CLWorkFlow(object):
         """
         self.param_file = Path(param_file).resolve()
         self.machine_pool = Path(machine_pool).resolve()
+        if conf_file is not None:
+            workflow_settings = self.set_workflow(conf_file)
+            self.workflow_settings = workflow_settings
+        else:
+            self.workflow_settings = {}
+        for key in workflow_settings.keys():
+            setattr(self, key, workflow_settings[key])
         self.stage = 0
         self.step = 0
         self.params = self.get_data(self.param_file)
+        self.updater = CLWorkflowUpdater
+
+    @staticmethod
+    def set_workflow(conf_file):
+        with open(conf_file) as f:
+            conf = load(f, Loader=SafeLoader)
+        return conf
 
     @staticmethod
     def get_data(json_file):
@@ -162,51 +176,20 @@ class CLWorkFlow(object):
             self.stage += 1
             self.step = 0
 
-    def check_converge(self):
-        if self.main_step == 1:
-            if self.real_step == 0:
-                model_devi_jobs = self.params['model_devi_jobs']
-                if self.stage >= len(model_devi_jobs):
-                    return False
-            else:
-                return True
-        else:
-            return True
-
     def run_loop(self, record="miko.record"):
         record_file_path = Path(record).resolve()
         self.read_record(record_file_path)
         while self.check_converge():
             self.run_step()
             self.record_stage(record_file_path, self.stage, self.step)
-
-    def render_params(self, param_file=None):
-        params = self.params
-        if param_file == None:
-            param_file = self.param_file
-            shutil.copyfile(
-                self.param_file,
-                self.param_file.parent / f"params_backup_{self.stage}.json"
-            )
-        with open(param_file, "w", encoding='utf-8') as f:
-            json.dump(params, f, indent=4)
-
-
-class ClusterReactionWorkflow(CLWorkFlow):
-    def __init__(self, param_file, machine_pool, conf_file):
-        super().__init__(param_file, machine_pool)
-        workflow_settings = self.set_workflow(conf_file)
-        self.workflow_settings = workflow_settings
-        for key in workflow_settings.keys():
-            setattr(self, key, workflow_settings[key])
-
-    def set_workflow(self, conf_file):
-        with open(conf_file) as f:
-            conf = load(f, Loader=SafeLoader)
-        return conf
+        self.append_tasks(record=record)
 
     def check_converge(self):
-        # check before model_devi step start
+        """check if model deviation converged after CL runs.
+
+        Returns:
+            Bool: whether continue or not.
+        """
         if self.main_step == 1:
             if self.real_step == 0:
                 model_devi_jobs = self.params.get('model_devi_jobs')
@@ -241,23 +224,84 @@ class ClusterReactionWorkflow(CLWorkFlow):
                         self.update_params()
                         return True
                     else:
-                        finished_exploration = last_model_devi_job["_finished_exploration"]
-                        if finished_exploration:
-                            # all accu, finish exploration
-                            logger.info('Model accuracy converged.')
-                            if self.params.get("auto_long_train", False) == True:
-                                logger.info('Long train task starts.')
-                                long_train_task = LongTrain(self)
-                                long_train_task.run_long_train()
-                            return False
-                        else:
+                        unfinished_exploration = last_model_devi_job.get("unfinished_exploration", False)
+                        if unfinished_exploration:
+                            # not all reaction coordinate covered
                             logger.info("Exploration not ending, try again.")
                             self.update_params()
                             return True
+                        else:
+                            # all accu, finish exploration
+                            return False
             else:
                 return True
         else:
             return True
+
+    def append_tasks(self, record=None):
+        self.long_train_process()
+
+    def long_train_process(self):
+        logger.info('Model accuracy converged.')
+        if self.params.get("auto_long_train", False) == True:
+            logger.info('Long train task starts.')
+            long_train_task = LongTrain(self)
+            long_train_task.run_long_train()
+    
+    def update_params(self):
+        if callable(self.updater):
+            updater = self.updater(self)
+            updater.model_devi_job_generator()
+        self._set_cur_trust_level()
+        self.render_params()
+
+    def render_params(self, param_file=None):
+        """render the params.json file for human reading and normal dpgen runs.
+
+        Args:
+            param_file (_type_, optional): _description_. Defaults to None.
+        """
+        params = self.params
+        if param_file == None:
+            param_file = self.param_file
+            shutil.copyfile(
+                self.param_file,
+                self.param_file.parent / f"params_backup_{self.stage}.json"
+            )
+        with open(param_file, "w", encoding='utf-8') as f:
+            json.dump(params, f, indent=4)
+
+    def _set_cur_trust_level(self):
+        f_trust_lo, f_trust_hi = self.guess_trust_level()
+        cur_job = self.params['model_devi_jobs'][self.stage]
+        cur_job["model_devi_f_trust_lo"] = f_trust_lo
+        cur_job["model_devi_f_trust_hi"] = f_trust_hi
+
+    def guess_trust_level(self, stage: int = None) -> float:
+        """guess trust level from training step each iteration
+
+        Args:
+            stage (int, optional): The iteration to guess trust level from. Default: current stage.
+
+        Returns:
+            float: lower and higher limitation of force deviation trust level
+        """
+
+        if stage is None:
+            stage = self.stage
+        mean_l2_error = 0.20
+
+        try:
+            training_l2_error = np.loadtxt(
+                Path(f"iter.{str(stage).zfill(6)}/00.train/000/lcurve.out").resolve(), usecols=3)
+            mean_l2_error = np.mean(training_l2_error[-int(len(training_l2_error)/10):])
+            logger.info("Use values guessed from training.")
+        except FileNotFoundError:
+            logger.info("Training task not found. Use default values.")
+
+        logger.info(
+            f"f_trust_lo: {round(mean_l2_error * 0.9, 2)}, f_trust_hi: {round(mean_l2_error * 3.0, 2)}")
+        return round(mean_l2_error * 0.9, 2), round(mean_l2_error * 3.0, 2)
 
     @staticmethod
     def _trust_limitation_check(sys_idx, lim):
@@ -269,7 +313,15 @@ class ClusterReactionWorkflow(CLWorkFlow):
             sys_lim = lim
         return sys_lim
 
-    def _get_trust_level(self, param_type, sys_idx):
+    def get_trust_level(self, param_type, sys_idx):
+        """get trust level for 
+        Args:
+            param_type (_type_): _description_
+            sys_idx (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         param_detail = self.params['model_devi_jobs'][self.stage -
                                                       1].get(param_type)
         if param_detail is None:
@@ -313,43 +365,50 @@ class ClusterReactionWorkflow(CLWorkFlow):
                 log_count += count_lines(f)
         return log_count
 
-    def update_params(self):
-        updater = ClusterReactionUpdater(self)
-        updater.model_devi_job_generator()
-        self._set_cur_trust_level()
-        self.render_params()
 
-    def _set_cur_trust_level(self):
-        f_trust_lo, f_trust_hi = self.guess_trust_level()
-        cur_job = self.params['model_devi_jobs'][self.stage]
-        cur_job["model_devi_f_trust_lo"] = f_trust_lo
-        cur_job["model_devi_f_trust_hi"] = f_trust_hi
+class CLWorkflowUpdater:
+    """update the params during each iteration loop
+    """
+    def __init__(self, wf: CLWorkflow):
+        self.workflow = wf
+        self.template_key = "job_template"
 
-    def guess_trust_level(self, stage=None):
-        """guess trust level from training step each iteration
+    def model_devi_job_generator(self):
+        while len(self.workflow.params['model_devi_jobs']) < self.workflow.stage + 1:
+            logger.debug(f"Add new model_devi_job.")
+            try:
+                last_job = self.workflow.params['model_devi_jobs'][-1]
+            except IndexError:
+                last_job = self.get_init()
+            self.workflow.params['model_devi_jobs'].append(last_job)
+        cur_job = self.workflow.params['model_devi_jobs'][self.workflow.stage]
+        self._new_template_generator(cur_job)
 
-        Args:
-            stage (int, optional): The iteration to guess trust level from. Default: current stage.
+    def get_init(self):
+        init_job = self.workflow.workflow_settings.get("job_template")
+        return init_job
 
-        Returns:
-            float: lower and higher limitation of force deviation trust level
-        """
+    def _new_template_generator(self, cur_job):
+        cur_job["_idx"] = str(self.workflow.stage)
 
-        if stage is None:
-            stage = self.stage
-        mean_l2_error = 0.20
 
-        try:
-            training_l2_error = np.loadtxt(
-                Path(f"iter.{str(stage).zfill(6)}/00.train/000/lcurve.out").resolve(), usecols=3)
-            mean_l2_error = np.mean(training_l2_error[-int(len(training_l2_error)/10):])
-            logger.info("Use values guessed from training.")
-        except FileNotFoundError:
-            logger.info("Training task not found. Use default values.")
+class ClusterReactionWorkflow(CLWorkflow):
+    def __init__(self, param_file, machine_pool, conf_file):
+        super().__init__(param_file, machine_pool, conf_file)
+        self.updater = ClusterReactionUpdater
 
-        logger.info(
-            f"f_trust_lo: {round(mean_l2_error * 0.9, 2)}, f_trust_hi: {round(mean_l2_error * 3.0, 2)}")
-        return round(mean_l2_error * 0.9, 2), round(mean_l2_error * 3.0, 2)
+    def append_tasks(self, record=None):
+        logger.info("Check if continue to run metadynamics exploration")
+        if self.workflow_settings.get("append_metad_flow"):
+            metad_workflow = MetadynReactionWorkflow(
+                self.param_file, 
+                self.machine_pool, 
+                self.conf_file
+            )
+            metad_workflow.workflow_settings['start_from_iter'] = self.stage
+            metad_workflow.run_loop(record=record)
+        else:
+            self.long_train_process()
 
 
 class ClusterReactionUpdater:
@@ -429,7 +488,7 @@ class ClusterReactionUpdater:
                     "_type": "FS"
                 }
                 add_new_flag += 2
-                cur_job["_finished_exploration"] = False
+                cur_job["unfinished_exploration"] = True
             else:
                 for key in cur_job['sys_rev_mat'].keys():
                     cur_job['sys_rev_mat'][key]['lmp']['V_DIS2'] = cur_job['sys_rev_mat'][key]['lmp']['V_DIS1']
@@ -440,13 +499,13 @@ class ClusterReactionUpdater:
                              for i in cur_job['sys_rev_mat'].values() if i.get('_type') == 'IS']
                 logger.info(f"explored IS coords: {is_coords}")
                 
-                finished_exploration = True
+                unfinished_exploration = False
                 for new_coord in [
                     round(max(is_coords) + exploration_step, 3),
                     round(max(is_coords) + 2 * exploration_step, 3)
                 ]:
                     if new_coord < self.exploration_track[center_idx]:
-                        finished_exploration = False
+                        unfinished_exploration = True
                         is_sys_idx = self._pick_new_structure(new_coord, task_list, distances)
                         logger.debug(f"add new sys_idx: {is_sys_idx}")
                         if is_sys_idx is not None:
@@ -472,7 +531,7 @@ class ClusterReactionUpdater:
                     round(min(fs_coords) - 2 * exploration_step, 3)
                 ]:
                     if new_coord >= self.exploration_track[center_idx]:
-                        finished_exploration = False
+                        unfinished_exploration = True
                         fs_sys_idx = self._pick_new_structure(new_coord, task_list, distances)
                         if fs_sys_idx is not None:
                             logger.info(
@@ -487,7 +546,7 @@ class ClusterReactionUpdater:
                                 "_type": "FS"
                             }
                             add_new_flag += 1
-                cur_job["_finished_exploration"] = finished_exploration
+                cur_job["unfinished_exploration"] = unfinished_exploration
         
         #TODO: generator for TS
 
@@ -532,9 +591,50 @@ class ClusterReactionUpdater:
         coord = self.workflow.workflow_settings[cv_type]['coordination']
         return sys_idx, coord
 
+
+class MetadynReactionWorkflow(CLWorkflow):
+    """Metadynamics workflow
+    """
+    def __init__(self, param_file, machine_pool, conf_file):
+        super().__init__(param_file, machine_pool)
+        workflow_settings = self.set_workflow(conf_file)
+        self.workflow_settings = workflow_settings
+        for key in workflow_settings.keys():
+            setattr(self, key, workflow_settings[key])
+        self.updater = MetaDynReactionUpdater
+
+
+class MetaDynReactionUpdater:
+    """update the params during each iteration loop
+    """
+    def __init__(self, wf: CLWorkflow):
+        self.workflow = wf
+        self.template_key = "metad_job_template"
+
+    def model_devi_job_generator(self):
+        while len(self.workflow.params['model_devi_jobs']) < self.workflow.stage + 1:
+            logger.debug(f"Add new model_devi_job.")
+            try:
+                last_job = self.workflow.params['model_devi_jobs'][-1]
+            except IndexError:
+                last_job = self.get_init()
+            self.workflow.params['model_devi_jobs'].append(last_job)
+        if self.workflow.stage >= self.workflow.workflow_settings.get("start_from_iter", 0):
+            self.workflow.params['model_devi_jobs'][-1] = self.get_init()
+        cur_job = self.workflow.params['model_devi_jobs'][self.workflow.stage]
+        self._new_template_generator(cur_job)
+
+    def get_init(self):
+        init_job = self.workflow.workflow_settings.get(self.template_key)
+        return init_job
+
+    def _new_template_generator(self, cur_job):
+        cur_job["_idx"] = str(self.workflow.stage)
+
+
 class LongTrain:
     """Final step for CLWorkFlow"""
-    def __init__(self, wf: CLWorkFlow) -> None:
+    def __init__(self, wf: CLWorkflow) -> None:
         self.workflow = wf
 
     def update_params(self):

@@ -98,6 +98,10 @@ _default_input_dict = {
 }
 
 
+#TODO: refactor to abandon the loop based workflow
+#TODO: melting point test for first two iteration of PMF
+
+
 class PMFFactory(object):
     def __init__(
             self,
@@ -366,6 +370,11 @@ class PMFCalculation(object):
         _cp2k_input = Cp2kInputToDict(template_file)
         _input_dict = _cp2k_input.get_tree()
         self.input_dict = _input_dict
+
+
+class PMFWorkflow:
+    #TODO: split loop into this class as prefect tasks
+    pass
 
 
 class DPPMFFactory(PMFFactory):

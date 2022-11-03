@@ -6,7 +6,7 @@ from miko_tasker.resources.submit import JobFactory
 
 class DPCheck:
     def __init__(self, dp_task: DPTask):
-        for k,v in 
+        pass
 
     def md_single_task(
             self,

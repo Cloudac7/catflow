@@ -1,5 +1,5 @@
 import click
-from miko_tasker.workflow.tesla import CLWorkFlow, ClusterReactionWorkflow
+from miko_tasker.workflow.tesla import CLWorkflow, ClusterReactionWorkflow
 
 
 @click.command()
@@ -14,7 +14,7 @@ def tesla(param, machine, record="miko.record"):
         machine (Path): Machine file, just like DP-GEN param.json.
         record (Path): Record. Default: `miko.record`
     """
-    task = CLWorkFlow(
+    task = CLWorkflow(
         param_file=param,
         machine_pool=machine
     )
