@@ -596,11 +596,7 @@ class MetadynReactionWorkflow(CLWorkflow):
     """Metadynamics workflow
     """
     def __init__(self, param_file, machine_pool, conf_file):
-        super().__init__(param_file, machine_pool)
-        workflow_settings = self.set_workflow(conf_file)
-        self.workflow_settings = workflow_settings
-        for key in workflow_settings.keys():
-            setattr(self, key, workflow_settings[key])
+        super().__init__(param_file, machine_pool, conf_file)
         self.updater = MetaDynReactionUpdater
 
 
