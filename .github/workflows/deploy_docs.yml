@@ -1,7 +1,9 @@
 name: deploy_docs
 on:
   push:
-  pull_request:
+    branches:
+      - 'main'
+      - 'dev'
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -10,11 +12,6 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.x
-      - run: pip install \
-              mkdocs-material \
-              mike \
-              mkdocstrings[python] \
-              mkdocs-gen-files \
-              mkdocs-literate-nav \
-              mkdocs-section-index
+      - run: python setup.py egg_info
+      - run: pip install -r *.egg-info/requires.txt [doc]
       - run: mkdocs gh-deploy --force

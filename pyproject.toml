@@ -27,8 +27,7 @@ dependencies = [
     "dpdata",
     "dpdispatcher",
     "dynaconf",
-    "matplotlib>=3.4.0",
-    "mkdocstrings[python]>=0.18",
+    "matplotlib<=3.4.3",
     "mdanalysis",
     "numba",
     "numpy",
@@ -42,10 +41,20 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
+    "flake8",
     "pytest",
     "pytest-datadir",
     "coverage",
     "coveralls"
+]
+docs = [
+    "mkdocstrings[python]>=0.18",
+    "mkdocs-material",
+    "mike",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-section-index"
 ]
 
 [project.urls]
