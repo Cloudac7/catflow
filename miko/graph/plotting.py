@@ -73,3 +73,8 @@ class AxesInit(object):
             label.set_fontsize(label_fontsize)
         self.ax.tick_params(length=6, width=2)
         self.ax.tick_params(which='minor', length=3, width=2)
+
+def square_grid(num_items):
+    import math
+    n = math.ceil(math.sqrt(num_items))
+    return n

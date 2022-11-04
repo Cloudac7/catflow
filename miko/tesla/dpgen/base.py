@@ -50,11 +50,16 @@ class DPTask(object):
             self.step = 'Labeling'
 
     def _read_record(self):
+        import numpy as np
         _record_path = self.path / self.record_file
-        with open(_record_path) as f:
-            _final_step = f.readlines()[-1]
-        self.iteration = int(_final_step.split()[0])
-        self.step_code = int(_final_step.split()[1])
+        steps = np.loadtxt(_record_path)
+        if steps.shape == (2,):
+            # support miko-tasker like record
+            self.iteration = int(steps[0])
+            self.step_code = int(steps[1])
+        else:
+            self.iteration = int(steps[-1][0])
+            self.step_code = int(steps[-1][1])
 
     def _read_param_data(self):
         _param_path = self.path / self.param_file

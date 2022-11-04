@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 
 from miko.utils import logger
 from miko.utils.lammps import *
-from miko.graph.plotting import canvas_style, AxesInit
+from miko.graph.plotting import canvas_style, AxesInit, square_grid
 from miko.resources.submit import JobFactory
 from miko.tesla.dpgen.base import DPAnalyzer
 
@@ -216,16 +216,14 @@ class DPExplorationAnalyzer(DPAnalyzer):
         """Generate a plot of model deviation in each iteration.
 
         Args:
-            iteration (_type_): The iteration. Defaults to current iteration.
-            f_trust_lo (float, optional): The lower limit of max_deviation_force. Defaults to 0.10.
-            f_trust_hi (float, optional): The higher limit of max_deviation_force. Defaults to 0.30.
+            iteration (int, optional): The iteration. Defaults to current iteration.
             x_limit (float, List[float], optional): Choose the limit of x axis. Defaults to None.
             y_limit (float, List[float], optional): Choose the limit of y axis. Defaults to None.
             use_log (bool, optional): Choose whether log scale used. Defaults to False.
             group_by (str, optional): Choose which the plots are grouped by, which should be included. 
                 Should be corresponding to keys in model_devi_job. Defaults to 'temps'.
-            select (_type_, optional): Choose which param selected as plot zone. Defaults to None.
-            select_value (_type_, optional): The dependence of `select`. 
+            select (str, optional): Choose which param selected as plot zone. Defaults to None.
+            select_value (str, optional): The dependence of `select`. 
                 Different from `group_by`, please pass only one number. Defaults to None.
             kwargs (_type_, optional): Additional keyword arguments. Include other params, such as:
                 `temps`: please use the value of `group_by`, whose default input is `"temps"`.
@@ -233,7 +231,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 Parameters of `canvas_style`: please refer to `miko.graph.plotting.canvas_style`.
 
         Returns:
-            _type_: A plot for different desired values.
+            Figure: A plot for different desired values.
         """
 
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
@@ -312,10 +310,13 @@ class DPExplorationAnalyzer(DPAnalyzer):
         label_unit = kwargs.get('label_unit', 'K')
 
         canvas_style(**kwargs)
-        fig, axs = plt.subplots(nrows=num_item, figsize=[
-                                12, 8 * num_item], constrained_layout=True)
+        nrows = square_grid(num_item)
+        fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
-            ax = axs[i]
+            try:
+                ax = axs[i]
+            except TypeError:
+                ax = axs
             for iteration in iterations:
                 step, mdf = self._data_prepareation(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
@@ -326,8 +327,11 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.set_xlabel('Simulation time (fs)', fontsize=24)
             ax.legend()
-            if ax.get_subplotspec().is_first_row():
-                ax.set_title(f'Iteration {",".join(iterations)}')
+        try:
+            plot_title = f'Iteration {",".join(iterations)}'
+        except TypeError:
+            plot_title = f'Iteration {iterations}'
+        fig.suptitle(plot_title)
         return fig
 
     def plot_multi_iter_distribution(
@@ -347,10 +351,14 @@ class DPExplorationAnalyzer(DPAnalyzer):
         label_unit = kwargs.get('label_unit', 'K')
 
         canvas_style(**kwargs)
-        fig, axs = plt.subplots(nrows=num_item, figsize=[
-                                12, 12], constrained_layout=True)
+        
+        nrows = square_grid(num_item)
+        fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
-            ax = axs[i]
+            try:
+                ax = axs[i]
+            except TypeError:
+                ax = axs
             for iteration in iterations:
                 step, mdf = self._data_prepareation(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
@@ -369,8 +377,11 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_ylabel('Distribution', fontsize=24)
             ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.legend()
-            if ax.get_subplotspec().is_first_row():
-                ax.set_title(f'Iteration {",".join(iterations)}')
+        try:
+            plot_title = f'Iteration {",".join(iterations)}'
+        except TypeError:
+            plot_title = f'Iteration {iterations}'
+        fig.suptitle(plot_title)
         return fig
 
         frames = []

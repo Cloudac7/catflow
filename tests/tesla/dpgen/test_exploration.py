@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from miko.tesla.dpgen.exploration import DPExplorationAnalyzer
+from miko.tesla.dpgen.exploration import DPExplorationAnalyzer, PlottingExploartion
+from matplotlib.testing.decorators import image_comparison
+import matplotlib.pyplot as plt
 
 @pytest.fixture
 def analyzer(shared_datadir):
@@ -28,6 +30,20 @@ def test_data_prepareation(analyzer, shared_datadir):
     assert len(mdf) == 31
     assert mdf[0] == 2.015300e-03
 
+@image_comparison(baseline_images=['single_iteration'], remove_text=True,
+                  extensions=['png'])
 def test_plot_single_iteration(analyzer):
-    #TODO: separate each part into real units.
-    fig = analyzer.plot_single_iteration(group_by='temps', temps=100, label_unit='K')
+    fig = analyzer.plot_single_iteration(group_by='temps', ylimit=1.0, temps=100, label_unit='K')
+    fig.show()
+
+@image_comparison(baseline_images=['multiple_iteration'], remove_text=True,
+                  extensions=['png'])
+def test_plot_multiple_iteration(analyzer):
+    fig = analyzer.plot_multiple_iterations(group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K')
+    fig.show()
+
+@image_comparison(baseline_images=['multi_iter_distribution'], remove_text=True,
+                  extensions=['png'])
+def test_plot_multi_iter_distribution(analyzer):
+    fig = analyzer.plot_multi_iter_distribution(group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K')
+    fig.show()
