@@ -1,6 +1,6 @@
 import click
 from .workflow.cli_pmf import pmf, dppmf
-from .workflow.cli_tesla import tesla, tesla_cluster
+from .workflow.cli_tesla import tesla, tesla_cluster, tesla_metad
 
 
 @click.group()
@@ -18,3 +18,4 @@ tasker.add_command(pmf)
 tasker.add_command(dppmf)
 tasker.add_command(tesla)
 tasker.add_command(tesla_cluster)
+tasker.add_command(tesla_metad)
