@@ -286,6 +286,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             group_by='temps',
             f_trust_lo=0.10,
             f_trust_hi=0.30,
+            x_limit=None,
+            y_limit=None,
             select=None,
             select_value=None,
             **kwargs
@@ -330,6 +332,13 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_xlabel('Simulation time (fs)')
             ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
+            if x_limit is not None:
+                PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
+            if kwargs.get('use_log', False) == True:
+                ax.set_yscale('log')
+            else:
+                if y_limit is not None:
+                    PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
         for i in range(num_item, nrows * nrows):
             fig.delaxes(axs.flatten()[i])
         try:
@@ -345,11 +354,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             group_by='temps',
             select=None,
             select_value=None,
-            f_trust_lo=0.10,
-            f_trust_hi=0.30,
-            x_lower_limit=1,
-            x_higher_limit=None,
-            y_limit=0.6,
+            x_limit=None,
+            y_limit=None,
             **kwargs
     ):
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
@@ -376,6 +382,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                     'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
                     'iteration': iteration,
+                    'x_limit': x_limit,
+                    'y_limit': y_limit,
                     'color': colors[j],
                     'label': f'Iter {iteration}'
                 }
