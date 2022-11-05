@@ -257,6 +257,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'use_log': use_log,
                 'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                 'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                'color': 'red',
                 'iteration': iteration,
             }
             PlottingExploartion.plot_mdf_time_curve(fig_left, fig_left_args)
@@ -272,6 +273,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 'use_log': use_log,
                 'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                 'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                'color': 'red',
                 'iteration': iteration,
             }
             PlottingExploartion.plot_mdf_distribution(
@@ -327,6 +329,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.set_xlabel('Simulation time (fs)', fontsize=24)
             ax.legend()
+        for i in range(num_item, nrows * nrows):
+            fig.delaxes(axs.flatten()[i])
         try:
             plot_title = f'Iteration {",".join(iterations)}'
         except TypeError:
@@ -377,6 +381,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_ylabel('Distribution', fontsize=24)
             ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
             ax.legend()
+        for i in range(num_item, nrows * nrows):
+            fig.delaxes(axs.flatten()[i])
         try:
             plot_title = f'Iteration {",".join(iterations)}'
         except TypeError:
@@ -452,8 +458,9 @@ class PlottingExploartion:
         f_trust_lo = args.get('f_trust_lo')
         f_trust_hi = args.get('f_trust_hi')
         iteration = args.get('iteration')
+        color = args.get('color')
 
-        sns.scatterplot(data=args, x='x', y='y', color='red',
+        sns.scatterplot(data=args, x='x', y='y', color=color,
                         alpha=0.5, ax=ax, label=f'{plot_item} {label_unit}')
 
         PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
@@ -483,18 +490,21 @@ class PlottingExploartion:
         y_limit = args.get('y_limit')
         f_trust_lo = args.get('f_trust_lo')
         f_trust_hi = args.get('f_trust_hi')
+        color = args.get('color')
+        plot_item = args.get('plot_item')
+        label_unit = args.get('label_unit')
 
         if orientation == 'vertical':
             sns.histplot(
-                data=args, x="data", bins=50,
-                kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
+                data=args, x="data", bins=50, label=f'{plot_item} {label_unit}',
+                kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax,
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                data=args, y="data", bins=50,
-                kde=True, stat='density', color='red', ec=None, alpha=0.5, ax=ax
+                data=args, y="data", bins=50, label=f'{plot_item} {label_unit}',
+                kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
