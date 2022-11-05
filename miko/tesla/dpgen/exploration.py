@@ -314,7 +314,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
             try:
-                ax = axs[i]
+                ax = axs.flatten()[i]
             except TypeError:
                 ax = axs
             for iteration in iterations:
@@ -356,7 +356,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
             try:
-                ax = axs[i]
+                ax = axs.flatten()[i]
             except TypeError:
                 ax = axs
             for iteration in iterations:
