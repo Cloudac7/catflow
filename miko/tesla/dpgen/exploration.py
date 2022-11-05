@@ -360,13 +360,13 @@ class DPExplorationAnalyzer(DPAnalyzer):
         nrows = square_grid(num_item)
         fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
 
-        colors = plt.cm.viridis(np.linspace(0, 1, num_item))
+        colors = plt.cm.viridis(np.linspace(0, 1, len(iterations)))
         for i, plot_item in enumerate(plot_items):
             try:
                 ax = axs.flatten()[i]
             except TypeError:
                 ax = axs
-            for iteration in iterations:
+            for j, iteration in enumerate(iterations):
                 step, mdf = self._data_prepareation(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
                 ax_args = {
@@ -376,13 +376,11 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                     'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
                     'iteration': iteration,
-                    'color': colors[i],
+                    'color': colors[j],
                     'label': f'Iter {iteration}'
                 }
                 PlottingExploartion.plot_mdf_distribution(
                     ax, ax_args, orientation='vertical')
-            ax.axhline(f_trust_lo, linestyle='dashed')
-            ax.axhline(f_trust_hi, linestyle='dashed')
             ax.set_ylabel('Distribution')
             ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)')
             ax.set_title(f'{plot_item} {label_unit}')
@@ -395,61 +393,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
             plot_title = f'Iteration {iterations}'
         fig.suptitle(plot_title)
         return fig
-
-        frames = []
-        for it in iterations:
-            location = os.path.join(
-                self.path, f'data_pkl/data_{str(it).zfill(2)}.pkl')
-            if os.path.exists(location):
-                frames.append(self.md_set_load_pkl(iteration=it))
-            else:
-                frames.append(self.md_set_pd(iteration=it))
-        items = kwargs.get(group_by, None)
-        if isinstance(items, (list, tuple)):
-            num_items = len(items)
-        elif isinstance(items, (int, float)):
-            num_items = 0
-            items = [items]
-        elif isinstance(items, str):
-            num_items = 0
-            items = [str(items)]
-        else:
-            raise TypeError("temps should be a value or a list of value.")
-        label_unit = kwargs.get('label_unit', 'K')
-        df = pd.concat(frames)
-        plt.figure(figsize=[12, 12])
-        for i, item in enumerate(items):
-            ax = plt.subplot(num_items, 1, i + 1)
-            for k in iterations:
-                if select is not None:
-                    select_value = kwargs.get('select_value', None)
-                    if select_value is not None:
-                        df = df[df[select] == select_value]
-                part_data = df[df[group_by] == item]
-                parts = part_data[part_data['iteration']
-                                  == 'iter.' + str(k).zfill(6)]
-                for j, [temp, part] in enumerate(parts.groupby(group_by)):
-                    mdf = np.array(list(part['max_devi_f']))
-                    t_freq = np.average(part['t_freq'])
-                    flatmdf = np.ravel(mdf)
-                    plt.hist(flatmdf, bins=100, density=True,
-                             label=f'iter {int(k)}', alpha=0.5)
-            if x_higher_limit is None:
-                x_higher_limit = ax.get_xlim()[1]
-            ax.set_xlim(x_lower_limit, x_higher_limit)
-            if y_limit is None:
-                y_limit = ax.get_ylim()[1]
-            ax.set_ylim(0, y_limit)
-            plt.axvline(f_trust_lo, linestyle='dashed')
-            plt.axvline(f_trust_hi, linestyle='dashed')
-            plt.xlabel(r'$\sigma_{f}^{max}$ (eV/Å)', fontsize=16)
-            plt.ylabel('Distribution', fontsize=16)
-            plt.xticks(fontsize=16)
-            plt.yticks(fontsize=16)
-            plt.legend(fontsize=16)
-            plt.title(f'{item} {label_unit}', fontsize=16)
-        plt.tight_layout()
-        return plt
 
 
 class PlottingExploartion:
