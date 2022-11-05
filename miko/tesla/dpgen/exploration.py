@@ -326,8 +326,9 @@ class DPExplorationAnalyzer(DPAnalyzer):
                            label=f'iter {int(iteration)}', marker='o')
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
-            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
-            ax.set_xlabel('Simulation time (fs)', fontsize=24)
+            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
+            ax.set_xlabel('Simulation time (fs)')
+            ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
         for i in range(num_item, nrows * nrows):
             fig.delaxes(axs.flatten()[i])
@@ -358,6 +359,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
         
         nrows = square_grid(num_item)
         fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
+
+        colors = plt.cm.viridis(np.linspace(0, 1, num_item))
         for i, plot_item in enumerate(plot_items):
             try:
                 ax = axs.flatten()[i]
@@ -373,13 +376,16 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
                     'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
                     'iteration': iteration,
+                    'color': colors[i],
+                    'label': f'Iter {iteration}'
                 }
                 PlottingExploartion.plot_mdf_distribution(
                     ax, ax_args, orientation='vertical')
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
-            ax.set_ylabel('Distribution', fontsize=24)
-            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)', fontsize=24)
+            ax.set_ylabel('Distribution')
+            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)')
+            ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
         for i in range(num_item, nrows * nrows):
             fig.delaxes(axs.flatten()[i])
@@ -491,19 +497,18 @@ class PlottingExploartion:
         f_trust_lo = args.get('f_trust_lo')
         f_trust_hi = args.get('f_trust_hi')
         color = args.get('color')
-        plot_item = args.get('plot_item')
-        label_unit = args.get('label_unit')
+        label = args.get('label')
 
         if orientation == 'vertical':
             sns.histplot(
-                data=args, x="data", bins=50, label=f'{plot_item} {label_unit}',
+                data=args, x="data", bins=50, label=label,
                 kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax,
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                data=args, y="data", bins=50, label=f'{plot_item} {label_unit}',
+                data=args, y="data", bins=50, label=label,
                 kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
