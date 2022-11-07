@@ -319,7 +319,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         for i, plot_item in enumerate(plot_items):
             try:
                 ax = axs.flatten()[i]
-            except TypeError:
+            except AttributeError:
                 ax = axs
             for iteration in iterations:
                 step, mdf = self._data_prepareation(
@@ -340,7 +340,10 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 if y_limit is not None:
                     PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
         for i in range(num_item, nrows * nrows):
-            fig.delaxes(axs.flatten()[i])
+            try:
+                fig.delaxes(axs.flatten()[i])
+            except AttributeError:
+                pass
         try:
             plot_title = f'Iteration {",".join(iterations)}'
         except TypeError:
@@ -370,7 +373,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         for i, plot_item in enumerate(plot_items):
             try:
                 ax = axs.flatten()[i]
-            except TypeError:
+            except AttributeError:
                 ax = axs
             for j, iteration in enumerate(iterations):
                 step, mdf = self._data_prepareation(
@@ -394,7 +397,10 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
         for i in range(num_item, nrows * nrows):
-            fig.delaxes(axs.flatten()[i])
+            try:
+                fig.delaxes(axs.flatten()[i])
+            except AttributeError:
+                pass
         try:
             plot_title = f'Iteration {",".join(iterations)}'
         except TypeError:

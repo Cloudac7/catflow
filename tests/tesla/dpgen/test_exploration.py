@@ -36,13 +36,13 @@ def test_plot_single_iteration(analyzer):
     fig = analyzer.plot_single_iteration(group_by='temps', ylimit=1.0, temps=100, label_unit='K')
     fig.show()
 
-@image_comparison(baseline_images=['multiple_iteration'], remove_text=True,
+@image_comparison(baseline_images=['multiple_iteration','multiple_iteration2'], remove_text=True,
                   extensions=['png'])
 def test_plot_multiple_iteration(analyzer):
     fig = analyzer.plot_multiple_iterations(group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K')
     fig.show()
 
-@image_comparison(baseline_images=['multi_iter_distribution'], remove_text=True,
+@image_comparison(baseline_images=['multi_iter_distribution','multi_iter_distribution2','multi_iter_distribution3'], remove_text=True,
                   extensions=['png'])
 def test_plot_multi_iter_distribution(analyzer):
     fig = analyzer.plot_multi_iter_distribution(group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K')

@@ -30,7 +30,7 @@ dependencies = [
     "matplotlib<=3.4.3",
     "mdanalysis",
     "numba",
-    "numpy",
+    "numpy>=1.20.0",
     "requests",
     "scipy",
     "seaborn",
