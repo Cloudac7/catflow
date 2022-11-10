@@ -282,34 +282,35 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
     def plot_multiple_iterations(
             self,
-            iterations,
-            group_by='temps',
-            f_trust_lo=0.10,
-            f_trust_hi=0.30,
-            x_limit=None,
-            y_limit=None,
-            select=None,
-            select_value=None,
+            iterations: Iterable,
+            group_by: str = 'temps',
+            f_trust_lo: float = 0.10,
+            f_trust_hi: float = 0.30,
+            x_limit: Union[float, List[float]] = None,
+            y_limit: Union[float, List[float]] = None,
+            select: str = None,
+            select_value: str = None,
             **kwargs
     ):
-        """
-        Analyse trajectories for different temperatures.
-        :param iterations: Iterations selected, which should be iterable.
-        :param group_by: Choose which the plots are grouped by, which should be included.
+        """Analyse trajectories for different temperatures.
+
+        Args:
+            iterations (Iterabke): Iterations selected, which should be iterable.
+            group_by (str, optional): Choose which the plots are grouped by, which should be included.
             For value of group_by, a list, int or str containing desired value(s) should be included as kwargs.
             For example, if `group_by='temps'`, then `temps=[100., 200., 300.]` should also be passed to this function.
             Default: "temps".
-        :param select: Choose which param selected as plot zone.
-        :param f_trust_lo: The lower limit of max_deviation_force.
-        :param f_trust_hi: The higher limit of max_deviation_force.
-        :param x_lower_limit: The lower limit of x scale.
-        :param x_higher_limit: The higher limit of x scale.
-        :param y_limit: The limit of y.
-        :param x_log: Choose whether use log scale for x axis.
-        :param y_log: Choose whether use log scale for y axis.
-        :return: A plot for different iterations.
-        """
+            f_trust_lo (float, optional): The lower limit of max_deviation_force.. Defaults to 0.10.
+            f_trust_hi (float, optional): The higher limit of max_deviation_force.. Defaults to 0.30.
+            x_limit (_type_, optional): The limit of x scale. Defaults to None.
+            y_limit (_type_, optional): The limit of y scale. Defaults to None.
+            select (_type_, optional): Choose which param selected as plot zone.. Defaults to None.
+            select_value (_type_, optional): _description_. Defaults to None.
 
+        Returns:
+            _type_: A plot for different iterations.
+
+        """
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
 
@@ -353,14 +354,27 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
     def plot_multi_iter_distribution(
             self,
-            iterations,
-            group_by='temps',
-            select=None,
-            select_value=None,
-            x_limit=None,
-            y_limit=None,
+            iterations: Iterable,
+            group_by: str ='temps',
+            select: str = None,
+            select_value: str = None,
+            x_limit: Union[float, List[float]] = None,
+            y_limit: Union[float, List[float]] = None,
             **kwargs
-    ):
+    ) -> Figure:
+        """Draw distribution in histogram of model deviation for multiple iterations.
+
+        Args:
+            iterations (Iterable): _description_
+            group_by (str, optional): _description_. Defaults to 'temps'.
+            select (str, optional): _description_. Defaults to None.
+            select_value (str, optional): _description_. Defaults to None.
+            x_limit (Union[float, List[float]], optional): _description_. Defaults to None.
+            y_limit (Union[float, List[float]], optional): _description_. Defaults to None.
+
+        Returns:
+            Figure: A figure containing distribution of model deviation for multiple iterations.
+        """
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         label_unit = kwargs.get('label_unit', 'K')
 
