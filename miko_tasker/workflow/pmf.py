@@ -417,7 +417,10 @@ class DPPMFCalculation(PMFCalculation):
     def _link_model(self, model_path):
         model_abs_path = os.path.abspath(model_path)
         work_abs_base = os.path.abspath(self.work_base)
-        os.symlink(model_abs_path, os.path.join(work_abs_base, 'graph.pb'))
+        try:
+            os.symlink(model_abs_path, os.path.join(work_abs_base, 'graph.pb'))
+        except FileExistsError:
+            logger.info("model symlink exists")
         fwd_files_flag = self.kwargs.get("forward_common_files", False)
         if fwd_files_flag is False:
             self.kwargs["forward_common_files"] = ['graph.pb']
