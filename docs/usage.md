@@ -72,9 +72,13 @@ fig = ana.plot_single_iteration(
 ```
 
 其中：
+
 - `iteration` 对应为所需分析的轮数，默认为最新进行过Exploartion的轮数。
+
 - `f_trust_lo`和`f_trust_hi`即对应的最大力偏差上下限设置。
+
 - 通过 `group_by` 指定所需作图的参数，对应到 `param.json` 中 `model_devi_jobs` 中该轮数需要迭代的List，例如：
+  
   ```json
     {
         "template": {
@@ -103,7 +107,9 @@ fig = ana.plot_single_iteration(
         "model_devi_f_trust_hi": 0.75
     }
   ```
+  
   若指定`group_by` 参数为 `V_TEMP`，则根据该轮的热浴温度分组作图，若指定`V_TEMP=[400, 600, 800, 1000, 1200]`，则可由400、600、800、1000、1200K分别对model deviation作图。
+
 - `label_unit` 即 `group_by` 参数的单位，例如这里是温度，故为"K"。
 
 效果如下：
