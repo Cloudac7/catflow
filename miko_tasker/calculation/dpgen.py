@@ -1,12 +1,22 @@
+import json
+import os
+import shutil
 from glob import glob
 
 import dpdata
+import numpy as np
+import matplotlib.pyplot as plt
+from ase.io import read, write
+from miko.utils.log_factory import logger
 from miko.tesla.dpgen.base import DPTask
 from miko_tasker.resources.submit import JobFactory
+from miko_tasker.utils.lammps import \
+    convert_init_structures, check_keywords, \
+    parse_template, substitute_keywords
 
 class DPCheck:
     def __init__(self, dp_task: DPTask):
-        pass
+        self.task = dp_task
 
     def md_single_task(
             self,
@@ -37,7 +47,7 @@ class DPCheck:
         JobFactory
             To generate job to be submitted.
         """
-        mdata = self.machine_data['model_devi'][0]
+        mdata = self.task.machine_data['model_devi'][0]
         folder_list = kwargs.get('folder_list', ["task.*"])
         all_task = []
         for i in folder_list:
@@ -107,20 +117,20 @@ class DPCheck:
         -------
 
         """
-        location = os.path.abspath(self.path)
+        location = os.path.abspath(self.task.path)
         logger.info(f"Task path: {location}")
 
         if iteration is None:
-            if self.step_code < 2:
-                iteration = self.iteration - 1
+            if self.task.step_code < 2:
+                iteration = self.task.iteration - 1
             else:
-                iteration = self.iteration
+                iteration = self.task.iteration
         n_iter = 'iter.' + str(iteration).zfill(6)
         model_path = os.path.join(location, n_iter, '00.train')
         test_path = os.path.join(location, n_iter, '04.model_test')
 
         if params is None:
-            params = self.param_data
+            params = self.task.param_data
 
         if restart == True:
             logger.info("Restarting from old checkpoint")
@@ -134,10 +144,10 @@ class DPCheck:
                 template_base=template_base
             )
 
-        if self.step_code < 6:
-            md_iter = self.iteration - 1
+        if self.task.step_code < 6:
+            md_iter = self.task.iteration - 1
         else:
-            md_iter = self.iteration
+            md_iter = self.task.iteration
         md_iter = 'iter.' + str(md_iter).zfill(6)
 
         logger.info("Task submitting")
@@ -146,7 +156,7 @@ class DPCheck:
             model_path=model_path,
             machine_name=machine_name,
             resource_dict=resource_dict,
-            numb_models=self.param_data['numb_models'],
+            numb_models=self.task.param_data['numb_models'],
             forward_files=kwargs.get(
                 "forward_files", ['conf.lmp', 'input.lammps']),
             backward_files=kwargs.get("backward_files",
@@ -163,7 +173,7 @@ class DPCheck:
         trj_freq = cur_job.get('traj_freq', False)
 
         if template_base is None:
-            template_base = self.path
+            template_base = self.task.path
 
         lmp_templ = cur_job['template']['lmp']
         lmp_templ = os.path.abspath(os.path.join(template_base, lmp_templ))
@@ -249,14 +259,13 @@ class DPCheck:
         ------
 
         """
-        logger = LogFactory(__name__).get_log()
 
-        location = self.path
+        location = self.task.path
         if iteration is None:
-            if self.step_code < 7:
-                iteration = self.iteration - 1
+            if self.task.step_code < 7:
+                iteration = self.task.iteration - 1
             else:
-                iteration = self.iteration
+                iteration = self.task.iteration
         logger.info("Preparing structures from FP runs.")
         n_iter = 'iter.' + str(iteration).zfill(6)
         quick_test_dir = os.path.join(location, n_iter, '03.quick_test')
@@ -274,7 +283,7 @@ class DPCheck:
                 oo, _dpgen_output), fmt=_dpdata_format)
             stc = read(os.path.join(oo, _stc_file))
             if len(sys) > 0:
-                sys.check_type_map(type_map=self.param_data['type_map'])
+                sys.check_type_map(type_map=self.task.param_data['type_map'])
             if idx == 0:
                 all_sys = sys
                 stcs.append(stc)
@@ -290,10 +299,10 @@ class DPCheck:
         dft_energy = all_sys['energies']
         dft_force = all_sys['forces']
         if test_model is None:
-            if self.step_code < 2:
-                test_model = self.iteration - 1
+            if self.task.step_code < 2:
+                test_model = self.task.iteration - 1
             else:
-                test_model = self.iteration
+                test_model = self.task.iteration
         model_iter = 'iter.' + str(test_model).zfill(6)
         model_dir = os.path.join(location, model_iter, '00.train')
         self._fp_generate_error_test(
@@ -307,7 +316,7 @@ class DPCheck:
         job = self.md_single_task(
             work_path=quick_test_dir,
             model_path=model_dir,
-            numb_models=self.param_data['numb_models'],
+            numb_models=self.task.param_data['numb_models'],
             forward_files=['conf.lmp', 'input.lammps', 'validate.xyz'],
             backward_files=['model_devi.out', 'energy.log',
                             'quick_test.log', 'quick_test.err', 'dump.lammpstrj'],
@@ -393,7 +402,7 @@ class DPCheck:
         input_file += "neighbor        2.0 bin\n"
         input_file += "neigh_modify    every 10 delay 0 check no\n"
         input_file += "read_data       conf.lmp\n"
-        _masses = self.param_data['mass_map']
+        _masses = self.task.param_data['mass_map']
         # change the masses of atoms
         for ii, jj in enumerate(_masses):
             input_file += f"mass            {ii + 1} {jj}\n"
@@ -429,14 +438,14 @@ class DPCheck:
             "vasp": "POSCAR",
             "cp2k": "coord.xyz",
         }
-        return styles.get(self.param_data['fp_style'], None)
+        return styles.get(self.task.param_data['fp_style'], None)
 
     def _fp_output_style(self):
         styles = {
             "vasp": "vasprun.xml",
             "cp2k": "coord.xyz",
         }
-        return styles.get(self.param_data['fp_style'], None)
+        return styles.get(self.task.param_data['fp_style'], None)
 
     def _fp_output_dpgen(self):
         styles = {
@@ -447,11 +456,11 @@ class DPCheck:
             "gaussian": "output",
             "pwmat": "REPORT",
         }
-        return styles.get(self.param_data['fp_style'], None)
+        return styles.get(self.task.param_data['fp_style'], None)
 
     def _fp_output_format(self):
         styles = {
             "vasp": "vasp/outcar",
             "cp2k": "cp2k/output",
         }
-        return styles.get(self.param_data['fp_style'], None)
+        return styles.get(self.task.param_data['fp_style'], None)
