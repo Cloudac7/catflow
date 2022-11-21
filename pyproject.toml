@@ -26,6 +26,7 @@ dependencies = [
     "dpdispatcher>=0.4.15",
     "dpgen>=0.10.6",
     "dynaconf",
+    "miko-analyzer @ git+https://github.com/Cloudac7/miko-analyzer.git@dev",
     "numpy",
     "pymatgen",
     "matplotlib<=3.4.3",
