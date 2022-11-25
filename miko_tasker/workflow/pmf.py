@@ -228,7 +228,7 @@ class PMFCalculation(object):
         np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[i, coord_index] == 0:
+            if self._find_task_step(i, coord_index) == 0:
                 # first loop
                 coordinate = self.reaction_coords[coord_index]
 
@@ -241,12 +241,13 @@ class PMFCalculation(object):
                                     temperature, structure, **kwargs)
                 self._task_postprocess(init_task_path, coordinate,
                                        temperature, structure, **kwargs)
-                self.task_map[i, coord_index] = 1
+                #self.task_map[i, coord_index] = 1
+                self._update_task_step(i, coord_index, 1)
             np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         task_list = []
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[i, coord_index] == 1:
+            if self._find_task_step(i, coord_index) == 1:
                 # run tasks from generated
                 task_name = f'task.{coordinate}_{temperature}'
                 task_list.append(self._get_task_generated(task_name, **kwargs))
@@ -256,12 +257,13 @@ class PMFCalculation(object):
             logger.info("New Tasks submitting.")
             job.run_submission()
             for i, temperature in enumerate(self.temperatures):
-                if self.task_map[i, coord_index] == 1:
-                    self.task_map[:, coord_index] = 2
+                if self._find_task_step(i, coord_index) == 1:
+                    self._update_task_step(i, coord_index, 2)
+                    #self.task_map[:, coord_index] = 2
             np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[i, coord_index] == 2:
+            if self._find_task_step(i, coord_index) == 2:
                 num_atoms = len(structures[0].numbers)
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
@@ -271,12 +273,13 @@ class PMFCalculation(object):
                 logger.info('Making new file')
                 with open(os.path.join(init_task_path, 'last.xyz'), 'wb') as output:
                     output.write(last)
-                self.task_map[i, coord_index] = 3
+                #self.task_map[i, coord_index] = 3
+                self._update_task_step(i, coord_index, 3)
             np.savetxt(os.path.join(work_path, 'task_map.out'), self.task_map, fmt="%d")
 
         next_structures = []
         for i, temperature in enumerate(self.temperatures):
-            if self.task_map[i, coord_index] == 3:
+            if self._find_task_step(i, coord_index) == 3:
                 # turn to the next loop
                 task_name = f'task.{coordinate}_{temperature}'
                 init_task_path = os.path.join(work_path, task_name)
@@ -291,6 +294,24 @@ class PMFCalculation(object):
             logger.info('End loop')
             logger.info('Workflow finished!')
         self._postprocess()
+
+    def _find_task_step(self, temp_index, coord_index):
+        task_map = self.task_map
+        if len(task_map.shape) == 0:
+            raise ValueError("should select the temperatures and coords")
+        elif len(task_map.shape) == 1:
+            return task_map[(temp_index + 1)*(coord_index + 1) - 1]
+        else:
+            return task_map[temp_index, coord_index]
+
+    def _update_task_step(self, temp_index, coord_index, next_code):
+        task_map = self.task_map
+        if len(task_map.shape) == 0:
+            raise ValueError("should select the temperatures and coords")
+        elif len(task_map.shape) == 1:
+            self.task_map[(temp_index + 1)*(coord_index + 1) - 1] = next_code
+        else:
+            self.task_map[temp_index, coord_index] = next_code
 
     def _task_generate(self, init_task_path, coordinate, temperature, structure, **kwargs):
         os.makedirs(init_task_path, exist_ok=True)
