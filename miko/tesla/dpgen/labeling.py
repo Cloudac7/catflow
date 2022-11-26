@@ -8,7 +8,6 @@ from matplotlib import pyplot as plt
 
 from miko.utils import logger
 from miko.utils import LogFactory
-from miko.utils.lammps import *
 from miko.tesla.dpgen.base import DPAnalyzer
 
 

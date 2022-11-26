@@ -4,6 +4,7 @@ from re import A
 import shutil
 from collections.abc import Iterable, Sized
 from glob import glob
+from pathlib import Path
 
 from typing import Union, List
 from matplotlib.figure import Figure
@@ -15,10 +16,21 @@ from ase.io import read, write
 from matplotlib import pyplot as plt
 
 from miko.utils import logger
-from miko.utils.lammps import *
 from miko.graph.plotting import canvas_style, AxesInit, square_grid
 from miko.resources.submit import JobFactory
 from miko.tesla.dpgen.base import DPAnalyzer
+
+
+def read_model_deviation(model_devi_path: Path):
+    model_devi_path = model_devi_path.resolve()
+    try:
+        steps = np.loadtxt(model_devi_path, usecols=0)
+        max_devi_f = np.loadtxt(model_devi_path, usecols=4)
+        max_devi_e = np.loadtxt(model_devi_path, usecols=3)
+    except FileNotFoundError as err:
+        logger.error('Please select an existing model_devi.out')
+        raise err
+    return steps, max_devi_f, max_devi_e
 
 
 class DPExplorationAnalyzer(DPAnalyzer):
