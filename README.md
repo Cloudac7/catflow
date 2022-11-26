@@ -25,6 +25,3 @@ cd miko-analyzer
 pip install .
 ```
 
-## Usage
-
-To be completed.

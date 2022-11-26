@@ -145,3 +145,6 @@ cython_debug/
 .ipynb_checkpoints/*
 .history/*
 .DS_Store
+
+# Matplotlib
+result_images

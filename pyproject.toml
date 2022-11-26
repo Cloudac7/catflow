@@ -14,22 +14,23 @@ authors = [
 description = "Analyzing tool for Deep Potential based chemical research."
 readme = "README.md"
 requires-python = ">=3.7"
-keywords = ["one", "two"]
 license = {text = "Apache License, Version 2.0"}
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
+    "importlib-metadata<5;python_version<'3.8.0'",
+    "argcomplete>=1.12.3;python_version<'3.8.0'",
     "ase",
     "click",
     "dscribe",
     "dpdata",
     "dpdispatcher",
     "dynaconf",
-    "matplotlib",
+    "matplotlib<=3.4.3",
     "mdanalysis",
     "numba",
-    "numpy",
+    "numpy>=1.20.0",
     "requests",
     "scipy",
     "seaborn",
@@ -40,14 +41,24 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
+    "flake8",
     "pytest",
     "pytest-datadir",
     "coverage",
     "coveralls"
+]
+docs = [
+    "mkdocstrings[python]>=0.18",
+    "mkdocs-material",
+    "mike",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-section-index"
 ]
 
 [project.urls]
 repository = "https://github.com/cloudac7/miko-analysis"
 
 [project.scripts]
-miko = "miko.main:cli"
+miko = "miko.cmdline.base:cli"

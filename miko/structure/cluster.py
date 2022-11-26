@@ -6,6 +6,7 @@ from scipy.optimize import curve_fit
 from MDAnalysis import Universe
 
 
+#TODO: refactor in need
 class Cluster(object):
     def __init__(self, path):
         self.path = path
@@ -116,7 +117,7 @@ def fitting_lindemann_curve(
         function='func2'
 ):
     """
-    fit smooth curve from given lindemann index of each temperature.
+    fit smooth curve from given lindemann index or free energy of each temperature.
 
     Parameters
     ----------
