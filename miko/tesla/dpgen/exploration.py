@@ -17,7 +17,6 @@ from matplotlib import pyplot as plt
 
 from miko.utils import logger
 from miko.graph.plotting import canvas_style, AxesInit, square_grid
-from miko.resources.submit import JobFactory
 from miko.tesla.dpgen.base import DPAnalyzer
 
 
