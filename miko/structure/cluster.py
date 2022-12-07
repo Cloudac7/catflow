@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from numba import njit
 
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
@@ -47,6 +48,7 @@ def distance_to_cnt(u: Universe, selection_cluster, cluster_size):
     return distances
 
 
+@njit
 def lindemann_per_frames(u: Universe, select_lang):
     """Calculate the lindemann index for each atom AND FRAME
 
@@ -102,7 +104,7 @@ def lindemann_per_frames(u: Universe, select_lang):
                 array_var[j, i] = array_var[i, j]
 
         lindemann_indices = np.divide(
-            np.sqrt(np.divide(array_var, nframes)), array_mean
+            np.sqrt(np.divide(array_var, iframe - 1)), array_mean
         )
         # lindemann_indices = np.nanmean(np.sqrt(array_var/nframes)/array_mean, axis=1)
         lindex_array[q] = lindemann_indices
