@@ -48,7 +48,6 @@ def distance_to_cnt(u: Universe, selection_cluster, cluster_size):
     return distances
 
 
-@njit
 def lindemann_per_frames(u: Universe, select_lang):
     """Calculate the lindemann index for each atom AND FRAME
 
