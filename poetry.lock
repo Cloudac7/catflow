@@ -1157,18 +1157,18 @@ mkdocs = ">=1.0.3,<2.0.0"
 
 [[package]]
 name = "mkdocs-literate-nav"
-version = "0.6.0"
+version = "0.5.0"
 description = "MkDocs plugin to specify the navigation in Markdown instead of YAML"
 category = "dev"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.6,<4.0"
 files = [
-    {file = "mkdocs_literate_nav-0.6.0-py3-none-any.whl", hash = "sha256:8c1b84714e5974da5e44e011ec0069275ae7647270c13a679662cf6ffce675a4"},
-    {file = "mkdocs_literate_nav-0.6.0.tar.gz", hash = "sha256:81ccbea18163ae8e10bd0bd39237fe70c32a1f2dff6c170779f5d52dd98a0470"},
+    {file = "mkdocs-literate-nav-0.5.0.tar.gz", hash = "sha256:c63d4385bb2b520baede25badad2d0936acebff3da175922c600d0a91902d8ff"},
+    {file = "mkdocs_literate_nav-0.5.0-py3-none-any.whl", hash = "sha256:b41149172af38c1a1df5e8d63292cbe7ed2a1431cd5daf884289036f2a9c7cca"},
 ]
 
 [package.dependencies]
-mkdocs = ">=1.0.3"
+mkdocs = ">=1.0.3,<2.0.0"
 
 [[package]]
 name = "mkdocs-material"
@@ -2215,4 +2215,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "<3.12,>=3.8"
-content-hash = "d3bad63e4984b6de95450f873e0bd81b343352bc07f7a295cd66b84ce28f6b3e"
+content-hash = "3e3323fd41277162867d9f252752ffdb571cd4fdf34506f481792b4632a8c683"

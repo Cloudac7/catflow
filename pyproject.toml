@@ -40,7 +40,7 @@ mkdocstrings = { version = ">=0.18", extras = ["python"] }
 mkdocs-material = "*"
 mike = "*"
 mkdocs-gen-files = "*"
-mkdocs-literate-nav = "*"
+mkdocs-literate-nav = "^0.5.0"
 mkdocs-section-index = "*"
 
 [tool.poetry.scripts]
