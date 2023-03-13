@@ -30,6 +30,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          poetry run coverage run --source=./miko_tasker -m pytest -v tests/
+          poetry run coverage run --source=./miko -m pytest -v tests/
           poetry run coverage report
           poetry coveralls --service=github

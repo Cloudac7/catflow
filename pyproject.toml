@@ -8,6 +8,9 @@ readme = "README.md"
 repository = "https://github.com/cloudac7/miko-analysis"
 packages = [{include = "miko"}]
 
+[tool.poetry-dynamic-versioning]
+enable = true
+
 [tool.poetry.dependencies]
 python = "<3.12,>=3.8"
 ase = "^3.21.1"
