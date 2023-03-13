@@ -248,7 +248,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
 
         canvas_style(**kwargs)
-        fig = plt.figure(figsize=[16, 6 * num_item],
+        fig = plt.figure(figsize=[12, 4 * num_item],
                          constrained_layout=True)
         gs = fig.add_gridspec(num_item, 3)
 
