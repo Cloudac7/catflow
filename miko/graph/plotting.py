@@ -40,6 +40,9 @@ def canvas_style(
         color_codes=color_codes,
         rc=rc
     )
+    sns.set_style({
+        'font.sans-serif': 'DejaVu Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif'
+        })
 
 
 class AxesInit(object):
