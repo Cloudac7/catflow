@@ -39,7 +39,7 @@ def test_data_prepareation(analyzer, shared_datadir):
 
 
 @image_comparison(baseline_images=['single_iteration'], remove_text=True,
-                  extensions=['pdf'], style='mpl20')
+                  extensions=['png'], style='mpl20')
 def test_plot_single_iteration(analyzer):
     fig = analyzer.plot_single_iteration(
         group_by='temps', ylimit=1.0, temps=100, label_unit='K')
@@ -47,17 +47,18 @@ def test_plot_single_iteration(analyzer):
 
 
 @image_comparison(baseline_images=['multiple_iteration'], remove_text=True,
-                  extensions=['pdf'], style='mpl20')
+                  extensions=['png'], style='mpl20')
 def test_plot_multiple_iteration(analyzer):
-    fig = analyzer.plot_multiple_iterations(group_by='temps', iterations=[
-                                            0], ylimit=1.0, temps=100, label_unit='K')
+    fig = analyzer.plot_multiple_iterations(
+        group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K'
+    )
     fig.show()
 
 
-@image_comparison(
-    baseline_images=['multi_iter_distribution'],
-    remove_text=True, extensions=['pdf'], style='mpl20')
+@image_comparison(baseline_images=['multi_iter_distribution'], remove_text=True, 
+                  extensions=['png'], style='mpl20')
 def test_plot_multi_iter_distribution(analyzer):
     fig = analyzer.plot_multi_iter_distribution(
-        group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K')
+        group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K'
+    )
     fig.show()

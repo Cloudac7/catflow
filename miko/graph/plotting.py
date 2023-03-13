@@ -1,6 +1,4 @@
 import seaborn as sns
-import proplot as pplt
-from proplot import Figure, Axes
 from matplotlib import pyplot as plt
 
 
@@ -52,13 +50,9 @@ class AxesInit(object):
             **kwargs
     ):
         if fig is None:
-            self.fig = pplt.figure()
-        else:
-            self.fig = Figure(fig)
+            self.fig = plt.figure()
         if ax is None:
             self.ax = self.fig.subplot()
-        else:
-            self.ax = Axes(ax)
         self.kwargs = kwargs
 
     def add_text(self, title=None, xlabel=None, ylabel=None, fontsize=28):
