@@ -13,6 +13,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Install OS dependencies
+        run: |
+          sudo apt-get update -yy
+          sudo apt-get install -yy \
+            msttcorefonts
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
