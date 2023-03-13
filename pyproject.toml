@@ -6,7 +6,7 @@ authors = ["Cloudac7 <scottryuu@outlook.com>"]
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/cloudac7/miko-analysis"
-packages = [{include = "miko_analyzer"}]
+packages = [{include = "miko"}]
 
 [tool.poetry.dependencies]
 python = "<3.12,>=3.8"
