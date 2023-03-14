@@ -11,7 +11,7 @@ def cluster(shared_datadir):
     return cluster
 
 def test_load_mda_trajectory(cluster):
-    assert cluster.trajectory is not None
+    assert cluster.universe is not None
 
 def test_convert_universe(cluster, shared_datadir):
     u = Universe(shared_datadir / 'test_case_O2Pt36.xyz')
