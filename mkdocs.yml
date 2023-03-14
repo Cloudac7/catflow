@@ -6,7 +6,7 @@ repo_url: https://github.com/cloudac7/miko-analyzer
 nav:
 - Welcome: index.md
 - Get Start: get_start.md
-- Usage: usage.md
+- Usage: Usage/
 - Code Reference: reference/
 
 plugins:

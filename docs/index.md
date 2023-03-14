@@ -2,4 +2,4 @@
 
 ## Usage
 
-Please refer to [Usage](usage.md).
+Please refer to [Usage](Usage/).

@@ -1,6 +1,6 @@
-# Usage
+# 分析DP-GEN任务
 
-## 分析DP-GEN任务
+## 加载环境
 
 首先，导入环境：
 
@@ -21,7 +21,7 @@ t = DPTask(
 
 便可根据所需分析的部分，对训练情况进行分析。
 
-### 训练（Training）
+## 训练（Training）
 
 导入分析器（`DPAnalyzer`），这里我们选择训练，即：
 
@@ -46,7 +46,7 @@ fig.set_size_inches((12,12))
 
 ![20221110160809](https://s2.loli.net/2022/11/10/koHFV25Leu6bdIn.png)
 
-### 探索（Exploration）
+## 探索（Exploration）
 
 类似地，我们也可以对模型的model deviation分布进行分析：
 
@@ -115,7 +115,3 @@ fig = ana.plot_single_iteration(
 效果如下：
 
 ![20221110160742](https://s2.loli.net/2022/11/10/g9hZaUTDfQi6Pov.png)
-
-## Other analysis tools
-
-To be completed.
