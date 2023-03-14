@@ -1,10 +1,11 @@
-on: 
-  push:
-    tags:        
-      - v*
+on: [push, pull_request]
 name: Release to pypi
 jobs:
-  release-to-pypi:
-    uses: deepmodeling/workflows/.github/workflows/release-to-pypi.yml@main
-    secrets:
-      PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish package
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }} 
