@@ -11,6 +11,7 @@ jobs:
       matrix:
         python-version: ['3.8', '3.9', '3.10']
     steps:
+      - uses: actions/checkout@v2
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.16
         with:
