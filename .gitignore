@@ -139,6 +139,7 @@ cython_debug/
 
 # Other files
 *.xyz
+!test_*.xyz
 *.pyc
 .vscode/*
 .idea/*
