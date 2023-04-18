@@ -1,0 +1,14 @@
+job_config: 
+  work_path: "."
+  machine_name: "dummy_machine"
+  resources: {}
+  command: "dummy_command"
+  reaction_pair: [0, 1]
+  input_dict: {}
+flow_config:
+  coordinates: [1.4, 2.0, 3.8]
+  t_min: 300.
+  cluster_component: 
+    - Pt
+  lindemann_n_last_frames: 2
+init_structure_path: "last_frame.xyz"

@@ -1,49 +1,59 @@
-[build-system]
-requires = ["setuptools>=61.2", "setuptools_scm[toml]>=7.0.5"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools_scm]
-
-[project]
+[tool.poetry]
 name = "miko-tasker"
+version = "0.0.0"
+license = "Apache-2.0"
+description = "Tasking plugin for Miko-Analyzer."
 authors = [
-    {email = "scottryuu@outlook.com"},
-    {name = "Cloudac7"}
+    "Cloudac7 <scottryuu@outlook.com>"
 ]
-
-description = "Analyzing tool for Deep Potential based chemical research."
 readme = "README.md"
-requires-python = ">=3.7"
-license = {text = "Apache License, Version 2.0"}
-classifiers = [
-    "Programming Language :: Python :: 3",
-]
-dependencies = [
-    "ase",
-    "click",
-    "dscribe",
-    "dpdata",
-    "dpdispatcher>=0.4.15",
-    "dpgen>=0.10.6",
-    "dynaconf",
-    "miko-analyzer @ git+https://github.com/Cloudac7/miko-analyzer.git@dev",
-    "numpy",
-    "pymatgen",
-    "matplotlib<=3.4.3",
-    "pyyaml"
-]
-dynamic = ["version"]
-
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-datadir",
-    "coverage",
-    "coveralls"
-]
-
-[project.urls]
+packages = [{include = "miko_tasker"}]
 repository = "https://github.com/cloudac7/miko-tasker"
 
-[project.entry-points."miko.cmdline"]
-tasker_cli = "miko_tasker.cmdline.base:tasker_cli"
+[tool.poetry.dependencies]
+python = "<3.12, >=3.8"
+ase = "*"
+click = "*"
+dscribe = "*"
+dpdata = "*"
+dpdispatcher = "^0.5.6"
+dpgen = "^0.11.1"
+dynaconf = "*"
+miko-analyzer = "^0.3.0"
+numpy = "^1.18"
+pymatgen = "*"
+pyyaml = "*"
+mdanalysis = ">=2.2.0"
+
+
+[tool.poetry.group.test.dependencies]
+flake8 = "*"
+pytest = "*"
+pytest-mock = "*"
+pytest-datadir = "*"
+coverage = "*"
+pytest-asyncio = "^0.21.0"
+
+[[tool.poetry.source]]
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = false
+secondary = true
+
+[[tool.poetry.source]]
+name = "ustc"
+url = "https://pypi.mirrors.ustc.edu.cn/simple/"
+default = false
+secondary = true
+
+[tool.poetry.plugins]
+
+[tool.poetry.plugins."miko.cmdline"]
+"tasker_cli" = "miko_tasker.cmdline.base:tasker_cli"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+build-backend = "poetry_dynamic_versioning.backend"

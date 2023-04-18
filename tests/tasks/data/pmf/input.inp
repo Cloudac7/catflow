@@ -1,0 +1,80 @@
+&FORCE_EVAL
+   METHOD FIST
+   &MM
+      &FORCEFIELD
+         IGNORE_MISSING_CRITICAL_PARAMS .TRUE.
+         &NONBONDED
+         &END NONBONDED
+      &END FORCEFIELD
+      &POISSON
+         &EWALD
+            EWALD_TYPE none
+         &END EWALD
+      &END POISSON
+   &END MM
+   &PRINT
+      &FORCES ON
+         &EACH
+         &END EACH
+      &END FORCES
+   &END PRINT
+   &SUBSYS
+      &CELL
+         ABC 18.0 18.0 18.0
+         ALPHA_BETA_GAMMA 90.0 90.0 90.0
+      &END CELL
+      &COLVAR
+         &DISTANCE
+            ATOMS 1 2
+         &END DISTANCE
+      &END COLVAR
+      &TOPOLOGY
+         COORD_FILE_FORMAT XYZ
+         COORD_FILE_NAME init.xyz
+      &END TOPOLOGY
+   &END SUBSYS
+&END FORCE_EVAL
+&GLOBAL
+   PROJECT pmf
+   RUN_TYPE MD
+&END GLOBAL
+&MOTION
+   &CONSTRAINT
+      &COLLECTIVE
+         COLVAR 1
+         INTERMOLECULAR .TRUE.
+         TARGET 2.6456165744760782
+      &END COLLECTIVE
+      &LAGRANGE_MULTIPLIERS ON
+         COMMON_ITERATION_LEVELS 20000000
+      &END LAGRANGE_MULTIPLIERS
+   &END CONSTRAINT
+   &MD
+      ENSEMBLE NVT
+      STEPS 8000000
+      TEMPERATURE 700.0
+      &THERMOSTAT
+         &CSVR
+            TIMECON 100
+         &END CSVR
+      &END THERMOSTAT
+      TIMESTEP 0.5
+   &END MD
+   &PRINT
+      &FORCES
+         &EACH
+            MD 100
+         &END EACH
+      &END FORCES
+      &RESTART_HISTORY
+         &EACH
+            MD 200000
+         &END EACH
+      &END RESTART_HISTORY
+      &TRAJECTORY
+         &EACH
+            MD 100
+         &END EACH
+      &END TRAJECTORY
+   &END PRINT
+&END MOTION

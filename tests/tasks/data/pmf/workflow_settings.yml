@@ -1,0 +1,24 @@
+coordinate: 1.4
+temperature: 700.0
+reaction_pair: [0, 1]
+cell: [18., 18., 18.,]
+steps: 8000000
+dump_freq: 100
+init_structure_path: ""
+work_path: "."
+machine_name: "dummy_machine"
+resources: 
+  number_node: 1
+  cpu_per_node: 4
+  gpu_per_node: 1
+  queue_name: gpu
+  group_size: 1
+  custom_flags:
+    - "#SBATCH --gres=gpu:1"
+  module_list:
+    - "deepmd/2.1"
+  envs:
+    OMP_NUM_THREADS: 4
+    TF_INTRA_OP_PARALLELISM_THREADS: 4
+    TF_INTER_OP_PARALLELISM_THREADS: 1
+command: ""

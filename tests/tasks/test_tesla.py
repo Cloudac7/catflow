@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 import numpy as np
-from miko_tasker.workflow.tesla import ClusterReactionWorkflow, ClusterReactionUpdater
+from miko_tasker.tasks.tesla import ClusterReactionWorkflow, ClusterReactionUpdater
 
 
 class MockClusterReactionWorkflow(object):

@@ -2,35 +2,61 @@ import os
 import shutil
 
 from copy import deepcopy
+from glob import glob
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import numpy as np
-from glob import glob
-from ase.io import read, iread, write
 
 from miko.utils.log_factory import logger
 from miko_tasker.resources.submit import JobFactory
 
 
-def traj_fp_vasp(traj_file, work_path, chemical_symbol=None, index="::"):
+def trajectory_checkrun_vasp(
+        traj_file: str, 
+        work_path: str, 
+        chemical_symbol: Optional[str] = None, 
+        cell: Optional[Union[List, np.ndarray]] = None,
+        index: str = "::",
+        **task_generation_params
+    ):
+    """Exports VASP POSCAR files from a trajectory.
+
+    Args:
+        traj_file (str): The trajectory file to read.
+        work_path (str): The working directory to write the POSCAR files to.
+        chemical_symbol (str): The chemical symbol to use for the atoms in the POSCAR files.
+        index (str): The index of the frame to use.
+
+    Returns:
+        None
     """
-    Export VASP POSCAR files from trajectory.
-    :param traj_file:
-    :param work_path:
-    :param chemical_symbol:
-    :param index:
-    :return:
-    """
-    stcs = iread(os.path.abspath(traj_file), index=index)
+    from ase.io import iread, write
+
+    stcs = iread(os.path.abspath(traj_file), index=index)    
     os.makedirs(work_path, exist_ok=True)
+
     for i, j in enumerate(stcs):
         if chemical_symbol:
             j.set_chemical_symbols(chemical_symbol)
+        if cell is not None:
+            j.set_cell(cell)
         task_path = os.path.join(work_path, f'task.{str(i).zfill(6)}')
         os.makedirs(task_path, exist_ok=True)
-        write(os.path.join(task_path, 'POSCAR'), j, vasp5=True)
+        write(os.path.join(task_path, 'POSCAR'), j, vasp5=True) # type: ignore
+    if task_generation_params:
+        submission = multi_fp_task(work_path=work_path, **task_generation_params)
+        return submission
 
 
-def multi_fp_task(work_path, fp_command, machine_name, resource_dict, **kwargs):
+def multi_fp_task(
+        work_path, 
+        fp_command, 
+        machine_name, 
+        resource_dict, 
+        files_to_forward: Optional[List[str]] = None,
+        **kwargs
+    ):
     """Run multiple VASP tasks in parallel.
 
     Args:
@@ -52,6 +78,10 @@ def multi_fp_task(work_path, fp_command, machine_name, resource_dict, **kwargs):
     fp_tasks.sort()
     if len(fp_tasks) == 0:
         return
+    if files_to_forward is not None:
+        for ii in fp_tasks:
+            for jj in files_to_forward:
+                shutil.copy(jj, ii)
     fp_run_tasks = fp_tasks
     run_tasks = [os.path.basename(ii) for ii in fp_run_tasks]
 
@@ -72,17 +102,24 @@ def multi_fp_task(work_path, fp_command, machine_name, resource_dict, **kwargs):
         "backward_common_files": kwargs.get('backward_common_files', [])
     }
     job = JobFactory(task_dict_list, submission_dict, machine_name, resource_dict, group_size=1)
-    job.run_submission()
+    submission = job.submission
+    return submission.run_submission(exit_on_submit=True)
 
 
 def cell_tests(
         init_structure_path,
+        work_path,
         cell_list,
         cubic=True,
         required_files=None,
-        **task_params
+        **task_generation_params
 ):
-    work_path = os.path.abspath(task_params.get('work_path'))
+    """Run VASP tasks with different cell sizes.
+    """
+
+    from ase.io import read, write
+
+    work_path = Path(work_path).resolve()
     if required_files is None:
         required_files = {
             "incar_path": os.path.join(work_path, "INCAR"),
@@ -97,16 +134,16 @@ def cell_tests(
         task_path = os.path.join(os.path.abspath(work_path), f'task.{str(idx).zfill(3)}')
         os.makedirs(task_path, exist_ok=True)
         s = deepcopy(init_structure)
-        s.set_cell(cell)
-        s.set_pbc([1, 1, 1])
-        write(os.path.join(task_path, 'POSCAR'), s, vasp5=True)
+        s.set_cell(cell) # type: ignore
+        s.set_pbc([1, 1, 1]) # type: ignore
+        write(os.path.join(task_path, 'POSCAR'), s, vasp5=True) # type: ignore
         assert ('incar_path' in required_files.keys()) & ('potcar_path' in required_files.keys())
         for path in required_files.values():
             shutil.copy(
                 path,
                 os.path.join(task_path, os.path.basename(path))
             )
-    multi_fp_task(**task_params)
+    multi_fp_task(work_path=work_path, **task_generation_params)
 
 
 """

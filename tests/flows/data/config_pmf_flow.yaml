@@ -1,0 +1,16 @@
+coordinates: [1.4, 2.0, 3.8]
+temperatures: [300., 400., 500., 600., 700., 800., 900.]
+t_min: 300.
+t_max: 900.
+t_step: 100.
+n_temps: 7
+job_config: 
+  work_path: "."
+  machine_name: "dummy_machine"
+  resources: {}
+  command: "dummy_command"
+  reaction_pair: [0, 1]
+  init_structure: "last_frame.xyz"
+  input_dict: {}
+cluster_component: 
+  - Pt

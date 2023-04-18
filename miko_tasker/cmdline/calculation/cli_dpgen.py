@@ -47,8 +47,11 @@ def simu(input_settings, task_path, param, machine, record):
     with open(input_settings) as f:
         settings = json.load(f)
     params = settings['params']
+    machine_config = settings['machine']
     long_task_ana = read_params(task_path, param, machine, record)
     long_task_ana.train_model_test(
+        machine_name=machine_config['machine_name'],
+        resource_dict=machine_config['resources'],
         iteration=settings['iteration'],
         params=params,
         files=settings['input'],
@@ -56,7 +59,7 @@ def simu(input_settings, task_path, param, machine, record):
         backward_files=settings['backward_files']
     )
     mes_text = "# 完成情况 \n\n"
-    mes_text += "您的长训练MD任务已经全部完成，请登陆服务器查看\n\n"
+    mes_text += "您的长训练MD任务已经全部完成, 请登陆服务器查看\n\n"
     mes_text += "时间：" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     dingtalk_reminder(
         webhook=settings['webhook'],
