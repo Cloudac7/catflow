@@ -86,7 +86,8 @@ class DPCheck:
             "forward_common_files": model_names,
             "backward_common_files": kwargs.get('backward_common_files', [])
         }
-        return JobFactory(task_dict_list, submission_dict, machine_name, resource_dict)
+        job = JobFactory(task_dict_list, submission_dict, machine_name, resource_dict)
+        return job.submission
 
     def train_model_test(
             self,

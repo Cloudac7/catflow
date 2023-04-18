@@ -345,3 +345,29 @@ class Cp2kInputToDict(object):
             raise FileNotFoundError(f'No @INCLUDE File: {filename}')
         return [cls._remove_comment(line) for line in file_lines]
 
+def lagrange_mult_log_parser(filename):
+    """Collect the Lagrange multipliers from the log file.
+
+    Args:
+        filename (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    from scipy.constants import physical_constants
+
+    eV = physical_constants['atomic unit of electric potential'][0]
+    a = physical_constants['atomic unit of length'][0]
+    eV_a = eV / (a * 1e10)
+
+    # Read the log file
+    forces = []
+    with open(filename) as f:
+        line = 1
+        while line:
+            line = f.readline()
+            if line:
+                forces.append(float(line.split()[-1]) * eV_a)
+            # just jump the 'Rattle' line
+            f.readline() 
+    return forces

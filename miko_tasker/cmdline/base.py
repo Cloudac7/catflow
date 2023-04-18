@@ -1,7 +1,7 @@
 import click
-from .calculation.cli_vasp import vasprun
+from .calculation.cli_vasp import vasprun, trajcheck
 from .calculation.cli_dpgen import simu
-from .workflow.cli_pmf import pmf, dppmf
+from .workflow.cli_pmf import pmf
 from .workflow.cli_tesla import tesla, tesla_cluster, tesla_metad
 
 
@@ -16,9 +16,9 @@ def tasker():
     pass
 
 tasker.add_command(vasprun)
+tasker.add_command(trajcheck)
 tasker.add_command(simu)
 tasker.add_command(pmf)
-tasker.add_command(dppmf)
 tasker.add_command(tesla)
 tasker.add_command(tesla_cluster)
 tasker.add_command(tesla_metad)

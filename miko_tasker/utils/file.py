@@ -2,6 +2,8 @@ import os
 import yaml
 from yaml.loader import SafeLoader
 
+"""Utilities for file operations, mainly for IOStream.
+"""
 
 def tail(f, lines=20):
     """read last N lines of a file, with bytes stream as input

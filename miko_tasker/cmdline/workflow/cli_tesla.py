@@ -1,5 +1,5 @@
 import click
-from miko_tasker.workflow.tesla import CLWorkflow, ClusterReactionWorkflow, MetadynReactionWorkflow
+from miko_tasker.tasks.tesla import CLWorkflow, ClusterReactionWorkflow, MetadynReactionWorkflow
 
 
 @click.command()
