@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sized
 from glob import glob
 from pathlib import Path
 
-from typing import Union, List
+from typing import Optional, Union, List
 from matplotlib.figure import Figure
 
 import numpy as np
@@ -16,6 +16,7 @@ from ase.io import read, write
 from matplotlib import pyplot as plt
 
 from miko.utils import logger
+from miko.utils.files import count_lines
 from miko.graph.plotting import canvas_style, AxesInit, square_grid
 from miko.tesla.dpgen.base import DPAnalyzer
 
@@ -101,6 +102,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         """
         all_data = self.make_set(iteration=iteration)
         df = pd.DataFrame(all_data)
+        df = df.explode(["max_devi_e", "max_devi_f", "steps"])
         return df
 
     def make_set_pickle(self, iteration: int = None) -> pd.DataFrame:
@@ -148,13 +150,12 @@ class DPExplorationAnalyzer(DPAnalyzer):
         elif isinstance(plot_items, Sized):
             num_item = len(plot_items)
         else:
-            logger.error('The values chosen for plotting not exists.')
-            raise TypeError(
-                'Please pass values to be plotted with `group_by` value as variable name')
+            num_item = 1
+            plot_items = [plot_items]
         return num_item, plot_items
 
     @staticmethod
-    def select_dataset(dataset, select, select_value):
+    def select_dataset(dataset, select, select_value=None):
         try:
             df = dataset[dataset[select] == select_value]
         except KeyError as err:
@@ -181,24 +182,56 @@ class DPExplorationAnalyzer(DPAnalyzer):
             raise err
         return parts
 
-    def _data_prepareation(self, plot_item, iteration=None, group_by="temps", select=None, select_value=None, **kwargs):
+    def _load_model_devi_dataframe(
+            self,
+            plot_item,
+            iteration=None,
+            group_by="temps",
+            select=None,
+            select_value=None,
+            **kwargs
+    ) -> pd.DataFrame:
         iteration_code = self._iteration_control_code(
             control_step=2, iteration=iteration)
         try:
             df = self.load_from_pickle(iteration=iteration_code)
         except FileNotFoundError:
             df = self.make_set_pickle(iteration=iteration_code)
-
-        label_unit = kwargs.get('label_unit')
-
         if all([select, select_value]):
             df = self.select_dataset(df, select, select_value)
-        partdata = self.extract_group_dataset(df, plot_item, group_by)
-        parts = self.extract_iteration_dataset(
-            partdata, self._iteration_dir(control_step=2, iteration=iteration)
+            partdata = self.extract_group_dataset(df, plot_item, group_by)
+            parts = self.extract_iteration_dataset(
+                partdata, self._iteration_dir(
+                    control_step=2, iteration=iteration
+                )
+            )
+        else:
+            partdata = df
+            parts = self.extract_iteration_dataset(
+                partdata, self._iteration_dir(
+                    control_step=2, iteration=iteration
+                )
+            )
+        return parts
+
+    def _data_prepareation(
+            self,
+            plot_item,
+            iteration=None,
+            group_by="temps",
+            select=None,
+            select_value=None,
+            **kwargs
+    ):
+        iteration_code = self._iteration_control_code(
+            control_step=2, iteration=iteration)
+        parts = self._load_model_devi_dataframe(
+            plot_item, iteration, group_by, select, select_value, **kwargs
         )
-        steps = np.array(list(parts['steps'])).flatten()
-        mdf = np.array(list(parts['max_devi_f'])).flatten()
+
+        steps = parts['steps']
+        mdf = parts['max_devi_f']
+        label_unit = kwargs.get('label_unit')
         logger.info(
             f"f_max = {mdf.max()} ev/Å at {group_by}={plot_item} {label_unit} at iter {iteration_code}.")
         return steps, mdf
@@ -327,7 +360,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
         canvas_style(**kwargs)
         nrows = square_grid(num_item)
-        fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
+        fig, axs = plt.subplots(nrows, nrows, figsize=[
+                                12, 12], constrained_layout=True)
         for i, plot_item in enumerate(plot_items):
             try:
                 ax = axs.flatten()[i]
@@ -345,12 +379,14 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
             if x_limit is not None:
-                PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
+                PlottingExploartion._plot_set_axis_limits(
+                    ax, x_limit, 'x_limit')
             if kwargs.get('use_log', False) == True:
                 ax.set_yscale('log')
             else:
                 if y_limit is not None:
-                    PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
+                    PlottingExploartion._plot_set_axis_limits(
+                        ax, y_limit, 'y_limit')
         for i in range(num_item, nrows * nrows):
             try:
                 fig.delaxes(axs.flatten()[i])
@@ -366,7 +402,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def plot_multi_iter_distribution(
             self,
             iterations: Iterable,
-            group_by: str ='temps',
+            group_by: str = 'temps',
             select: str = None,
             select_value: str = None,
             x_limit: Union[float, List[float]] = None,
@@ -390,9 +426,10 @@ class DPExplorationAnalyzer(DPAnalyzer):
         label_unit = kwargs.get('label_unit', 'K')
 
         canvas_style(**kwargs)
-        
+
         nrows = square_grid(num_item)
-        fig, axs = plt.subplots(nrows, nrows, figsize=[12, 12], constrained_layout=True)
+        fig, axs = plt.subplots(nrows, nrows, figsize=[
+                                12, 12], constrained_layout=True)
 
         colors = plt.cm.viridis(np.linspace(0, 1, len(iterations)))
         for i, plot_item in enumerate(plot_items):
@@ -433,6 +470,58 @@ class DPExplorationAnalyzer(DPAnalyzer):
         fig.suptitle(plot_title)
         return fig
 
+    def plot_ensemble_ratio_bar(
+            self,
+            iterations: Iterable,
+            group_by: Optional[str] = 'temps',
+            select: Optional[str] = None,
+            select_value: Optional[str] = None,
+            **kwargs
+    ) -> Figure:
+        num_item, plot_items = self._convert_group_by(group_by, **kwargs)
+        nrows = square_grid(num_item)
+        fig, axs = plt.subplots(nrows, nrows)
+        for i, plot_item in enumerate(plot_items):
+            try:
+                ax = axs.flatten()[i]
+            except AttributeError:
+                ax = axs
+            ratios = np.zeros((len(iterations), 3))
+
+            for j, iteration in enumerate(iterations):
+                df = self._load_model_devi_dataframe(
+                    plot_item, iteration, group_by, select, select_value, **kwargs)
+
+                f_trust_lo = self._read_model_devi_trust_level(
+                    "model_devi_f_trust_lo", iteration
+                )
+                f_trust_hi = self._read_model_devi_trust_level(
+                    "model_devi_f_trust_hi", iteration
+                )
+
+                accu_count = (df['max_devi_f'] <= f_trust_lo).sum()
+                failed_count = (df['max_devi_f'] > f_trust_hi).sum()
+                candidate_count = (
+                    (df['max_devi_f'] > f_trust_lo) &
+                    (df['max_devi_f'] <= f_trust_hi)
+                ).sum()
+
+                all_count = accu_count + failed_count + candidate_count
+                count_array = np.array(
+                    [failed_count, candidate_count, accu_count])
+                ratios[j] = count_array / all_count
+
+            ax_args = {
+                'ratios': ratios,
+                'iterations': iterations,
+            }
+            PlottingExploartion.plot_ensemble_ratio_bar(ax, ax_args)
+            handles, labels = ax.get_legend_handles_labels()
+        fig.supxlabel('Iteration')
+        fig.supylabel('Ratio')
+        fig.legend(handles, labels, loc='upper center', 
+                   ncol=3, bbox_to_anchor=(0.5, 1.0))
+        return fig
 
 class PlottingExploartion:
     @staticmethod
@@ -509,6 +598,24 @@ class PlottingExploartion:
 
         ax.set_xticklabels([])
         ax.set_yticklabels([])
+        return ax
+
+    @staticmethod
+    def plot_ensemble_ratio_bar(ax: plt.Axes, args):
+        data = args.get('ratios')
+        labels = args.get('iterations')
+
+        category_names = ['Failed', 'Candidate', 'Accurate']
+        category_colors = plt.colormaps['YlGnBu_r'](
+            np.linspace(0.15, 0.85, data.shape[1])
+        )
+        data_cum = data.cumsum(axis=1)
+        for i, (colname, color) in enumerate(zip(category_names, category_colors)):
+            widths = data[:, i]
+            starts = data_cum[:, i] - widths
+            ax.bar(labels, widths, width=0.5, bottom=starts, 
+                   label=colname, color=color)
+        ax.set_ylim(0.0, 1.0)
         return ax
 
     @staticmethod

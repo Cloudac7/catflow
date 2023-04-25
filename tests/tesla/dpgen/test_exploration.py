@@ -32,10 +32,12 @@ def test_make_set_pickle(analyzer, shared_datadir):
 
 
 def test_data_prepareation(analyzer, shared_datadir):
+    import math
+
     steps, mdf = analyzer._data_prepareation(plot_item=100)
     assert len(steps) == 31
     assert len(mdf) == 31
-    assert mdf[0] == 2.015300e-03
+    assert math.isclose(mdf.to_list()[0], 2.015300e-03)
 
 
 @image_comparison(baseline_images=['single_iteration'], remove_text=True,
@@ -60,5 +62,13 @@ def test_plot_multiple_iteration(analyzer):
 def test_plot_multi_iter_distribution(analyzer):
     fig = analyzer.plot_multi_iter_distribution(
         group_by='temps', iterations=[0], ylimit=1.0, temps=100, label_unit='K'
+    )
+    fig.show()
+
+@image_comparison(baseline_images=['multiple_ratio_bars'], remove_text=True, 
+                  extensions=['png'], style='mpl20')
+def test_plot_ensemble_bar(analyzer):
+    fig = analyzer.plot_ensemble_bars(
+        iterations=[0], label_unit='K'
     )
     fig.show()
