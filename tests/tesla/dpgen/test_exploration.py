@@ -68,7 +68,7 @@ def test_plot_multi_iter_distribution(analyzer):
 @image_comparison(baseline_images=['multiple_ratio_bars'], remove_text=True, 
                   extensions=['png'], style='mpl20')
 def test_plot_ensemble_bar(analyzer):
-    fig = analyzer.plot_ensemble_bars(
+    fig = analyzer.plot_ensemble_ratio_bar(
         iterations=[0], label_unit='K'
     )
     fig.show()

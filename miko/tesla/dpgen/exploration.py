@@ -322,6 +322,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             }
             PlottingExploartion.plot_mdf_distribution(
                 fig_right, fig_right_args, orientation='horizontal')
+            fig_right.set_xticklabels([])
+            fig_right.set_yticklabels([])
         return fig
 
     def plot_multiple_iterations(
@@ -376,7 +378,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
             ax.axhline(f_trust_hi, linestyle='dashed')
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
             ax.set_xlabel('Simulation time (fs)')
-            ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
             if x_limit is not None:
                 PlottingExploartion._plot_set_axis_limits(
@@ -392,11 +393,6 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 fig.delaxes(axs.flatten()[i])
             except AttributeError:
                 pass
-        try:
-            plot_title = f'Iteration {",".join(iterations)}'
-        except TypeError:
-            plot_title = f'Iteration {iterations}'
-        fig.suptitle(plot_title)
         return fig
 
     def plot_multi_iter_distribution(
@@ -456,18 +452,12 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     ax, ax_args, orientation='vertical')
             ax.set_ylabel('Distribution')
             ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)')
-            ax.set_title(f'{plot_item} {label_unit}')
             ax.legend()
         for i in range(num_item, nrows * nrows):
             try:
                 fig.delaxes(axs.flatten()[i])
             except AttributeError:
                 pass
-        try:
-            plot_title = f'Iteration {",".join(iterations)}'
-        except TypeError:
-            plot_title = f'Iteration {iterations}'
-        fig.suptitle(plot_title)
         return fig
 
     def plot_ensemble_ratio_bar(
@@ -555,9 +545,6 @@ class PlottingExploartion:
         if ax.get_subplotspec().is_first_col():
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
         ax.legend()
-        if iteration is None:
-            if ax.get_subplotspec().is_first_row():
-                ax.set_title(f'Iteration {iteration}')
         return ax
 
     @staticmethod
@@ -572,14 +559,14 @@ class PlottingExploartion:
 
         if orientation == 'vertical':
             sns.histplot(
-                data=args, x="data", bins=50, label=label,
+                data=args, x="data", label=label,
                 kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax,
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
             sns.histplot(
-                data=args, y="data", bins=50, label=label,
+                data=args, y="data", label=label,
                 kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
@@ -587,17 +574,11 @@ class PlottingExploartion:
         else:
             raise ValueError('Invalid orientation')
 
-        if ax.get_subplotspec().is_first_row():
-            ax.set_title('Distribution of Deviation')
-
         PlottingExploartion._plot_set_axis_limits(ax, x_limit, 'x_limit')
         if args.get('use_log', False) == True:
             ax.set_yscale('log')
         else:
             PlottingExploartion._plot_set_axis_limits(ax, y_limit, 'y_limit')
-
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
         return ax
 
     @staticmethod
