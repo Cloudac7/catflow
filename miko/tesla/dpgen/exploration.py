@@ -37,7 +37,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
     """Analyzer for exploration tasks.
     """
 
-    def make_set(self, iteration: int = None) -> dict:
+    def make_set(self, iteration: Optional[int] = None) -> List[dict]:
         """Dump dataset for easy analysis as list of dict
 
         Args:
@@ -427,7 +427,9 @@ class DPExplorationAnalyzer(DPAnalyzer):
         fig, axs = plt.subplots(nrows, nrows, figsize=[
                                 12, 12], constrained_layout=True)
 
-        colors = plt.cm.viridis(np.linspace(0, 1, len(iterations)))
+        colors = plt.colormaps['viridis_r'](
+            np.linspace(0.15, 0.85, len(iterations))
+        )
         for i, plot_item in enumerate(plot_items):
             try:
                 ax = axs.flatten()[i]
@@ -472,10 +474,11 @@ class DPExplorationAnalyzer(DPAnalyzer):
         nrows = square_grid(num_item)
         fig, axs = plt.subplots(nrows, nrows)
         for i, plot_item in enumerate(plot_items):
-            try:
-                ax = axs.flatten()[i]
-            except AttributeError:
+            if type(axs) is plt.Axes:
                 ax = axs
+            else:
+                ax = axs.flatten()[i]
+            
             ratios = np.zeros((len(iterations), 3))
 
             for j, iteration in enumerate(iterations):
@@ -498,10 +501,11 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
                 all_count = accu_count + failed_count + candidate_count
                 count_array = np.array(
-                    [failed_count, candidate_count, accu_count])
+                    [accu_count, candidate_count, failed_count])
                 ratios[j] = count_array / all_count
 
             ax_args = {
+                'category_names': ['Accurate', 'Candidate', 'Failed'],
                 'ratios': ratios,
                 'iterations': iterations,
             }
@@ -557,17 +561,18 @@ class PlottingExploartion:
         color = args.get('color')
         label = args.get('label')
 
+        # draw the kernel density estimate plot
         if orientation == 'vertical':
-            sns.histplot(
-                data=args, x="data", label=label,
-                kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax,
+            sns.kdeplot(
+                data=args, x="data", label=label, fill=True,
+                color=color, alpha=0.5, ax=ax,
             )
             ax.axvline(f_trust_lo, linestyle='dashed')
             ax.axvline(f_trust_hi, linestyle='dashed')
         elif orientation == 'horizontal':
-            sns.histplot(
-                data=args, y="data", label=label,
-                kde=True, stat='density', color=color, ec=None, alpha=0.5, ax=ax
+            sns.kdeplot(
+                data=args, y="data", label=label, fill=True,
+                color=color, alpha=0.5, ax=ax
             )
             ax.axhline(f_trust_lo, linestyle='dashed')
             ax.axhline(f_trust_hi, linestyle='dashed')
@@ -585,8 +590,8 @@ class PlottingExploartion:
     def plot_ensemble_ratio_bar(ax: plt.Axes, args):
         data = args.get('ratios')
         labels = args.get('iterations')
+        category_names = args.get('category_names')
 
-        category_names = ['Failed', 'Candidate', 'Accurate']
         category_colors = plt.colormaps['YlGnBu_r'](
             np.linspace(0.15, 0.85, data.shape[1])
         )
@@ -596,6 +601,7 @@ class PlottingExploartion:
             starts = data_cum[:, i] - widths
             ax.bar(labels, widths, width=0.5, bottom=starts, 
                    label=colname, color=color)
+        ax.plot(labels, data[:, 0], "o-", c=category_colors[0], mec="white")
         ax.set_ylim(0.0, 1.0)
         return ax
 
