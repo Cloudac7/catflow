@@ -81,15 +81,13 @@ class DPAnalyzer(ABC):
     """
     def __init__(self, dp_task: DPTask) -> None:
         self.dp_task = dp_task
-        for key in dp_task.__dict__:
-            setattr(self, key, dp_task.__dict__[key])
 
     def _iteration_control_code(self, control_step, iteration=None):
         if iteration is None:
-            if self.step_code < control_step:
-                iteration = self.iteration - 1
+            if self.dp_task.step_code < control_step:
+                iteration = self.dp_task.iteration - 1
             else:
-                iteration = self.iteration
+                iteration = self.dp_task.iteration
         return iteration
 
     def _iteration_dir(self, **kwargs):

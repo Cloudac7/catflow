@@ -12,10 +12,10 @@ def _default_theme():
 
 def canvas_style(
         context='notebook',
-        style='darkgrid',
+        style='ticks',
         palette='deep',
         font='sans-serif',
-        font_scale=1,
+        font_scale=1.5,
         color_codes=True,
         rc=None,
         **kwargs

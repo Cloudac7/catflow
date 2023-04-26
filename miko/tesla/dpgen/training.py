@@ -11,12 +11,12 @@ class DPTrainingAnalyzer(DPAnalyzer):
 
     def load_lcurve(self, iteration=None, model=0):
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
-        lcurve_path = self.path / n_iter / \
+        lcurve_path = self.dp_task.path / n_iter / \
             f'00.train/{str(model).zfill(3)}/lcurve.out'
 
         from distutils.version import LooseVersion
 
-        if LooseVersion(self.deepmd_version) < LooseVersion('2.0'):
+        if LooseVersion(self.dp_task.deepmd_version) < LooseVersion('2.0'):
             return {
                 'step': np.loadtxt(lcurve_path, usecols=0),
                 'energy_train': np.loadtxt(lcurve_path, usecols=4),
@@ -69,22 +69,3 @@ class DPTrainingAnalyzer(DPAnalyzer):
         axs[1].legend()
 
         return fig
-
-    def train_longrunning(self, iteration=None, deepmd_version='2.0', **kwargs):
-        #TODO: finish or refactor
-        """Generate models with larger decay steps and total batch
-
-        Parameters
-        ----------
-        iteration : int, optional
-            The iteration of model for long running, by default None
-        """
-        from distutils.version import LooseVersion
-        params = self.param_data
-        if LooseVersion(deepmd_version) < LooseVersion('1.0'):
-            logger.info('Preparing input for DeePMD-kit 0.x')
-        elif LooseVersion(deepmd_version) < LooseVersion('2.0'):
-            logger.info('Preparing input for DeePMD-kit 1.x')
-        else:
-            logger.info('Preparing input for DeePMD-kit 2.x')
-        pass

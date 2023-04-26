@@ -2,11 +2,11 @@ import json
 import os
 from re import A
 import shutil
-from collections.abc import Iterable, Sized
+from collections.abc import Iterable, Collection, Sized
 from glob import glob
 from pathlib import Path
 
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Tuple, Dict
 from matplotlib.figure import Figure
 
 import numpy as np
@@ -15,7 +15,7 @@ import seaborn as sns
 from ase.io import read, write
 from matplotlib import pyplot as plt
 
-from miko.utils import logger
+from miko.utils.log_factory import logger
 from miko.utils.files import count_lines
 from miko.graph.plotting import canvas_style, AxesInit, square_grid
 from miko.tesla.dpgen.base import DPAnalyzer
@@ -48,7 +48,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         """
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         all_data = []
-        for task in (self.path / n_iter).glob('01.model_devi/task*'):
+        for task in (self.dp_task.path / n_iter).glob('01.model_devi/task*'):
             # read model_devi.out
             steps, max_devi_f, max_devi_e = \
                 read_model_deviation(task / 'model_devi.out')
@@ -73,25 +73,28 @@ class DPExplorationAnalyzer(DPAnalyzer):
             all_data.append(all_dict)
         return all_data
 
-    def get_cur_job(self, iteration: int) -> dict:
+    def get_cur_job(self, iteration: Optional[int]) -> dict:
         """Get `cur_job.json` for the selected iteration
 
         Args:
-            iteration (int): the iteration to get
+            iteration (int, optional): the iteration to get
 
         Returns:
             dict: current job parameters
         """
         n_iter = self._iteration_dir(control_step=2, iteration=iteration)
         try:
-            with open(self.path / n_iter / '01.model_devi' / 'cur_job.json', 'r') as f:
+            with open(
+                self.dp_task.path / n_iter / '01.model_devi' / 'cur_job.json', 'r'
+            ) as f:
                 job_dict = json.load(f)
         except Exception as err:
             logger.warning(err)
             job_dict = {}
         return job_dict
 
-    def make_set_dataframe(self, iteration: int = None) -> pd.DataFrame:
+    def make_set_dataframe(
+            self, iteration: Optional[int] = None) -> pd.DataFrame:
         """Dump dataset for easy analysis as `pandas.Dataframe`
 
         Args:
@@ -105,7 +108,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
         df = df.explode(["max_devi_e", "max_devi_f", "steps"])
         return df
 
-    def make_set_pickle(self, iteration: int = None) -> pd.DataFrame:
+    def make_set_pickle(self, iteration: Optional[int] = None) -> pd.DataFrame:
         """Dump pickle from `self.make_set_dataframe` for quick load.
            Default to `<dpgen_task_path>/model_devi_each_iter/data_<iter>.pkl`
 
@@ -116,7 +119,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             pd.DataFrame: DataFrame containing all model deviation logs.
         """
         df = self.make_set_dataframe(iteration=iteration)
-        save_path = self.path / 'model_devi_each_iter'
+        save_path = self.dp_task.path / 'model_devi_each_iter'
         os.makedirs(name=save_path, exist_ok=True)
         if iteration is None:
             iteration = self._iteration_control_code(
@@ -133,25 +136,32 @@ class DPExplorationAnalyzer(DPAnalyzer):
         Returns:
             pd.DataFrame: DataFrame containing all model deviation logs.
         """
-        pkl_path = self.path / \
+        pkl_path = self.dp_task.path / \
             f'model_devi_each_iter/data_{str(iteration).zfill(6)}.pkl'
         df = pd.read_pickle(pkl_path)
         return df
 
     @staticmethod
-    def _convert_group_by(group_by: str, **kwargs):
-        plot_items = kwargs.get(group_by)
-        if isinstance(plot_items, str):
+    def _convert_group_by(
+        group_by: Optional[str] = None, 
+        **kwargs
+    ) -> Tuple[int, Union[List, Collection]]:
+        if group_by is None:
             num_item = 1
-            plot_items = [int(plot_items)]
-        elif isinstance(plot_items, (int, float)):
-            num_item = 1
-            plot_items = [plot_items]
-        elif isinstance(plot_items, Sized):
-            num_item = len(plot_items)
+            plot_items = [None]
         else:
-            num_item = 1
-            plot_items = [plot_items]
+            plot_items = kwargs.get(group_by)
+            if isinstance(plot_items, str):
+                num_item = 1
+                plot_items = [int(plot_items)]
+            elif isinstance(plot_items, (int, float)):
+                num_item = 1
+                plot_items = [plot_items]
+            elif isinstance(plot_items, Collection):
+                num_item = len(plot_items)
+            else:
+                num_item = 1
+                plot_items = [plot_items]
         return num_item, plot_items
 
     @staticmethod
@@ -186,7 +196,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             self,
             plot_item,
             iteration=None,
-            group_by="temps",
+            group_by=None,
             select=None,
             select_value=None,
             **kwargs
@@ -197,28 +207,30 @@ class DPExplorationAnalyzer(DPAnalyzer):
             df = self.load_from_pickle(iteration=iteration_code)
         except FileNotFoundError:
             df = self.make_set_pickle(iteration=iteration_code)
+
+        # select data frame of given select
         if all([select, select_value]):
             df = self.select_dataset(df, select, select_value)
+
+        # extract data frame of given group
+        if group_by:
             partdata = self.extract_group_dataset(df, plot_item, group_by)
-            parts = self.extract_iteration_dataset(
-                partdata, self._iteration_dir(
-                    control_step=2, iteration=iteration
-                )
-            )
         else:
             partdata = df
-            parts = self.extract_iteration_dataset(
-                partdata, self._iteration_dir(
-                    control_step=2, iteration=iteration
-                )
+
+        # export data frame of given iteration
+        parts = self.extract_iteration_dataset(
+            partdata, self._iteration_dir(
+                control_step=2, iteration=iteration
             )
+        )
         return parts
 
     def _data_prepareation(
             self,
             plot_item,
             iteration=None,
-            group_by="temps",
+            group_by=None,
             select=None,
             select_value=None,
             **kwargs
@@ -240,21 +252,22 @@ class DPExplorationAnalyzer(DPAnalyzer):
         cur_job = self.get_cur_job(iteration)
         trust_level = cur_job.get(trust_level_key)
         if trust_level is None:
-            trust_level = self.param_data[trust_level_key]
+            trust_level = self.dp_task.param_data[trust_level_key]
         # Is average OK for different systems?
         if isinstance(trust_level, Iterable):
-            trust_level = np.mean(trust_level)
+            trust_level = np.mean(trust_level)  # type: ignore
         return trust_level
 
     def plot_single_iteration(
             self,
-            iteration: int = None,
-            x_limit: Union[float, List[float]] = None,
-            y_limit: Union[float, List[float]] = None,
+            iteration: Optional[int] = None,
+            *,
+            x_limit: Optional[Union[float, List[float]]] = None,
+            y_limit: Optional[Union[float, List[float]]] = None,
             use_log: bool = False,
-            group_by: str = 'temps',
-            select: str = None,
-            select_value: str = None,
+            group_by: Optional[str] = None,
+            select: Optional[str] = None,
+            select_value: Optional[str] = None,
             **kwargs
     ) -> Figure:
         """Generate a plot of model deviation in each iteration.
@@ -290,7 +303,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 plot_item, iteration, group_by, select, select_value, **kwargs)
 
             # left part
-            fig_left = fig.add_subplot(gs[i, :-1])
+            fig_left = fig.add_subplot(gs[i, :-1]) # type: ignore
             fig_left_args = {
                 'x': steps,
                 'y': mdf,
@@ -308,7 +321,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
             global_ylim = fig_left.get_ylim()
 
             # right part
-            fig_right = fig.add_subplot(gs[i, -1])
+            fig_right = fig.add_subplot(gs[i, -1]) # type: ignore
             fig_right_args = {
                 'data': mdf,
                 'plot_item': plot_item,
@@ -329,13 +342,13 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def plot_multiple_iterations(
             self,
             iterations: Iterable,
-            group_by: str = 'temps',
+            group_by: Optional[str] = None,
             f_trust_lo: float = 0.10,
             f_trust_hi: float = 0.30,
-            x_limit: Union[float, List[float]] = None,
-            y_limit: Union[float, List[float]] = None,
-            select: str = None,
-            select_value: str = None,
+            x_limit: Optional[Union[float, List[float]]] = None,
+            y_limit: Optional[Union[float, List[float]]] = None,
+            select: Optional[str] = None,
+            select_value: Optional[str] = None,
             **kwargs
     ):
         """Analyse trajectories for different temperatures.
@@ -372,22 +385,22 @@ class DPExplorationAnalyzer(DPAnalyzer):
             for iteration in iterations:
                 step, mdf = self._data_prepareation(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
-                ax.scatter(step, mdf, s=80, alpha=0.3,
+                ax.scatter(step, mdf, s=80, alpha=0.3, # type: ignore
                            label=f'iter {int(iteration)}', marker='o')
-            ax.axhline(f_trust_lo, linestyle='dashed')
-            ax.axhline(f_trust_hi, linestyle='dashed')
-            ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
-            ax.set_xlabel('Simulation time (fs)')
-            ax.legend()
+            ax.axhline(f_trust_lo, linestyle='dashed') # type: ignore
+            ax.axhline(f_trust_hi, linestyle='dashed') # type: ignore
+            ax.set_ylabel(r"$\sigma_{f}^{max}$ (ev/Å)") # type: ignore
+            ax.set_xlabel('Simulation time (fs)') # type: ignore
+            ax.legend() # type: ignore
             if x_limit is not None:
                 PlottingExploartion._plot_set_axis_limits(
-                    ax, x_limit, 'x_limit')
+                    ax, x_limit, 'x_limit') # type: ignore
             if kwargs.get('use_log', False) == True:
-                ax.set_yscale('log')
+                ax.set_yscale('log') # type: ignore
             else:
                 if y_limit is not None:
                     PlottingExploartion._plot_set_axis_limits(
-                        ax, y_limit, 'y_limit')
+                        ax, y_limit, 'y_limit') # type: ignore
         for i in range(num_item, nrows * nrows):
             try:
                 fig.delaxes(axs.flatten()[i])
@@ -398,20 +411,20 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def plot_multi_iter_distribution(
             self,
             iterations: Iterable,
-            group_by: str = 'temps',
-            select: str = None,
-            select_value: str = None,
+            group_by: Optional[str] = None,
+            select: Optional[str] = None,
+            select_value: Optional[str] = None,
             f_trust_lo: Optional[float] = None,
             f_trust_hi: Optional[float] = None,
-            x_limit: Union[float, List[float]] = None,
-            y_limit: Union[float, List[float]] = None,
+            x_limit: Optional[Union[float, List[float]]] = None,
+            y_limit: Optional[Union[float, List[float]]] = None,
             **kwargs
     ) -> Figure:
         """Draw distribution in histogram of model deviation for multiple iterations.
 
         Args:
             iterations (Iterable): _description_
-            group_by (str, optional): _description_. Defaults to 'temps'.
+            group_by (str, optional): _description_. Defaults to None.
             select (str, optional): _description_. Defaults to None.
             select_value (str, optional): _description_. Defaults to None.
             f_trust_lo (float, optional): The lower limit of max_deviation_force. Defaults to None.
@@ -431,8 +444,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
         fig, axs = plt.subplots(nrows, nrows, figsize=[
                                 12, 12], constrained_layout=True)
 
-        colors = plt.colormaps['viridis_r'](
-            np.linspace(0.15, 0.85, len(iterations))
+        colors = plt.colormaps['viridis_r']( # type: ignore
+            np.linspace(0.15, 0.85, len(iterations)) # type: ignore
         )
         for i, plot_item in enumerate(plot_items):
             try:
@@ -461,10 +474,10 @@ class DPExplorationAnalyzer(DPAnalyzer):
                     'label': f'Iter {iteration}'
                 }
                 PlottingExploartion.plot_mdf_distribution(
-                    ax, ax_args, orientation='vertical')
-            ax.set_ylabel('Distribution')
-            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)')
-            ax.legend()
+                    ax, ax_args, orientation='vertical') # type: ignore
+            ax.set_ylabel('Distribution') # type: ignore
+            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)') # type: ignore
+            ax.legend() # type: ignore
         for i in range(num_item, nrows * nrows):
             try:
                 fig.delaxes(axs.flatten()[i])
@@ -475,7 +488,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
     def plot_ensemble_ratio_bar(
             self,
             iterations: Iterable,
-            group_by: Optional[str] = 'temps',
+            group_by: Optional[str] = None,
             select: Optional[str] = None,
             select_value: Optional[str] = None,
             f_trust_lo: Optional[float] = None,
@@ -486,7 +499,7 @@ class DPExplorationAnalyzer(DPAnalyzer):
 
         Args:
             iterations (Iterable): _description_
-            group_by (Optional[str], optional): _description_. Defaults to 'temps'.
+            group_by (Optional[str], optional): _description_. Defaults to None.
             select (Optional[str], optional): _description_. Defaults to None.
             select_value (Optional[str], optional): _description_. Defaults to None.
             f_trust_lo (Optional[float], optional): _description_. Defaults to None.
@@ -506,9 +519,9 @@ class DPExplorationAnalyzer(DPAnalyzer):
             if type(axs) is plt.Axes:
                 ax = axs
             else:
-                ax = axs.flatten()[i]
-            
-            ratios = np.zeros((len(iterations), 3))
+                ax = axs.flatten()[i] # type: ignore
+
+            ratios = np.zeros((len(iterations), 3)) # type: ignore
 
             for j, iteration in enumerate(iterations):
                 df = self._load_model_devi_dataframe(
@@ -542,9 +555,10 @@ class DPExplorationAnalyzer(DPAnalyzer):
             handles, labels = ax.get_legend_handles_labels()
         fig.supxlabel('Iteration')
         fig.supylabel('Ratio')
-        fig.legend(handles, labels, loc='upper center', 
+        fig.legend(handles, labels, loc='upper center', # type: ignore
                    ncol=3, bbox_to_anchor=(0.5, 1.0))
         return fig
+
 
 class PlottingExploartion:
     @staticmethod
@@ -573,9 +587,9 @@ class PlottingExploartion:
             ax.axhline(f_trust_lo, linestyle='dashed')
         if f_trust_hi is not None:
             ax.axhline(f_trust_hi, linestyle='dashed')
-        if ax.get_subplotspec().is_last_row():
+        if ax.get_subplotspec().is_last_row(): # type: ignore
             ax.set_xlabel('Simulation Steps')
-        if ax.get_subplotspec().is_first_col():
+        if ax.get_subplotspec().is_first_col(): # type: ignore
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
         ax.legend()
         return ax
@@ -621,14 +635,14 @@ class PlottingExploartion:
         labels = args.get('iterations')
         category_names = args.get('category_names')
 
-        category_colors = plt.colormaps['YlGnBu_r'](
+        category_colors = plt.colormaps['YlGnBu_r']( # type: ignore
             np.linspace(0.15, 0.85, data.shape[1])
         )
         data_cum = data.cumsum(axis=1)
         for i, (colname, color) in enumerate(zip(category_names, category_colors)):
             widths = data[:, i]
             starts = data_cum[:, i] - widths
-            ax.bar(labels, widths, width=0.5, bottom=starts, 
+            ax.bar(labels, widths, width=0.5, bottom=starts,
                    label=colname, color=color)
         ax.plot(labels, data[:, 0], "o-", c=category_colors[0], mec="white")
         ax.set_ylim(0.0, 1.0)
@@ -644,12 +658,12 @@ class PlottingExploartion:
         if limitation is not None:
             if isinstance(limitation, (int, float)):
                 _func(0, limitation)
-            elif isinstance(limitation, Iterable):
+            elif isinstance(limitation, Sized):
                 if len(limitation) > 2:
                     raise ValueError("Limitation should be a value \
                         or a set with no more than 2 elements.")
                 elif len(limitation) == 1:
-                    _func(0, limitation[0])
+                    _func(0, limitation[0]) # type: ignore
                 else:
                     _func(limitation)
             else:
