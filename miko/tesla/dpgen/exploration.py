@@ -401,6 +401,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             group_by: str = 'temps',
             select: str = None,
             select_value: str = None,
+            f_trust_lo: Optional[float] = None,
+            f_trust_hi: Optional[float] = None,
             x_limit: Union[float, List[float]] = None,
             y_limit: Union[float, List[float]] = None,
             **kwargs
@@ -412,6 +414,8 @@ class DPExplorationAnalyzer(DPAnalyzer):
             group_by (str, optional): _description_. Defaults to 'temps'.
             select (str, optional): _description_. Defaults to None.
             select_value (str, optional): _description_. Defaults to None.
+            f_trust_lo (float, optional): The lower limit of max_deviation_force. Defaults to None.
+            f_trust_hi (float, optional): The higher limit of max_deviation_force. Defaults to None.
             x_limit (Union[float, List[float]], optional): _description_. Defaults to None.
             y_limit (Union[float, List[float]], optional): _description_. Defaults to None.
 
@@ -438,12 +442,18 @@ class DPExplorationAnalyzer(DPAnalyzer):
             for j, iteration in enumerate(iterations):
                 step, mdf = self._data_prepareation(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
+                if f_trust_lo is None:
+                    f_trust_lo = self._read_model_devi_trust_level(
+                        "model_devi_f_trust_lo", iteration)
+                if f_trust_hi is None:
+                    f_trust_hi = self._read_model_devi_trust_level(
+                        "model_devi_f_trust_hi", iteration)
                 ax_args = {
                     'data': mdf,
                     'plot_item': plot_item,
                     'label_unit': kwargs.get('label_unit'),
-                    'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
-                    'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                    'f_trust_lo': f_trust_lo,
+                    'f_trust_hi': f_trust_hi,
                     'iteration': iteration,
                     'x_limit': x_limit,
                     'y_limit': y_limit,
@@ -468,10 +478,29 @@ class DPExplorationAnalyzer(DPAnalyzer):
             group_by: Optional[str] = 'temps',
             select: Optional[str] = None,
             select_value: Optional[str] = None,
+            f_trust_lo: Optional[float] = None,
+            f_trust_hi: Optional[float] = None,
             **kwargs
     ) -> Figure:
+        """Draw ensemble ratio bar for multiple iterations.
+
+        Args:
+            iterations (Iterable): _description_
+            group_by (Optional[str], optional): _description_. Defaults to 'temps'.
+            select (Optional[str], optional): _description_. Defaults to None.
+            select_value (Optional[str], optional): _description_. Defaults to None.
+            f_trust_lo (Optional[float], optional): _description_. Defaults to None.
+            f_trust_hi (Optional[float], optional): _description_. Defaults to None.
+
+        Returns:
+            Figure: _description_
+        """
+
         num_item, plot_items = self._convert_group_by(group_by, **kwargs)
         nrows = square_grid(num_item)
+
+        canvas_style(**kwargs)
+
         fig, axs = plt.subplots(nrows, nrows)
         for i, plot_item in enumerate(plot_items):
             if type(axs) is plt.Axes:
@@ -485,12 +514,12 @@ class DPExplorationAnalyzer(DPAnalyzer):
                 df = self._load_model_devi_dataframe(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
 
-                f_trust_lo = self._read_model_devi_trust_level(
-                    "model_devi_f_trust_lo", iteration
-                )
-                f_trust_hi = self._read_model_devi_trust_level(
-                    "model_devi_f_trust_hi", iteration
-                )
+                if f_trust_lo is None:
+                    f_trust_lo = self._read_model_devi_trust_level(
+                        "model_devi_f_trust_lo", iteration)
+                if f_trust_hi is None:
+                    f_trust_hi = self._read_model_devi_trust_level(
+                        "model_devi_f_trust_hi", iteration)
 
                 accu_count = (df['max_devi_f'] <= f_trust_lo).sum()
                 failed_count = (df['max_devi_f'] > f_trust_hi).sum()
