@@ -60,7 +60,6 @@ class PMFFlowConfig(BaseModel):
     t_step: float = 100.
     n_temps: int = 5
     lindemann_n_last_frames: int = 20000
-    block_size: int = 20000
     temperatures: Optional[List[float]]
     t_min: Optional[float]
     t_max: Optional[float]
@@ -291,8 +290,7 @@ async def task_pmf_calculation(
 
 async def convergence_test_lagrange_multiplier(
     task_output: PMFTaskOutput,
-    pmf_task_outputs: SafeList,
-    block_size: int = 20000
+    pmf_task_outputs: SafeList
 ):
     """Convergence test for lagrange multiplier."""
     coordinate = task_output.coordinate
@@ -306,13 +304,13 @@ async def convergence_test_lagrange_multiplier(
             coordinate, 
             temperature, 
             task_path, 
-            restart_time, 
-            block_size
+            restart_time
         )
         mean, var = await loop.run_in_executor(
             executor, _partial
         )
-    if var < 0.1:
+    if var < 0.08:
+        # set threshold to 0.08
         logger.info(f"Convergence reached for {task_output.coordinate} at {task_output.temperature}.")
         logger.info(f"Mean: {mean}, Var: {var}")
         task_output.convergence = True
@@ -331,8 +329,7 @@ def pmf_analyzer(
     coordinate: float,
     temperature: float,
     task_path: Path,
-    restart_time: int = 0,
-    block_size: int = 20000
+    restart_time: int = 0
 ):
     from miko_tasker.utils.cp2k import lagrange_mult_log_parser
     from miko_tasker.utils.statistics import block_average
@@ -357,7 +354,9 @@ def pmf_analyzer(
                 lagrange_mult_log_path = _task_path / "pmf.LagrangeMultLog"
                 lagrange_mults += lagrange_mult_log_parser(lagrange_mult_log_path)
                 np.save(parsed_log_path, lagrange_mults)
-    mean, var = block_average(lagrange_mults, block_size)
+    mean, var = block_average(
+        lagrange_mults[1:], int(len(lagrange_mults[1:])/10)
+    )
     return mean, var
 
 
@@ -891,8 +890,7 @@ async def subflow_pmf_each_temperauture(
             # check if the PMF calculation is converged
             task_output = await convergence_test_lagrange_multiplier(
                 task_output,  # type: ignore
-                pmf_task_outputs,
-                block_size=flow_input.flow_config.block_size,
+                pmf_task_outputs
             )
             convergence = task_output.convergence
 

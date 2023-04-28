@@ -29,7 +29,6 @@ def test_pmf_config(shared_datadir):
     #assert config.init_structure_path == "last_frame.xyz"
     assert config.job_config.reaction_pair == [0, 1]
     assert config.flow_config.cluster_component == ["Pt"]
-    assert config.flow_config.block_size == 20000
 
 
 @pytest.fixture
@@ -354,8 +353,7 @@ async def test_pmf_temperature_range_2(pmf_flow_config):
 
 async def mock_convergence_test_lagrange_multiplier(
     task_output: PMFTaskOutput,
-    pmf_task_outputs: SafeList,
-    block_size: int = 20000
+    pmf_task_outputs: SafeList
 ):
     import asyncio
     import random
@@ -374,7 +372,9 @@ async def mock_convergence_test_lagrange_multiplier(
     sleeptime = random.randint(0, 300)
     await asyncio.sleep(float(sleeptime/100))
 
-    mean, var = block_average(lagrange_mults, block_size)
+    mean, var = block_average(
+        lagrange_mults[1:], int(len(lagrange_mults[1:])/10)
+    )
     if var < 0.1:
         task_output.convergence = True
         task_output.pmf_mean = mean
