@@ -122,7 +122,8 @@ class SafeList:
                 if (new_item.restart_time > old_item.restart_time) or (
                         new_item.last_frame_path != old_item.last_frame_path) or (
                         new_item.lindemann_index != old_item.lindemann_index) or (
-                        new_item.pmf_mean != old_item.pmf_mean):
+                        new_item.pmf_mean != old_item.pmf_mean) or (
+                        new_item.convergence != old_item.convergence):
                     self.items.remove(old_item)
                     self.items.append(new_item)
                 else:
@@ -854,17 +855,18 @@ async def subflow_pmf_each_temperauture(
                 last_task_output = last_task_check[1]
                 init_structure_path = last_task_output.last_frame_path
 
-        restart_time = -1
-        convergence = False
+        restart_time = 0
         # submit the PMF calculation task
-        while not convergence:
+        while True:
             # if not, submit the PMF calculation task
-            restart_time += 1
             if task_output is not None:
-                if not task_output.convergence:
+                if task_output.convergence:
+                    return task_output
+                else:
                     # not converged yet
                     # continue from current restart time
-                    restart_time = task_output.restart_time
+                    if task_output.restart_time >= restart_time:
+                        restart_time = task_output.restart_time
                     task_output = await task_pmf_calculation(
                         coordinate,
                         temperature,
@@ -872,11 +874,6 @@ async def subflow_pmf_each_temperauture(
                         pmf_task_outputs,
                         init_structure_path,
                         restart_time
-                    )
-                elif type(task_output) is not PMFTaskOutput:
-                    # avoid accidentally overwriting the task_output
-                    raise TypeError(
-                        'The type of task_output is not PMFTaskOutput.'
                     )
             else:
                 # submit the PMF calculation task
@@ -894,7 +891,7 @@ async def subflow_pmf_each_temperauture(
                 task_output,  # type: ignore
                 pmf_task_outputs
             )
-            convergence = task_output.convergence
+            restart_time += 1
 
 
 def plot_pmf_profile(
