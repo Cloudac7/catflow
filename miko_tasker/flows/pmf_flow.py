@@ -319,6 +319,7 @@ async def convergence_test_lagrange_multiplier(
     else:
         logger.info(f"Convergence not reached for {task_output.coordinate} at {task_output.temperature}.")
         logger.info(f"Mean: {mean}, Var: {var}")
+        task_output.convergence = False
         task_output.pmf_mean = mean
         task_output.pmf_var = var
     await pmf_task_outputs.add_item(task_output)
@@ -447,6 +448,7 @@ async def convergence_test_lindemann_index(
     else:
         logger.info(f"Convergence not reached for {coordinate} at {temperature}.")
         logger.info(f"Last frame index: {last_frame_index}")
+        task_output.convergence = False
         task_output.lindemann_index = last_frame_index
     await pmf_task_outputs.add_item(task_output)
     return task_output
