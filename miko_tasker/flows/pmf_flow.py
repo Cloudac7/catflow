@@ -861,7 +861,7 @@ async def subflow_pmf_each_temperauture(
             # if not, submit the PMF calculation task
             if task_output is not None:
                 if task_output.convergence:
-                    return task_output
+                    break
                 else:
                     # not converged yet
                     # continue from current restart time
