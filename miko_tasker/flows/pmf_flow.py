@@ -310,8 +310,8 @@ async def convergence_test_lagrange_multiplier(
         mean, var = await loop.run_in_executor(
             executor, _partial
         )
-    if var < 0.08:
-        # set threshold to 0.08
+    if var < 0.1:
+        # set threshold to 0.1
         logger.info(f"Convergence reached for {task_output.coordinate} at {task_output.temperature}.")
         logger.info(f"Mean: {mean}, Var: {var}")
         task_output.convergence = True
@@ -354,8 +354,9 @@ def pmf_analyzer(
                 lagrange_mults += list(np.load(parsed_log_path))
             else:
                 lagrange_mult_log_path = _task_path / "pmf.LagrangeMultLog"
-                lagrange_mults += lagrange_mult_log_parser(lagrange_mult_log_path)
-                np.save(parsed_log_path, lagrange_mults)
+                new_lagrange_mults = lagrange_mult_log_parser(lagrange_mult_log_path)
+                np.save(parsed_log_path, new_lagrange_mults)
+                lagrange_mults += new_lagrange_mults
     mean, var = block_average(
         lagrange_mults[1:], int(len(lagrange_mults[1:])/10)
     )
