@@ -3,7 +3,12 @@ on:
   push:
     branches:
       - 'master'
-      - 'dev'
+    paths:
+      - docs/**
+      - README.md
+      - mkdocs.yml
+      - miko/**
+      - .github/workflows/deploy_docs.yml
 jobs:
   deploy:
     runs-on: ubuntu-latest

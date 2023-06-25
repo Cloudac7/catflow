@@ -1,6 +1,23 @@
 name: Python package
 
-on: [push, pull_request]
+on: 
+  push: 
+    branches:
+      - 'master'
+      - 'dev'
+    paths:
+      - miko/**
+      - tests/**
+      - .github/workflows/ci.yml
+      - pyproject.toml
+      - poetry.lock
+  pull_request:
+    paths:
+      - miko/**
+      - tests/**
+      - .github/workflows/ci.yml
+      - pyproject.toml
+      - poetry.lock
 
 jobs:
   build:
