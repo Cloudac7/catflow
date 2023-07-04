@@ -1,7 +1,7 @@
-from miko.tesla.dpgen.base import CllTask
+from miko.tesla.dpgen.base import DPTask
 
 
-def _inner_test_dp_task(t: CllTask):
+def _inner_test_dp_task(t: DPTask):
     assert t.step_code == 4
     assert t.state == 'Parsing'
     assert t.step == 'Exploring'
@@ -10,7 +10,7 @@ def _inner_test_dp_task(t: CllTask):
 
 
 def test_dp_task_from_params(shared_datadir):
-    t = CllTask(
+    t = DPTask(
         path=shared_datadir / "dpgen_task",
         param_file="param.json",
         machine_file="machine.json",
@@ -20,7 +20,7 @@ def test_dp_task_from_params(shared_datadir):
 
 
 def test_dp_task_from_dict(shared_datadir):
-    t = CllTask.from_dict({
+    t = DPTask.from_dict({
         "path": shared_datadir / "dpgen_task",
         "param_file": "param.json",
         "machine_file": "machine.json",
