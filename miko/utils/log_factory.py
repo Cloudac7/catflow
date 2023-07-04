@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import logging
 
 
@@ -6,11 +6,11 @@ class LogFactory(object):
     """
     For logging
     """
-    def __init__(self, logger=None, log_dir=""):
-        self.log_path = os.getcwd() if log_dir == "" else log_dir
+    def __init__(self, logger=None, log_dir=None, log_name="miko.log"):
+        self.log_path = Path.cwd() if log_dir is None else Path(log_dir)
         self.logger = logging.getLogger(logger)
         self.logger.setLevel(logging.DEBUG)
-        self.log_name = os.path.join(self.log_path, "miko.log")
+        self.log_name = self.log_path / log_name
 
         # create file handler which logs even debug messages
         file_handler = logging.FileHandler(self.log_name, delay=True)
