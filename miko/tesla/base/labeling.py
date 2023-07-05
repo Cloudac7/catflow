@@ -71,7 +71,7 @@ class LabelingAnalyzer(BaseAnalyzer):
         dis = []
         dis_loc = []
         task_files = self.get_fp_tasks(iteration=iteration)
-        _output_name = self._fp_style()
+        _stc_name = self._fp_style()
 
         for i in task_files:
             stc_file_path = i / _stc_name # type: ignore
