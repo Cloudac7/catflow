@@ -1,19 +1,19 @@
 import json
-from abc import ABC
 from pathlib import Path
+from typing import Optional
 
-class DPTask(object):
+from miko.tesla.base.task import BaseTask, BaseAnalyzer
+
+class DPTask(BaseTask):
     """DPTask is a class reading a DP-GEN directory, where the DP-GEN task run.
     """
-
     def __init__(
-        self,
+        self, 
         path: str,
         param_file: str = 'param.json',
         machine_file: str = 'machine.json',
-        record_file: str = 'record.dpgen',
-        deepmd_version: str = '2.0'
-    ):
+        record_file: str = 'record.dpgen'
+    ) -> None:
         """Generate a class of tesla task.
 
         Args:
@@ -23,11 +23,11 @@ class DPTask(object):
             record_file (str): The record file name.
             deepmd_version (str): DeepMD-kit version used. Default: 2.0.
         """
-        self.path = Path(path).resolve()
+        super().__init__(path)
+
         self.param_file = param_file
         self.machine_file = machine_file
         self.record_file = record_file
-        self.deepmd_version = deepmd_version
         self._load_task()
 
     def _load_task(self):
@@ -71,18 +71,20 @@ class DPTask(object):
         with open(_param_path) as f:
             self.machine_data = json.load(f)
 
-    @classmethod
-    def from_dict(cls, dp_task_dict: dict):
-        return cls(**dp_task_dict)
 
-
-class DPAnalyzer(ABC):
+class DPAnalyzer(BaseAnalyzer):
     """Base class to be implemented as analyzer for `DPTask`
     """
-    def __init__(self, dp_task: DPTask) -> None:
-        self.dp_task = dp_task
+    def __init__(self, dp_task: DPTask, **kwargs) -> None:
+        super().__init__(dp_task)
+        if type(self.dp_task) is not DPTask:
+            self.dp_task = DPTask.from_dict(**self.dp_task.__dict__, **kwargs)
 
-    def _iteration_control_code(self, control_step, iteration=None):
+    def _iteration_control_code(
+        self, 
+        control_step: int, 
+        iteration: Optional[int] = None
+    ):
         if iteration is None:
             if self.dp_task.step_code < control_step:
                 iteration = self.dp_task.iteration - 1
@@ -91,7 +93,11 @@ class DPAnalyzer(ABC):
         return iteration
 
     def _iteration_dir(self, **kwargs):
-        iteration = self._iteration_control_code(**kwargs)
+        control_step = kwargs.get('control_step', 2)
+        iteration = self._iteration_control_code(
+            control_step=control_step,
+            iteration=kwargs.get('iteration')
+        )
         return 'iter.' + str(iteration).zfill(6)
 
     @classmethod

@@ -8,17 +8,17 @@ from ai2_kit.core.util import load_yaml_files
 from ai2_kit.core.checkpoint import set_checkpoint_file
 from ai2_kit.workflow.cll_mlp import CllWorkflowConfig
 
+from miko.tesla.base.task import BaseTask, BaseAnalyzer
 
-class CllTask(object):
+
+class CllTask(BaseTask):
     """CllTask is a class reading a ai2-kit directory, where the Cll-Workflow run.
     """
 
     def __init__(
         self,
         *config_files,
-        path: str,
-        deepmd_version: str = '2.0',
-        **kwargs
+        path: str
     ):
         """Generate a class of tesla task.
 
@@ -29,8 +29,7 @@ class CllTask(object):
 
         config_data = load_yaml_files(*config_files)
         self.config = CllWorkflowConfig.parse_obj(config_data)
-        self.path = Path(path).resolve()
-        self.deepmd_version = deepmd_version        
+        self.path = Path(path).resolve()      
 
     @classmethod
     def from_dict(cls, dp_task_dict: dict):
@@ -43,10 +42,13 @@ class CllAnalyzer(ABC):
     def __init__(
         self, 
         dp_task: CllTask,
-        iteration: int = 0
+        iteration: int = 0,
+        **kwargs
     ) -> None:
         self.dp_task = dp_task
         self.iteration = iteration
+        if type(self.dp_task) is not CllTask:
+            self.dp_task = CllTask.from_dict(**self.dp_task.__dict__, **kwargs)
 
     def _iteration_dir(self, iteration: Optional[int] = None):
         if iteration is None:

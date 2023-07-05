@@ -1,4 +1,4 @@
-from miko.tesla.dpgen.base import DPTask
+from miko.tesla.dpgen.task import DPTask
 
 
 def _inner_test_dp_task(t: DPTask):
