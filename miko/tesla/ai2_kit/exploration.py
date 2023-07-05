@@ -27,11 +27,11 @@ def read_model_deviation(model_devi_path: Path):
     try:
         steps = np.loadtxt(model_devi_path, usecols=0)
         max_devi_f = np.loadtxt(model_devi_path, usecols=4)
-        max_devi_e = np.loadtxt(model_devi_path, usecols=3)
+        max_devi_v = np.loadtxt(model_devi_path, usecols=3)
     except FileNotFoundError as err:
         logger.error('Please select an existing model_devi.out')
         raise err
-    return steps, max_devi_f, max_devi_e
+    return steps, max_devi_f, max_devi_v
 
 
 class CllExplorationAnalyzer(CllAnalyzer):
@@ -51,11 +51,11 @@ class CllExplorationAnalyzer(CllAnalyzer):
         stage_path = self.dp_task.path / n_iter / 'explore-lammps/tasks'
         all_data = []
         task_files = [
-            item for item in stage_path.iterdir() if re.search(r'^\d+$', str(item))
+            item for item in stage_path.iterdir() if re.search(r'^\d+$', str(item.name))
         ]
         for task in task_files:
             # read model_devi.out
-            steps, max_devi_f, max_devi_e = \
+            steps, max_devi_f, max_devi_v = \
                 read_model_deviation(task / 'model_devi.out')
 
             # load job config
@@ -64,7 +64,7 @@ class CllExplorationAnalyzer(CllAnalyzer):
             # gather result_dict
             result_dict = {
                 'iteration': n_iter,
-                'max_devi_e': max_devi_e,
+                'max_devi_v': max_devi_v,
                 'max_devi_f': max_devi_f,
                 'task_path': task,
                 'steps': steps
@@ -85,7 +85,7 @@ class CllExplorationAnalyzer(CllAnalyzer):
         """
         all_data = self.make_set(iteration=iteration)
         df = pd.DataFrame(all_data)
-        df = df.explode(["max_devi_e", "max_devi_f", "steps"])
+        df = df.explode(["max_devi_v", "max_devi_f", "steps"])
         return df
 
     def make_set_pickle(self, iteration: Optional[int] = None) -> pd.DataFrame:

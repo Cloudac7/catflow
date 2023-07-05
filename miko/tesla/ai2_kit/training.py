@@ -16,7 +16,7 @@ class CllTrainingAnalyzer(CllAnalyzer):
         validation: bool = False
     ) -> None:
         super().__init__(dp_task, iteration)
-        self.validation = True
+        self.validation = validation
 
     def load_lcurve(self, iteration=None, model=0):
         n_iter = self._iteration_dir(iteration=iteration)
