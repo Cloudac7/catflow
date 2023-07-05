@@ -1,24 +1,19 @@
-import json
 import os
-from re import A
-import shutil
+
 from collections.abc import Iterable, Collection, Sized
-from glob import glob
 from pathlib import Path
 
-from typing import Optional, Union, List, Tuple, Dict
+from typing import Optional, Union, List, Tuple
 from matplotlib.figure import Figure
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from ase.io import read, write
 from matplotlib import pyplot as plt
 
 from miko.utils.log_factory import logger
-from miko.utils.files import count_lines
-from miko.graph.plotting import canvas_style, AxesInit, square_grid
-from miko.tesla.base.task import BaseTask, BaseAnalyzer
+from miko.graph.plotting import canvas_style, square_grid
+from miko.tesla.base.task import BaseAnalyzer
 
 
 def read_model_deviation(model_devi_path: Path):
@@ -122,7 +117,7 @@ class ExplorationAnalyzer(BaseAnalyzer):
 
     @staticmethod
     def _convert_group_by(
-        group_by: Optional[str] = None, 
+        group_by: Optional[str] = None,
         **kwargs
     ) -> Tuple[int, Union[List, Collection]]:
         if group_by is None:
@@ -274,7 +269,7 @@ class ExplorationAnalyzer(BaseAnalyzer):
                 plot_item, iteration, group_by, select, select_value, **kwargs)
 
             # left part
-            fig_left = fig.add_subplot(gs[i, :-1]) # type: ignore
+            fig_left = fig.add_subplot(gs[i, :-1])  # type: ignore
             fig_left_args = {
                 'x': steps,
                 'y': mdf,
@@ -292,7 +287,7 @@ class ExplorationAnalyzer(BaseAnalyzer):
             global_ylim = fig_left.get_ylim()
 
             # right part
-            fig_right = fig.add_subplot(gs[i, -1]) # type: ignore
+            fig_right = fig.add_subplot(gs[i, -1])  # type: ignore
             fig_right_args = {
                 'data': mdf,
                 'plot_item': plot_item,
@@ -356,22 +351,22 @@ class ExplorationAnalyzer(BaseAnalyzer):
             for iteration in iterations:
                 step, mdf = self._data_prepareation(
                     plot_item, iteration, group_by, select, select_value, **kwargs)
-                ax.scatter(step, mdf, s=80, alpha=0.3, # type: ignore
+                ax.scatter(step, mdf, s=80, alpha=0.3,  # type: ignore
                            label=f'iter {int(iteration)}', marker='o')
-            ax.axhline(f_trust_lo, linestyle='dashed') # type: ignore
-            ax.axhline(f_trust_hi, linestyle='dashed') # type: ignore
-            ax.set_ylabel(r"$\sigma_{f}^{max}$ (ev/Å)") # type: ignore
-            ax.set_xlabel('Simulation time (fs)') # type: ignore
-            ax.legend() # type: ignore
+            ax.axhline(f_trust_lo, linestyle='dashed')  # type: ignore
+            ax.axhline(f_trust_hi, linestyle='dashed')  # type: ignore
+            ax.set_ylabel(r"$\sigma_{f}^{max}$ (ev/Å)")  # type: ignore
+            ax.set_xlabel('Simulation time (fs)')  # type: ignore
+            ax.legend()  # type: ignore
             if x_limit is not None:
                 PlottingExploartion._plot_set_axis_limits(
-                    ax, x_limit, 'x_limit') # type: ignore
+                    ax, x_limit, 'x_limit')  # type: ignore
             if kwargs.get('use_log', False) == True:
-                ax.set_yscale('log') # type: ignore
+                ax.set_yscale('log')  # type: ignore
             else:
                 if y_limit is not None:
                     PlottingExploartion._plot_set_axis_limits(
-                        ax, y_limit, 'y_limit') # type: ignore
+                        ax, y_limit, 'y_limit')  # type: ignore
         for i in range(num_item, nrows * nrows):
             try:
                 fig.delaxes(axs.flatten()[i])
@@ -415,8 +410,8 @@ class ExplorationAnalyzer(BaseAnalyzer):
         fig, axs = plt.subplots(nrows, nrows, figsize=[
                                 12, 12], constrained_layout=True)
 
-        colors = plt.colormaps['viridis_r']( # type: ignore
-            np.linspace(0.15, 0.85, len(iterations)) # type: ignore
+        colors = plt.colormaps['viridis_r'](  # type: ignore
+            np.linspace(0.15, 0.85, len(iterations))  # type: ignore
         )
         for i, plot_item in enumerate(plot_items):
             try:
@@ -439,10 +434,10 @@ class ExplorationAnalyzer(BaseAnalyzer):
                     'label': f'Iter {iteration}'
                 }
                 PlottingExploartion.plot_mdf_distribution(
-                    ax, ax_args, orientation='vertical') # type: ignore
-            ax.set_ylabel('Distribution') # type: ignore
-            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)') # type: ignore
-            ax.legend() # type: ignore
+                    ax, ax_args, orientation='vertical')  # type: ignore
+            ax.set_ylabel('Distribution')  # type: ignore
+            ax.set_xlabel(r'$\sigma_{f}^{max}$ (ev/Å)')  # type: ignore
+            ax.legend()  # type: ignore
         for i in range(num_item, nrows * nrows):
             try:
                 fig.delaxes(axs.flatten()[i])
@@ -484,9 +479,9 @@ class ExplorationAnalyzer(BaseAnalyzer):
             if type(axs) is plt.Axes:
                 ax = axs
             else:
-                ax = axs.flatten()[i] # type: ignore
+                ax = axs.flatten()[i]  # type: ignore
 
-            ratios = np.zeros((len(iterations), 3)) # type: ignore
+            ratios = np.zeros((len(iterations), 3))  # type: ignore
 
             for j, iteration in enumerate(iterations):
                 df = self._load_model_devi_dataframe(
@@ -513,7 +508,7 @@ class ExplorationAnalyzer(BaseAnalyzer):
             handles, labels = ax.get_legend_handles_labels()
         fig.supxlabel('Iteration')
         fig.supylabel('Ratio')
-        fig.legend(handles, labels, loc='upper center', # type: ignore
+        fig.legend(handles, labels, loc='upper center',  # type: ignore
                    ncol=3, bbox_to_anchor=(0.5, 1.0))
         return fig
 
@@ -545,16 +540,16 @@ class PlottingExploartion:
             ax.axhline(f_trust_lo, linestyle='dashed')
         if f_trust_hi is not None:
             ax.axhline(f_trust_hi, linestyle='dashed')
-        if ax.get_subplotspec().is_last_row(): # type: ignore
+        if ax.get_subplotspec().is_last_row():  # type: ignore
             ax.set_xlabel('Simulation Steps')
-        if ax.get_subplotspec().is_first_col(): # type: ignore
+        if ax.get_subplotspec().is_first_col():  # type: ignore
             ax.set_ylabel(r'$\sigma_{f}^{max}$ (ev/Å)')
         ax.legend()
         return ax
 
     @staticmethod
     def plot_mdf_distribution(ax: plt.Axes, args, orientation='vertical'):
-        #data = args.get('data')
+        # data = args.get('data')
         x_limit = args.get('x_limit')
         y_limit = args.get('y_limit')
         f_trust_lo = args.get('f_trust_lo')
@@ -597,7 +592,7 @@ class PlottingExploartion:
         labels = args.get('iterations')
         category_names = args.get('category_names')
 
-        category_colors = plt.colormaps['YlGnBu_r']( # type: ignore
+        category_colors = plt.colormaps['YlGnBu_r'](  # type: ignore
             np.linspace(0.15, 0.85, data.shape[1])
         )
         data_cum = data.cumsum(axis=1)
@@ -625,7 +620,7 @@ class PlottingExploartion:
                     raise ValueError("Limitation should be a value \
                         or a set with no more than 2 elements.")
                 elif len(limitation) == 1:
-                    _func(0, limitation[0]) # type: ignore
+                    _func(0, limitation[0])  # type: ignore
                 else:
                     _func(limitation)
             else:

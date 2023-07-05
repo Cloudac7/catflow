@@ -8,6 +8,7 @@ from miko.graph.plotting import canvas_style
 from miko.tesla.base.training import TrainingAnalyzer
 from miko.tesla.ai2_kit.task import CllAnalyzer, CllTask
 
+
 class CllTrainingAnalyzer(TrainingAnalyzer, CllAnalyzer):
     """Analyzer for training tasks.
     """

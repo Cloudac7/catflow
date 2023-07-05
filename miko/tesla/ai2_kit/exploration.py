@@ -6,6 +6,7 @@ import numpy as np
 
 from miko.utils.log_factory import logger
 from miko.utils.lammps import lammps_variable_parser
+from miko.tesla.base.exploration import ExplorationAnalyzer
 from miko.tesla.ai2_kit.task import CllAnalyzer
 
 
@@ -21,21 +22,19 @@ def read_model_deviation(model_devi_path: Path):
     return steps, max_devi_f, max_devi_v
 
 
-class CllExplorationAnalyzer(CllAnalyzer):
+class CllExplorationAnalyzer(ExplorationAnalyzer, CllAnalyzer):
     """Analyzer for exploration tasks.
     """
 
     def _iteration_tasks(self, iteration) -> List[Path]:
         n_iter = self._iteration_dir(iteration=iteration)
         stage_path = self.dp_task.path / n_iter / 'explore-lammps/tasks'
-        all_data = []
         task_files = [
             item for item in stage_path.iterdir() if re.search(r'^\d+$', str(item.name))
         ]
         return task_files
 
     def load_task_job_dict(self, task: Path):
-        # load job config
         try:
             job_dict = lammps_variable_parser(task / 'lammps.input')
         except Exception as err:

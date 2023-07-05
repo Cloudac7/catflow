@@ -4,11 +4,13 @@ from typing import Optional
 
 from miko.tesla.base.task import BaseTask, BaseAnalyzer
 
+
 class DPTask(BaseTask):
     """DPTask is a class reading a DP-GEN directory, where the DP-GEN task run.
     """
+
     def __init__(
-        self, 
+        self,
         path: str,
         param_file: str = 'param.json',
         machine_file: str = 'machine.json',
@@ -75,14 +77,15 @@ class DPTask(BaseTask):
 class DPAnalyzer(BaseAnalyzer):
     """Base class to be implemented as analyzer for `DPTask`
     """
+
     def __init__(self, dp_task: DPTask, **kwargs) -> None:
         super().__init__(dp_task)
         if type(self.dp_task) is not DPTask:
             self.dp_task = DPTask.from_dict(**self.dp_task.__dict__, **kwargs)
 
     def _iteration_control_code(
-        self, 
-        control_step: int, 
+        self,
+        control_step: int,
         iteration: Optional[int] = None
     ):
         if iteration is None:

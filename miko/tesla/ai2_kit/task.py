@@ -26,17 +26,16 @@ class CllTask(BaseTask):
             path (str): The path of the tesla task.
             deepmd_version (str): DeepMD-kit version used. Default: 2.0.
         """
-
+        super().__init__(path)
         config_data = load_yaml_files(*config_files)
-        self.config = CllWorkflowConfig.parse_obj(config_data)
-        self.path = Path(path).resolve()      
+        self.config = CllWorkflowConfig.parse_obj(config_data)   
 
     @classmethod
     def from_dict(cls, dp_task_dict: dict):
         return cls(**dp_task_dict)
 
 
-class CllAnalyzer(ABC):
+class CllAnalyzer(BaseAnalyzer):
     """Base class to be implemented as analyzer for `DPTask`
     """
     def __init__(
@@ -50,7 +49,7 @@ class CllAnalyzer(ABC):
         if type(self.dp_task) is not CllTask:
             self.dp_task = CllTask.from_dict(**self.dp_task.__dict__, **kwargs)
 
-    def _iteration_dir(self, iteration: Optional[int] = None):
+    def _iteration_dir(self, iteration: Optional[int] = None, **kwargs) -> str:
         if iteration is None:
             iteration = self.iteration
         return 'iters-' + str(iteration).zfill(3)

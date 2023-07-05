@@ -27,8 +27,8 @@ class BaseAnalyzer(ABC):
     def __init__(self, dp_task: BaseTask) -> None:
         self.dp_task = dp_task
 
-    def _iteration_dir(self, iteration: int, **kwargs):
-        return 'iter.' + str(iteration).zfill(6)
+    def _iteration_dir(self, iteration: int, **kwargs) -> str:
+        return ""
 
     @classmethod
     def setup_task(cls, **kwargs):
