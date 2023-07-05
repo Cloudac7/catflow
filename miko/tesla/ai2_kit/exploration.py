@@ -227,8 +227,18 @@ class CllExplorationAnalyzer(CllAnalyzer):
             f"f_max = {mdf.max()} ev/Å at {group_by}={plot_item} {label_unit} at iter {iteration}.")
         return steps, mdf
 
-    def _read_model_devi_trust_level(self, trust_level_key, iteration=None):
-        pass
+    def _read_model_devi_trust_level(self, trust_level_key: str, iteration: int):        
+        global_workflow = self.dp_task.config.workflow
+        if iteration == 0:
+            current_workflow = global_workflow
+        else:
+            current_workflow = \
+                self.dp_task.config.workflow['update']['walkthrough']['table'][iteration - 1]
+        try:
+            trust_level = current_workflow['select']['by_threshold'].get(trust_level_key)
+        except IndexError:
+            trust_level = global_workflow['select']['by_threshold'].get(trust_level_key)
+        return trust_level
 
     def plot_single_iteration(
             self,
@@ -270,6 +280,9 @@ class CllExplorationAnalyzer(CllAnalyzer):
                          constrained_layout=True)
         gs = fig.add_gridspec(num_item, 3)
 
+        if iteration is None:
+            iteration = self.iteration
+
         for i, plot_item in enumerate(plot_items):
             steps, mdf = self._data_prepareation(
                 plot_item, iteration, group_by, select, select_value, **kwargs)
@@ -284,8 +297,8 @@ class CllExplorationAnalyzer(CllAnalyzer):
                 'x_limit': x_limit,
                 'y_limit': y_limit,
                 'use_log': use_log,
-                'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
-                'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                'f_trust_lo': kwargs.get("f_trust_lo", self._read_model_devi_trust_level("f_trust_lo", iteration)),
+                'f_trust_hi': kwargs.get("f_trust_lo", self._read_model_devi_trust_level("f_trust_lo", iteration)),
                 'color': 'red',
                 'iteration': iteration,
             }
@@ -300,8 +313,8 @@ class CllExplorationAnalyzer(CllAnalyzer):
                 'label_unit': kwargs.get('label_unit'),
                 'y_limit': global_ylim,
                 'use_log': use_log,
-                'f_trust_lo': self._read_model_devi_trust_level("model_devi_f_trust_lo", iteration),
-                'f_trust_hi': self._read_model_devi_trust_level("model_devi_f_trust_hi", iteration),
+                'f_trust_lo': kwargs.get("f_trust_lo", self._read_model_devi_trust_level("f_trust_lo", iteration)),
+                'f_trust_hi': kwargs.get("f_trust_lo", self._read_model_devi_trust_level("f_trust_lo", iteration)),
                 'color': 'red',
                 'iteration': iteration,
             }
@@ -429,10 +442,10 @@ class CllExplorationAnalyzer(CllAnalyzer):
                     plot_item, iteration, group_by, select, select_value, **kwargs)
                 if f_trust_lo is None:
                     f_trust_lo = self._read_model_devi_trust_level(
-                        "model_devi_f_trust_lo", iteration)
+                        "f_trust_lo", iteration)
                 if f_trust_hi is None:
                     f_trust_hi = self._read_model_devi_trust_level(
-                        "model_devi_f_trust_hi", iteration)
+                        "f_trust_hi", iteration)
                 ax_args = {
                     'data': mdf,
                     'plot_item': plot_item,
@@ -501,10 +514,10 @@ class CllExplorationAnalyzer(CllAnalyzer):
 
                 if f_trust_lo is None:
                     f_trust_lo = self._read_model_devi_trust_level(
-                        "model_devi_f_trust_lo", iteration)
+                        "f_trust_lo", iteration)
                 if f_trust_hi is None:
                     f_trust_hi = self._read_model_devi_trust_level(
-                        "model_devi_f_trust_hi", iteration)
+                        "f_trust_hi", iteration)
 
                 accu_count = (df['max_devi_f'] <= f_trust_lo).sum()
                 failed_count = (df['max_devi_f'] > f_trust_hi).sum()
