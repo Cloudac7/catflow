@@ -2,26 +2,48 @@
 
 [[package]]
 name = "ai2-kit"
-version = "0.1.0"
+version = "0.3.18"
 description = ""
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "ai2_kit-0.1.0-py3-none-any.whl", hash = "sha256:8476eadf3c6c2c56c1670fa0c824fbf341b693f961fa904d10634e064f91ede2"},
-    {file = "ai2_kit-0.1.0.tar.gz", hash = "sha256:010a90e6cc7af1cbe697ffe87140973ca9dc0530ae05e5a43d87db35020c94e2"},
+    {file = "ai2_kit-0.3.18-py3-none-any.whl", hash = "sha256:55faeafcfde28dffdca66db3bf1f8c66ca714900c7169d37441c7f59a3823224"},
+    {file = "ai2_kit-0.3.18.tar.gz", hash = "sha256:cddb684b2f4990f263c2395e78aa745ca82969e608d9a7e81fd563a698468a2d"},
 ]
 
 [package.dependencies]
+allpairspy = ">=2.5.0,<3.0.0"
+ase = ">=3.22.1,<4.0.0"
 cloudpickle = ">=2.2.0,<3.0.0"
-cp2k-input-tools = ">=0.8.2,<0.9.0"
 dpdata = ">=0.2.13,<0.3.0"
 fabric = ">=2.7.1,<3.0.0"
-fire = ">=0.4.0,<0.5.0"
+fire = ">=0.5.0,<0.6.0"
 invoke = ">=1.7.3,<2.0.0"
+mdanalysis = ">=2.4.3,<3.0.0"
 pandas = ">=1.5.3,<2.0.0"
 pydantic = ">=1.10.2,<2.0.0"
+pymatgen = ">=2023.2.22,<2024.0.0"
 ruamel-yaml = ">=0.17.21,<0.18.0"
 shortuuid = ">=1.0.11,<2.0.0"
+
+[[package]]
+name = "allpairspy"
+version = "2.5.0"
+description = "Pairwise test combinations generator"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+files = [
+    {file = "allpairspy-2.5.0-py2.py3-none-any.whl", hash = "sha256:66dbcb30c22a2c73e1cccae9ae7093f8e18bdf542e4ba2864ce822463735b5b4"},
+    {file = "allpairspy-2.5.0.tar.gz", hash = "sha256:9358484c91abe74ba18daf9d6d6904c5be7cc8818397d05248c9d336023c28b1"},
+]
+
+[package.dependencies]
+six = ">=1.10.0,<2.0.0"
+
+[package.extras]
+build = ["twine", "wheel"]
+release = ["releasecmd (>=0.0.18,<0.1.0)"]
+test = ["pytest"]
 
 [[package]]
 name = "ase"
@@ -487,28 +509,6 @@ requests = ">=1.0.0"
 yaml = ["PyYAML (>=3.10)"]
 
 [[package]]
-name = "cp2k-input-tools"
-version = "0.8.2"
-description = "Python tools to handle CP2K input files"
-optional = false
-python-versions = ">=3.6.1,<4"
-files = [
-    {file = "cp2k-input-tools-0.8.2.tar.gz", hash = "sha256:9c256e96008ca6d436a2ab7c75be59fb1607a9c201f4f316abfebdca2645fb9f"},
-    {file = "cp2k_input_tools-0.8.2-py3-none-any.whl", hash = "sha256:a6d1276636cd3825508d9828cd180365b44d20ba508f261ae8f049d2c8621b5e"},
-]
-
-[package.dependencies]
-click = ">=7.1.2,<9"
-Jinja2 = ">=2.11.3,<4.0.0"
-pint = ">=0.15,<0.18"
-pydantic = ">=1.8.2,<2.0.0"
-transitions = ">=0.7,<0.8"
-
-[package.extras]
-lsp = ["pygls (>=0.10,<0.12)"]
-yaml = ["ruamel.yaml (>=0.16.5,<0.18.0)"]
-
-[[package]]
 name = "cryptography"
 version = "41.0.1"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -705,12 +705,12 @@ files = [
 
 [[package]]
 name = "fire"
-version = "0.4.0"
+version = "0.5.0"
 description = "A library for automatically generating command line interfaces."
 optional = false
 python-versions = "*"
 files = [
-    {file = "fire-0.4.0.tar.gz", hash = "sha256:c5e2b8763699d1142393a46d0e3e790c5eb2f0706082df8f647878842c216a62"},
+    {file = "fire-0.5.0.tar.gz", hash = "sha256:a6b0d49e98c8963910021f92bba66f65ab440da2982b78eb1bbf95a0a34aacc6"},
 ]
 
 [package.dependencies]
@@ -1955,25 +1955,6 @@ docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-inline
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
-name = "pint"
-version = "0.17"
-description = "Physical quantities module"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "Pint-0.17-py2.py3-none-any.whl", hash = "sha256:6593c5dfaf2f701c54f17453191dff05e90ec9ebc3d1901468a59cfcb3289a4c"},
-    {file = "Pint-0.17.tar.gz", hash = "sha256:f4d0caa713239e6847a7c6eefe2427358566451fe56497d533f21fb590a3f313"},
-]
-
-[package.dependencies]
-packaging = "*"
-
-[package.extras]
-numpy = ["numpy (>=1.14)"]
-test = ["pytest", "pytest-cov", "pytest-mpl", "pytest-subtests"]
-uncertainties = ["uncertainties (>=3.0)"]
-
-[[package]]
 name = "plotly"
 version = "5.14.1"
 description = "An open-source, interactive data visualization library for Python"
@@ -2874,24 +2855,6 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
-name = "transitions"
-version = "0.7.2"
-description = "A lightweight, object-oriented Python state machine implementation."
-optional = false
-python-versions = "*"
-files = [
-    {file = "transitions-0.7.2-py2.py3-none-any.whl", hash = "sha256:011afaefa1244177cad3d960d836c0c4a201403252371bd4c555cf8c17ce7d3c"},
-    {file = "transitions-0.7.2.tar.gz", hash = "sha256:5566c9d32e438ee9eb1f046e3ac1a0b2689f32807b47859210162084d4c84ab7"},
-]
-
-[package.dependencies]
-six = "*"
-
-[package.extras]
-diagrams = ["pygraphviz"]
-test = ["pytest"]
-
-[[package]]
 name = "typing-extensions"
 version = "4.6.3"
 description = "Backported and Experimental Type Hints for Python 3.7+"
@@ -3024,4 +2987,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "<3.12,>=3.8"
-content-hash = "c1920d6455106ef72d4def2ab1b22c13c70c619e5d91249ceb8d706ada2d25dc"
+content-hash = "77846741903a4551c89c7d2bafbad14c14c7ba11b8b1baa30efaf07d56931cd6"

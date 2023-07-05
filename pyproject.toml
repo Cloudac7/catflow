@@ -25,7 +25,7 @@ scipy = "^1.10.1"
 seaborn = "*"
 tqdm = "^4.65.0"
 pymatgen = "^2023.5.10"
-ai2-kit = "^0.1.0"
+ai2-kit = "^0.3.18"
 
 [tool.poetry.group.test.dependencies]
 flake8 = "*"
