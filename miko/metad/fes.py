@@ -131,9 +131,9 @@ class FES:
         gauss_center_to_end = int((gauss_res - 1) / 2)
         gauss_center = gauss_center_to_end + 1
         grids = np.meshgrid(*[np.arange(gauss_res)] * cvs)
-        exponent = np.sum([
+        exponent = np.sum(
             -((grids[i] + 1 - gauss_center) ** 2) / (2 * sigma_res[i] ** 2) for i in range(len(sigma_res))
-        ])
+        )
         gauss = -np.exp(exponent)
 
         fes = np.zeros([resolution] * cvs)
