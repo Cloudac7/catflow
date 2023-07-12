@@ -6,69 +6,72 @@ from typing import List, Optional, Union
 from matplotlib.colors import Colormap
 
 from miko.graph.plotting import canvas_style
+from miko.metad.fes import FreeEnergySurface
 from miko.metad.hills import Hills
-from miko.metad.minima import Minima
 
 
-class FEProfile:
+class FreeEnergyProfile:
     """
-    Free energy profile is a visualization of differences between local 
-    minima points during metadynamics simulation. If the values seem 
-    to converge to a mean value of the difference, it suggests, 
-    but not fully proof, that the FES did converge to the correct shape.
-
-    Usage:
-    ```python
-    fep = miko.metad.FEProfile(minima, hillsfile)
-    ```
-
-    Args:
-        minima (Minima): `Minima` to be calculated the free energy profile for.
-        hillsfile (Hills): File of `Hills` to calculate the free energy profile from.
-
+    A class to calculate and visualize the free energy profile of a metadynamics simulation.
     """
 
-    def __init__(self, minima: Minima, hills: Hills):
-        self.cvs = minima.cvs
-        self.res = minima.res
+    def __init__(
+        self, 
+        fes: FreeEnergySurface, 
+        hills: Hills, 
+        profile_length: Optional[int] = None
+    ):
+        """
+        Initializes a FreeEnergyProfile object with the given FES and Hills objects.
 
-        if type(minima.minima) != pd.DataFrame:
+        Args:
+            fes (FES): A FES object containing the collective variables (CVs) and the free energy surface.
+            hills (Hills): A Hills object containing the collective variables (CVs), the Gaussian hills, and the sigma values.
+            profile_length (int, optional): The length of the free energy profile. Defaults to None, for which the length is the same as the number of hills.
+
+        Raises:
+            ValueError: If there is only one local minimum on the free energy surface.
+        """
+
+        self.cvs = fes.cvs
+        self.res = fes.res
+
+        if type(fes.minima) != pd.DataFrame:
             raise ValueError(
                 "There is only one local minimum on the free energy surface."
             )
-        self.minima = minima.minima
+        self.minima = fes.minima
 
-        self.periodic = minima.periodic
-        self.heights = hills.get_heights()
+        self.periodic = fes.periodic
+        self.heights = hills.heights
 
-        self.cv_name = minima.cv_name
-        self.cv_min = minima.cv_min
-        self.cv_max = minima.cv_max
-        self.cv_per = minima.cv_per
+        self.cv_name = fes.cv_name
+        self.cv_min = fes.cv_min
+        self.cv_max = fes.cv_max
         self.sigma = hills.sigma
         self.cv = hills.cv
 
-        self.makefeprofile(hills)
+        self.make_free_energy_profile(profile_length)
 
-    def makefeprofile(self, hills):
-        """
-        Internal method to calculate free energy profile.
-        """
-        hillslenght = len(hills.cv[:, 0])
+    def make_free_energy_profile(
+        self, 
+        profile_length: Optional[int] = None
+    ):
+        """Internal method to calculate free energy profile.
 
-        if hillslenght < 256:
-            profilelenght = hillslenght
-            scantimes = np.array(range(hillslenght))
+        Raises:
+            ValueError: If there is only one local minimum on the free energy surface.
+        """
+        hills_length = len(self.cv[:, 0])
+
+        if profile_length == None:
+            profile_length = hills_length
+            scan_times = np.arange(hills_length, dtype=int)
         else:
-            profilelenght = 256
-            scantimes = np.array(
-                ((hillslenght/(profilelenght))*np.array((range(1, profilelenght+1)))))
-            scantimes -= 1
-            scantimes = scantimes.astype(int)
+            scan_times = np.linspace(0, hills_length-1, profile_length, dtype=int)
 
         number_of_minima = self.minima.shape[0]
-
-        self.feprofile = np.zeros((self.minima["Minimum"].shape[0]+1))
+        self.free_profile = np.zeros((self.minima["Minimum"].shape[0]+1))
 
         cvs = self.cvs
         cv_min, cv_max = self.cv_min, self.cv_max
@@ -76,16 +79,16 @@ class FEProfile:
 
         fes = np.zeros((self.res, self.res))
 
-        lasttime = 0
-        line = 0
-        for time in scantimes:
+        last_time = 0
+
+        for time in scan_times:
             minima_cv_matrix = np.array(
                 self.minima.iloc[:, cvs+2:2*cvs+2], dtype=float
             )
             for coords in product(*minima_cv_matrix.T):
                 dist_cvs = []
                 for i in range(cvs):
-                    dist_cv = self.cv[:, i][lasttime:time] - coords[i]
+                    dist_cv = self.cv[:, i][last_time:time] - coords[i]
                     if self.periodic[i]:
                         dist_cv[dist_cv < -0.5*cv_fes_range[i]
                                 ] += cv_fes_range[i]
@@ -93,9 +96,9 @@ class FEProfile:
                                 ] -= cv_fes_range[i]
                     dist_cvs.append(dist_cv)
                 dp2 = np.sum(np.array(dist_cvs)**2, axis=0) / \
-                    (2*self.sigma[:, 0][lasttime:time]**2)
-                tmp = np.zeros(self.cv[:, 0][lasttime:time].shape)
-                tmp[dp2 < 2.5] = self.heights[lasttime:time][dp2 < 2.5] * \
+                    (2*self.sigma[:, 0][last_time:time]**2)
+                tmp = np.zeros(self.cv[:, 0][last_time:time].shape)
+                tmp[dp2 < 2.5] = self.heights[last_time:time][dp2 < 2.5] * \
                     (np.exp(-dp2[dp2 < 2.5]) *
                      1.00193418799744762399 - 0.00193418799744762399)
                 fes[tuple([
@@ -103,21 +106,20 @@ class FEProfile:
                 ])] -= tmp.sum()
 
             # save profile
-            profileline = [time]
+            profile_line = [time]
             for m in range(number_of_minima):
                 profile = fes[tuple([
                     int(float(self.minima.iloc[m, i+2])) for i in range(cvs)
                 ])] - fes[tuple([
                     int(float(self.minima.iloc[0, i+2])) for i in range(cvs)
                 ])]
-                profileline.append(profile)
-            self.feprofile = np.vstack([self.feprofile, profileline])
+                profile_line.append(profile)
+            self.free_profile = np.vstack([self.free_profile, profile_line])
 
-            lasttime = time
+            last_time = time
 
     def plot(
         self,
-        png_name: str = None,
         image_size: List[int] = [10, 7],
         xlabel: Optional[str] = None,
         ylabel: Optional[str] = None,
@@ -125,6 +127,7 @@ class FEProfile:
         energy_unit: str = "kJ/mol",
         label_size: int = 12,
         cmap: Union[str, Colormap] = "RdYlBu",
+        png_name: Optional[str] = None,
         **kwargs
     ):
         """
@@ -159,8 +162,8 @@ class FEProfile:
         colors = cmap(np.linspace(0.15, 0.85, self.minima.shape[0]))
         for m in range(self.minima.shape[0]):
             ax.plot(
-                self.feprofile[:, 0],
-                self.feprofile[:, m+1],
+                self.free_profile[:, 0],
+                self.free_profile[:, m+1],
                 color=colors[m],
                 label=f"Minima {self.minima.iloc[m, 0]}",
             )

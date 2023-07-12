@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from miko.metad.fes import FES
+from miko.metad.fes import FreeEnergySurface
 from miko.metad.string import StringMethod
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def fes():
     y = np.linspace(-5, 5, 100)
     X, Y = np.meshgrid(x, y)
     V = np.sin(X) + np.cos(Y)
-    make_fes = FES.from_array(
+    make_fes = FreeEnergySurface.from_array(
         V, cv_min=[-5, -5], cv_max=[5, 5], periodic=[False, False], cv_name=["x", "y"], resolution=100
     )
     return make_fes

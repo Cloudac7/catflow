@@ -11,13 +11,13 @@ J. Chem. Phys. 126, 164103 (2007), https://doi.org/10.1063/1.2720838
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
+
 from scipy.interpolate import Rbf, griddata, interp1d
 from tqdm import trange
 from typing import Literal, List, Union, Tuple, Optional
 
 from miko.utils import logger
-from miko.metad.fes import FES
-from miko.metad.minima import Minima
+from miko.metad.fes import FreeEnergySurface
 
 
 class StringMethod:
@@ -45,7 +45,7 @@ class StringMethod:
         mep: Converged minimum energy path (default=None, if not converged).
     """
 
-    def __init__(self, fes: FES, indexing: Literal['xy', 'ij'] = 'xy'):
+    def __init__(self, fes: FreeEnergySurface, indexing: Literal['xy', 'ij'] = 'xy'):
         self.fes = fes
         try:
             self.x = np.linspace(fes.cv_min[0], fes.cv_max[0], fes.res)
@@ -180,12 +180,11 @@ class StringMethod:
 
     def load_minima(
         self,
-        minima: Optional[Minima] = None,
         nbins: int = 8
     ):
-        if minima is None:
-            minima = Minima(self.fes, nbins)
-        self.minima = minima.minima
+        if self.fes.minima is None:
+            self.fes.find_minima(nbins)
+        self.minima = self.fes.minima
         logger.info(self.minima)
 
     def mep_from_minima(
@@ -194,7 +193,6 @@ class StringMethod:
         end_index: int,
         mid_indices: List[int] = [],
         *,
-        minima: Optional[Minima] = None,
         nbins: int = 8,
         **kwargs
     ):
@@ -211,12 +209,8 @@ class StringMethod:
             ValueError: `self.minima` should not be None, or please provide one into `minima` to load it.
         """
         if self.minima is None:
-            if minima is not None:
-                self.load_minima(minima, nbins)
-            else:
-                raise ValueError(
-                    "No minima found. Please run `load_minima` or pass a `Minima` object."
-                )
+            self.load_minima(nbins)
+
         minima_x = self.minima.filter(regex=r"^CV1\s+-\s+") # type: ignore
         minima_y = self.minima.filter(regex=r"^CV2\s+-\s+") # type: ignore
         begin_x = minima_x.iloc[begin_index].values[0]
@@ -230,7 +224,7 @@ class StringMethod:
             mid = []
         self.compute_mep(
             begin=[begin_x, begin_y],
-            mid=mid,
+            mid=mid, # type: ignore
             end=[end_x, end_y],
             **kwargs
         )

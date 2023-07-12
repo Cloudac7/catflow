@@ -1,11 +1,11 @@
 import numpy as np
-from joblib import Parallel, delayed
-
+import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from copy import deepcopy
+from joblib import Parallel, delayed
 from typing import Optional, List, Union, Dict, Any
+from itertools import product
 from numpy.typing import ArrayLike
 from matplotlib.colors import Colormap
 
@@ -14,14 +14,14 @@ from miko.graph.plotting import canvas_style
 from miko.utils.log_factory import logger
 
 
-class FES:
+class FreeEnergySurface:
     """
     Computes the free energy surface corresponding to the provided Hills object.
 
     Usage:
     ```python
-    from miko.metad.fes import FES
-    fes = FES(hills)
+    from miko.metad.fes import FreeEnergySurface
+    fes = FreeEnergySurface(hills)
     ```
 
     Args:
@@ -32,16 +32,16 @@ class FES:
         time_max (int, optional): The ending time step of simulation. Defaults to None.
     """
 
-    fes: Optional[np.ndarray] = None
-    hills: Optional[Hills] = None
-    fes: Optional[np.ndarray] = None
-    cv_min: Optional[np.ndarray] = None
-    cv_max: Optional[np.ndarray] = None
-    cv_fes_range: Optional[np.ndarray] = None
+    fes: np.ndarray
+    cvs: int
+    cv_min: np.ndarray
+    cv_max: np.ndarray
     periodic: np.ndarray
-    cv_name: Optional[List[str]] = None
     resolution: int = 256
-    cvs: Optional[int] = None
+    hills: Optional[Hills] = None
+    cv_fes_range: Optional[np.ndarray] = None
+    cv_name: Optional[List[str]] = None
+    minima: Optional[pd.DataFrame] = None
 
     def __init__(
         self,
@@ -105,6 +105,12 @@ class FES:
         fes.res = resolution
         fes.cvs = len(cv_name)
         return fes
+    
+    def name_cv(self):
+        if self.cv_name is None:
+            self.cv_name = []
+            for i in range(self.cvs):
+                self.cv_name.append(f"CV{i+1}")
 
     def get_e_beta_c(
         self,
@@ -148,6 +154,8 @@ class FES:
 
         cv_min = self.cv_min
         cv_max = self.cv_max
+        if self.cv_fes_range is None:
+            self.cv_fes_range = cv_max - cv_min
         cv_fes_range = self.cv_fes_range
 
         cv_bins = np.ceil(
@@ -163,14 +171,6 @@ class FES:
             if _ % 2 == 0:
                 gauss_res[i] += 1
 
-        #gauss_center_to_end = gauss_res // 2
-        #gauss_center = gauss_center_to_end + 1
-        #grids = np.meshgrid(*[np.arange(gauss_res)] * cvs)
-        #exponent = np.sum(
-        #    -((grids[i] + 1 - gauss_center) ** 2) / (2 * sigma_res[i] ** 2) for i in range(len(sigma_res))
-        #)
-        #gauss = -np.exp(exponent)
-        ## ...
         gauss = self._gauss_kernel(gauss_res, sigma_res)
         gauss_center = np.array(gauss.shape) // 2
 
@@ -212,6 +212,9 @@ class FES:
     def _sum_bias(
         self, gauss_center, gauss, cv_bins, line, cvs, resolution
     ):
+        if self.hills is None:
+            raise ValueError("Hills not loaded yet.")
+
         # create a meshgrid of the indexes of the fes that need to be edited
         fes_index_to_edit = np.indices(gauss.shape)
 
@@ -283,7 +286,12 @@ class FES:
         return reweighted_fes
 
     def _calculate_dp2(self, index, time_min, time_max):
+        if self.hills is None:
+            raise ValueError("Hills not loaded yet.")
+
         cv_min = self.cv_min
+        if self.cv_fes_range is None:
+            self.cv_fes_range = self.cv_max - self.cv_min
         cv_fes_range = self.cv_fes_range
         cvs = self.cvs
 
@@ -318,6 +326,8 @@ class FES:
             time_max (int, optional): The ending time step of simulation. Defaults to None.
             n_workers (int, optional): Number of workers for parallelization. Defaults to 2.
         """
+        if self.hills is None:
+            raise ValueError("Hills not loaded yet.")
 
         if resolution is None:
             resolution = self.res
@@ -402,7 +412,7 @@ class FES:
             probabilities = np.exp(-self.fes / (kb * temp))
             new_prob = np.sum(probabilities, axis=CV)
 
-            new_fes = FES(hills=self.hills)
+            new_fes = FreeEnergySurface(hills=self.hills)
             new_fes.fes = - kb * temp * np.log(new_prob)
             new_fes.fes = new_fes.fes - np.min(new_fes.fes)
             new_fes.res = self.res
@@ -445,6 +455,121 @@ class FES:
 
     def set_fes(self, fes: np.ndarray):
         self.fes = fes
+
+    def find_minima(self, nbins=8):
+        """Method for finding local minima on FES.
+
+        Args:
+            fes (Fes): The Fes object to find the minima on.
+            nbins (int, default=8): The number of bins used to divide the FES.
+        """
+        import pandas as pd
+
+        cv_min = self.cv_min
+        cv_max = self.cv_max
+
+        if int(nbins) != nbins:
+            nbins = int(nbins)
+            logger.info(
+                f"Number of bins must be an integer, it will be set to {nbins}.")
+        if self.res % nbins != 0:
+            raise ValueError("Resolution of FES must be divisible by number of bins.")
+        if nbins > self.res/2:
+            raise ValueError("Number of bins is too high.")
+        
+        bin_size = int(self.res/nbins)
+
+        for index in np.ndindex(tuple([nbins] * self.cvs)):
+            # index serve as bin number
+            _fes_slice = tuple(
+                slice(
+                    index[i] * bin_size, (index[i] + 1) * bin_size
+                ) for i in range(self.cvs)
+            )
+            fes_slice = self.fes[_fes_slice]
+            bin_min = np.min(fes_slice)
+
+            # indexes of global minimum of a bin
+            bin_min_arg = np.unravel_index(
+                np.argmin(fes_slice), fes_slice.shape
+            )
+            # indexes of that minima in the original fes (indexes +1)
+            min_cv_b = np.array([
+                bin_min_arg[i] + index[i] * bin_size for i in range(self.cvs)
+            ], dtype=int)
+
+            if (np.array(bin_min_arg, dtype=int) > 0).all() and \
+                    (np.array(bin_min_arg, dtype=int) < bin_size - 1).all():
+                # if the minima is not on the edge of the bin
+                min_cv = (((min_cv_b+0.5)/self.res) * (cv_max-cv_min))+cv_min
+                local_minima = np.concatenate([
+                    [np.round(bin_min, 6)], min_cv_b, np.round(min_cv, 6)
+                ])
+                if self.minima is None:
+                    self.minima = local_minima
+                else:
+                    self.minima = np.vstack((self.minima, local_minima))
+            else:
+                # if the minima is on the edge of the bin
+                around = np.zeros(tuple([3] * self.cvs))
+
+                for product_index in product(*[range(3)] * self.cvs):
+                    converted_index = np.array(product_index, dtype=int) + \
+                        np.array(min_cv_b, dtype=int) - 1
+                    converted_index[self.periodic] = \
+                        converted_index[self.periodic] % self.res
+
+                    mask = np.where(
+                        (converted_index < 0) + (converted_index > self.res - 1)
+                    )[0]
+
+                    if len(mask) > 0:
+                        around[product_index] = np.inf
+
+                    elif product_index == tuple([1] * self.cvs):
+                        around[product_index] = np.inf
+
+                    else:
+                        around[product_index] = self.fes[tuple(
+                            converted_index)]
+
+                if (around > bin_min).all():
+                    min_cv = (((min_cv_b+0.5)/self.res) * (cv_max-cv_min))+cv_min
+                    local_minima = np.concatenate([
+                        [np.round(bin_min, 6)], min_cv_b, np.round(min_cv, 6)
+                    ])
+                    if self.minima is None:
+                        self.minima = local_minima
+                    else:
+                        self.minima = np.vstack((self.minima, local_minima))
+
+        if self.minima is None:
+            logger.warning("No minima found.")
+            return None
+
+        if len(self.minima.shape) > 1:
+            self.minima = self.minima[self.minima[:, 0].argsort()]
+
+        if self.minima.shape[0] == 1:
+            self.minima = np.concatenate((
+                np.arange(0, self.minima.shape[0], dtype=int), self.minima
+            ))
+        else:
+            self.minima = np.column_stack((
+                np.arange(0, self.minima.shape[0], dtype=int), self.minima
+            ))
+
+        if self.cv_name is None:
+            self.cv_name = [f"CV{i+1}" for i in range(self.cvs)]
+
+        minima_df = pd.DataFrame(
+            np.array(self.minima),
+            columns=["Minimum", "free energy"] +
+            [f"CV{i+1}bin" for i in range(self.cvs)] +
+            [f"CV{i+1} - {self.cv_name[i]}" for i in range(self.cvs)]
+        )
+        minima_df["Minimum"] = minima_df["Minimum"].astype(int)
+        self.minima = minima_df
 
     def plot(
         self,
@@ -524,6 +649,12 @@ class FES:
             fig.savefig(png_name)
 
         return fig, ax
+    
+    def plot_minima(self, mark_color="white", png_name=None, **kwargs):
+        fig, ax = PlottingFES.plot_minima(self, mark_color, **kwargs)
+        if png_name is not None:
+            fig.savefig(png_name)
+        return fig, ax
 
 
 class PlottingFES:
@@ -533,7 +664,7 @@ class PlottingFES:
 
     @staticmethod
     def _surface_plot(
-        fes: FES,
+        fes: FreeEnergySurface,
         cmap: Union[str, Colormap] = "RdYlBu",
         energy_unit: str = "kJ/mol",
         xlabel: Optional[str] = None,
@@ -560,6 +691,9 @@ class PlottingFES:
         Future plans include implementing this function using PyVista. However, in the current version of PyVista (0.38.5), there is an issue with labels on the 3rd axis for free energy showing wrong values.
         """
 
+        if fes.cv_name is None:
+            fes.name_cv()
+
         if fes.cvs == 2:
             cv_min = fes.cv_min
             cv_max = fes.cv_max
@@ -581,12 +715,12 @@ class PlottingFES:
 
             if xlabel == None:
                 ax.set_xlabel(
-                    f'CV1 - {fes.cv_name[0]}', size=label_size)
+                    f'CV1 - {fes.cv_name[0]}', size=label_size) # type: ignore
             else:
                 ax.set_xlabel(xlabel, size=label_size)
             if ylabel == None:
                 ax.set_ylabel(
-                    f'CV2 - {fes.cv_name[1]}', size=label_size)
+                    f'CV2 - {fes.cv_name[1]}', size=label_size) # type: ignore
             else:
                 ax.set_ylabel(ylabel, size=label_size)
             if zlabel == None:
@@ -595,13 +729,13 @@ class PlottingFES:
                 ax.set_zlabel(zlabel, size=label_size)  # type: ignore
         else:
             raise ValueError(
-                f"Surface plot only works for FES with exactly two CVs, and this FES has {fes.hills.cvs}"
+                f"Surface plot only works for FES with exactly two CVs, and this FES has {fes.cvs}."
             )
         return fig, ax
 
     @staticmethod
     def _plot1d(
-        fes: FES,
+        fes: FreeEnergySurface,
         image_size: List[int] = [10, 7],
         dpi: int = 96,
         energy_unit: str = 'kJ/mol',
@@ -618,7 +752,7 @@ class PlottingFES:
         ax.plot(X, fes.fes)
         if xlabel == None:
             ax.set_xlabel(
-                f'CV1 - {fes.cv_name[0]}')
+                f'CV1 - {fes.cv_name[0]}') # type: ignore
         else:
             ax.set_xlabel(xlabel)
         if ylabel == None:
@@ -629,7 +763,7 @@ class PlottingFES:
 
     @staticmethod
     def _plot2d(
-        fes_obj: FES,
+        fes_obj: FreeEnergySurface,
         levels: int = 20,
         cmap: Union[str, Colormap] = "RdYlBu",
         image_size: List[int] = [10, 7],
@@ -681,4 +815,48 @@ class PlottingFES:
             cbar.set_label(f'Free Energy ({energy_unit})')
         else:
             cbar.set_label(zlabel)
+        return fig, ax
+
+    @staticmethod
+    def plot_minima(
+        fes_obj: FreeEnergySurface,
+        mark_color: str = "white",
+        **kwargs
+    ):
+        """
+        Function used to visualize the FES objects with the positions of local minima shown as letters on the graph.
+
+        Usage:
+        ```python
+        minima.plot()
+        ```
+        """
+        if fes_obj.minima is None:
+            raise ValueError("No minima found.")
+        
+        fig, ax = fes_obj.plot(**kwargs)
+
+        free_energy_range = fes_obj.fes.max() - fes_obj.fes.min()
+
+        if fes_obj.cvs == 1:
+            for m in range(len(fes_obj.minima.index)):
+                ax.text(
+                    float(fes_obj.minima.iloc[m, 3]), 
+                    float(fes_obj.minima.iloc[m, 1])+free_energy_range*0.05, 
+                    fes_obj.minima.iloc[m, 0],
+                    horizontalalignment='center', 
+                    c=mark_color,
+                    verticalalignment='bottom'
+                )
+
+        elif fes_obj.cvs == 2:
+            for m in range(len(fes_obj.minima.index)):
+                ax.text(
+                    float(fes_obj.minima.iloc[m, 4]), 
+                    float(fes_obj.minima.iloc[m, 5]), 
+                    fes_obj.minima.iloc[m, 0],
+                    horizontalalignment='center',
+                    verticalalignment='center', 
+                    c=mark_color
+                )
         return fig, ax
