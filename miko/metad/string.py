@@ -20,7 +20,7 @@ from miko.metad.fes import FES
 from miko.metad.minima import Minima
 
 
-class String2D:
+class StringMethod:
     """
     Class containing methods to compute the minimum energy path between two
     points on an energy landscape $V$.
@@ -278,7 +278,8 @@ class String2D:
         Args:
             **plot_V_kwargs: Keyword arguments for plotting the energy landscape V.
         """
-        fig, ax = self.fes.plot(**kwargs)
+        fes = self.fes
+        fig, ax = fes.plot(**kwargs)
         
         if self.mep is None:
             raise ValueError("No MEP found. Please run `compute_mep` first.")

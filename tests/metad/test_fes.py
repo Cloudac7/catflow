@@ -25,8 +25,8 @@ def test_sum_bias(shared_datadir, name, periodic, cv_per, resolution):
     hills = read_hills(
         name=hill_name, periodic=periodic, cv_per=cv_per
     )
-    fes = FES(hills, resolution=resolution)
-    _, fes_calc = fes.get_e_beta_c(resolution=resolution)
+    fes = FES.from_hills(hills, resolution=resolution)
+    _, fes_calc = fes.get_e_beta_c(resolution=resolution, return_fes=True)
     fes_calc = fes_calc.T
 
     plumed_name = shared_datadir / f"plumed/{name}.dat"
@@ -46,7 +46,7 @@ def test_make_fes_original(shared_datadir, name, periodic, cv_per, resolution):
     hills = read_hills(
         name=hill_name, periodic=periodic, cv_per=cv_per
     )
-    fes = FES(hills, resolution=resolution)
+    fes = FES.from_hills(hills, resolution=resolution)
     fes_calc = fes.make_fes_original(resolution=resolution)
     fes_calc = fes_calc.T
 

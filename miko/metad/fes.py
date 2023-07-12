@@ -6,6 +6,7 @@ import seaborn as sns
 
 from copy import deepcopy
 from typing import Optional, List, Union, Dict, Any
+from numpy.typing import ArrayLike
 from matplotlib.colors import Colormap
 
 from miko.metad.hills import Hills
@@ -31,50 +32,79 @@ class FES:
         time_max (int, optional): The ending time step of simulation. Defaults to None.
     """
 
+    fes: Optional[np.ndarray] = None
+    hills: Optional[Hills] = None
+    fes: Optional[np.ndarray] = None
+    cv_min: Optional[np.ndarray] = None
+    cv_max: Optional[np.ndarray] = None
+    cv_fes_range: Optional[np.ndarray] = None
+    periodic: np.ndarray
+    cv_name: Optional[List[str]] = None
+    resolution: int = 256
+    cvs: Optional[int] = None
+
     def __init__(
         self,
-        hills: Hills,
-        resolution: int = 256,
-        time_min: int = 0,
-        time_max: Optional[int] = None
+        resolution: int = 256
     ):
         self.res = resolution
-        self.fes = None
-        self.cvs = hills.cvs
 
-        self.hills = hills
-        self.periodic = hills.periodic
-        self.cv_name = hills.cv_name
-        self.generate_cv_map()
+    @classmethod
+    def from_hills(
+        cls, 
+        hills: Hills,
+        resolution: int = 256
+    ):
+        """Generate a FES object from a Hills object."""
+        fes = cls(resolution=resolution)
 
-        if time_max != None:
-            if time_max <= time_min:
-                logger.warning("Warning: End time is lower than start time")
-            if time_max > len(self.hills.cv[:, 0]):
-                time_max = len(self.hills.cv[:, 0])
-                logger.warning(
-                    f"Warning: End time {time_max} is higher than",
-                    f"number of lines in HILLS file {len(self.hills.cv[:, 0])},",
-                    "which will be used instead."
-                )
+        fes.cvs = hills.cvs
+
+        fes.hills = hills
+        fes.periodic = hills.periodic
+        fes.cv_name = hills.cv_name
+
+        fes.generate_cv_map()
+
+        return fes
 
     def generate_cv_map(self):
         """generate CV map"""
+        if self.hills is not None:
+            cv_min = deepcopy(self.hills.cv_min)
+            cv_max = deepcopy(self.hills.cv_max)
+            cv_range = cv_max - cv_min
+            self.cv_range = cv_range
 
-        cv_min = deepcopy(self.hills.cv_min)
-        cv_max = deepcopy(self.hills.cv_max)
-        cv_range = cv_max - cv_min
+            cv_min[~self.periodic] -= cv_range[~self.periodic] * 0.15
+            cv_max[~self.periodic] += cv_range[~self.periodic] * 0.15
+            cv_fes_range = np.abs(cv_max - cv_min)
 
-        self.cv_range = cv_range
+            # generate remapped cv_min and cv_max
+            self.cv_min = cv_min
+            self.cv_max = cv_max
+            self.cv_fes_range = cv_fes_range
 
-        cv_min[~self.periodic] -= cv_range[~self.periodic] * 0.15
-        cv_max[~self.periodic] += cv_range[~self.periodic] * 0.15
-        cv_fes_range = np.abs(cv_max - cv_min)
-
-        # generate remapped cv_min and cv_max
-        self.cv_min = cv_min
-        self.cv_max = cv_max
-        self.cv_fes_range = cv_fes_range
+    @classmethod
+    def from_array(
+        cls,
+        fes_array: ArrayLike,
+        cv_min: ArrayLike,
+        cv_max: ArrayLike,
+        periodic: ArrayLike,
+        cv_name: List[str],
+        resolution: int = 256
+    ):
+        fes = cls(resolution=resolution)
+        fes.fes = np.array(fes_array)
+        fes.cv_min = np.array(cv_min)
+        fes.cv_max = np.array(cv_max)
+        fes.cv_fes_range = np.array(cv_max) - np.array(cv_min)
+        fes.periodic = np.array(periodic, dtype=bool)
+        fes.cv_name = cv_name
+        fes.res = resolution
+        fes.cvs = len(cv_name)
+        return fes
 
     def get_e_beta_c(
         self,
@@ -83,7 +113,8 @@ class FES:
         time_max: Optional[int] = None,
         kb: float = 8.314e-3,
         temp: float = 300.0,
-        bias_factor: float = 15.0
+        bias_factor: float = 15.0,
+        return_fes: bool = False
     ):
         """Function used internally for summing hills in Hills object with the fast Bias Sum Algorithm. 
         From which could also be quick to get e_beta_c for reweighting.
@@ -103,6 +134,9 @@ class FES:
 
         if resolution is None:
             resolution = self.res
+
+        if self.hills is None:
+            raise ValueError("Hills not loaded yet.")
 
         if time_min is None:
             time_min = 0
@@ -124,51 +158,67 @@ class FES:
         sigma = self.hills.sigma[:cvs, 0]
         sigma_res = (sigma * resolution) / (cv_max - cv_min)
 
-        gauss_res = np.max((8 * sigma_res).astype(int))
-        if gauss_res % 2 == 0:
-            gauss_res += 1
+        gauss_res = (8 * sigma_res).astype(int)
+        for i, _ in enumerate(gauss_res):
+            if _ % 2 == 0:
+                gauss_res[i] += 1
 
-        gauss_center_to_end = int((gauss_res - 1) / 2)
-        gauss_center = gauss_center_to_end + 1
-        grids = np.meshgrid(*[np.arange(gauss_res)] * cvs)
-        exponent = np.sum(
-            -((grids[i] + 1 - gauss_center) ** 2) / (2 * sigma_res[i] ** 2) for i in range(len(sigma_res))
-        )
-        gauss = -np.exp(exponent)
+        #gauss_center_to_end = gauss_res // 2
+        #gauss_center = gauss_center_to_end + 1
+        #grids = np.meshgrid(*[np.arange(gauss_res)] * cvs)
+        #exponent = np.sum(
+        #    -((grids[i] + 1 - gauss_center) ** 2) / (2 * sigma_res[i] ** 2) for i in range(len(sigma_res))
+        #)
+        #gauss = -np.exp(exponent)
+        ## ...
+        gauss = self._gauss_kernel(gauss_res, sigma_res)
+        gauss_center = np.array(gauss.shape) // 2
 
         fes = np.zeros([resolution] * cvs)
-        e_beta_c = []
+        e_beta_c = np.zeros(len(cv_bins[0]))
 
         for line in range(len(cv_bins[0])):
             fes_index_to_edit, delta_fes = \
                 self._sum_bias(
-                    gauss_res, gauss_center, gauss, cv_bins, line, cvs, resolution
+                    gauss_center, gauss, cv_bins, line, cvs, resolution
                 )
             fes[fes_index_to_edit] += delta_fes
 
             local_fes = fes - np.min(fes)
-            e_beta_c.append(
-                np.sum(np.exp(-local_fes / (kb * temp))) /
-                np.sum(np.exp(-local_fes / (kb * temp * bias_factor)))
-            )
-        fes -= np.min(fes)
-        return e_beta_c, fes
+            exp_local_fes = np.exp(-local_fes / (kb * temp))
+
+            numerator = np.sum(exp_local_fes)
+            denominator = np.sum(exp_local_fes / bias_factor)
+            e_beta_c[line] = numerator / denominator
+        if return_fes:
+            fes -= np.min(fes)
+            return e_beta_c, fes
+        else:
+            return e_beta_c
+
+    def _gauss_kernel(self, gauss_res, sigma_res):
+
+        gauss_center = gauss_res // 2
+        grids = np.indices(gauss_res)
+        
+        grids_flatten = grids.reshape(gauss_res.shape[0], -1).T
+        exponent = np.sum(
+            -(grids_flatten - gauss_center)**2 / (2 * sigma_res**2), 
+            axis=1
+        )
+        gauss = -np.exp(exponent.T.reshape(gauss_res))
+        return gauss
 
     def _sum_bias(
-        self, gauss_res, gauss_center, gauss, cv_bins, line, cvs, resolution
+        self, gauss_center, gauss, cv_bins, line, cvs, resolution
     ):
         # create a meshgrid of the indexes of the fes that need to be edited
-        # size of the meshgrid is the same as the size of the gauss
-        fes_index_to_edit = np.meshgrid(
-            *([
-                np.arange(gauss_res) - gauss_center
-            ] * len(cv_bins[:, line]))
-        )
+        fes_index_to_edit = np.indices(gauss.shape)
 
         # create a mask to avoid editing indexes outside the fes
         local_mask = np.ones_like(gauss, dtype=int)
         for d in range(cvs):
-            fes_index_to_edit[d] += cv_bins[d][line]
+            fes_index_to_edit[d] += cv_bins[d][line] - gauss_center[d]
             if not self.periodic[d]:
                 mask = np.where(
                     (fes_index_to_edit[d] < 0) + (
@@ -185,12 +235,26 @@ class FES:
     def reweighting(
         self,
         colvar_file: str,
-        e_beta_c: np.ndarray,
+        e_beta_c: ArrayLike,
         cv_indexes: Optional[List[int]] = None,
         resolution: int = 64,
         kb: float = 8.314e-3,
         temp: float = 300.0
     ):
+        """
+        Reweights the free energy surface based on the given collective variables.
+
+        Args:
+            colvar_file (str): The path to the file containing the collective variables.
+            e_beta_c (ArrayLike): The array of e^(-beta*C(t)) values.
+            cv_indexes (Optional[List[int]], optional): The indexes of the collective variables to use. Defaults to None.
+            resolution (int, optional): The resolution of the free energy surface. Defaults to 64.
+            kb (float, optional): The Boltzmann constant. Defaults to 8.314e-3.
+            temp (float, optional): The temperature in Kelvin. Defaults to 300.0.
+
+        Returns:
+            np.ndarray: The reweighted free energy surface.
+        """
         colvar = np.loadtxt(colvar_file)
 
         if cv_indexes is None:
@@ -207,6 +271,8 @@ class FES:
 
         bias = colvar[:, 9]
         probs = np.zeros([resolution] * cvs)
+
+        e_beta_c = np.array(e_beta_c)
         reweighted_fes = np.zeros([len(e_beta_c)] + [resolution] * cvs)
 
         for i in np.arange(len(e_beta_c)):
