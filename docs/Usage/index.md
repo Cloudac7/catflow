@@ -4,3 +4,4 @@
 
 - [团簇结构分析](cluster_structures.md)
 - [DP-GEN分析](dpgen_analysis.md)
+- [Metadynamics分析](metadyn.ipynb)

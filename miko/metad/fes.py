@@ -412,7 +412,7 @@ class FreeEnergySurface:
             probabilities = np.exp(-self.fes / (kb * temp))
             new_prob = np.sum(probabilities, axis=CV)
 
-            new_fes = FreeEnergySurface(hills=self.hills)
+            new_fes = FreeEnergySurface.from_hills(hills=self.hills)
             new_fes.fes = - kb * temp * np.log(new_prob)
             new_fes.fes = new_fes.fes - np.min(new_fes.fes)
             new_fes.res = self.res
@@ -463,6 +463,15 @@ class FreeEnergySurface:
             fes (Fes): The Fes object to find the minima on.
             nbins (int, default=8): The number of bins used to divide the FES.
         """
+        if self.fes is None:
+            raise ValueError(
+                "FES not calculated yet. Use make_fes_original() first."
+            )
+
+        if self.minima is not None:
+            logger.warning("Minima already found.")
+            return None
+
         import pandas as pd
 
         cv_min = self.cv_min
