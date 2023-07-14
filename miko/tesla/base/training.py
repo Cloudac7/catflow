@@ -64,8 +64,9 @@ class TrainingAnalyzer(BaseAnalyzer):
         # force figure
         for key in lcurve_data.keys():
             if key.startswith('force_'):
-                axs[1].plot(step[10:], lcurve_data[key][10:],
-                            alpha=0.4, label=key.replace('force_', ''))
+                axs[1].plot(
+                    step[10:], lcurve_data[key][10:], label=key.replace('force_', '')
+                )
         axs[1].axhline(0.05, linestyle='dashed', color='red', label='50 meV/Å')
         axs[1].axhline(0.1, linestyle='dashed', color='blue', label='100 meV/Å')
         axs[1].axhline(0.2, linestyle='dashed', label='200 meV/Å')

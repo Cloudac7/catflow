@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "miko-analyzer"
-version = "0.0.0"
+version = "0.3.3"
 description = "Analyzing tool for deep learning based chemical research."
 authors = ["Cloudac7 <scottryuu@outlook.com>"]
 license = "Apache-2.0"
@@ -8,22 +8,16 @@ readme = "README.md"
 repository = "https://github.com/cloudac7/miko-analysis"
 packages = [{include = "miko"}]
 
-[tool.poetry-dynamic-versioning]
-enable = true
-
 [tool.poetry.dependencies]
 python = "<3.12,>=3.8"
 ase = "^3.21.1"
 matplotlib = "^3.7.1"
 numpy = "<1.24,>=1.18"
 pandas = "^1.3.3"
-dpdata = "*"
-dscribe = "*"
-dynaconf = "*"
+dscribe = "^2.0"
 mdanalysis = "^2.2"
 scipy = "^1.10.1"
-seaborn = "*"
-tqdm = "^4.65.0"
+seaborn = "^0.12.2"
 pymatgen = "^2023.5.10"
 ai2-kit = "^0.3.18"
 
