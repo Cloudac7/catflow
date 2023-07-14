@@ -22,7 +22,7 @@ def test_compute_mep(fes):
     sm = StringMethod(fes)
 
     # Compute MEP
-    sm.compute_mep(begin=[-4, 0], end=[4, 0], npts=10)
+    sm.compute_mep(begin=[-4, 0], end=[4, 0], n_points=10)
 
     # Check that the MEP has the correct shape
     assert sm.mep.shape == (10, 2)
@@ -32,7 +32,7 @@ def test_plot_mep(fes):
     sm = StringMethod(fes)
 
     # Compute MEP
-    sm.compute_mep(begin=[-4, 0], end=[4, 0], npts=10)
+    sm.compute_mep(begin=[-4, 0], end=[4, 0], n_points=10)
 
     # Plot MEP
     fig, ax = sm.plot_mep()
@@ -46,7 +46,7 @@ def test_plot_mep_energy_profile(fes):
     sm = StringMethod(fes)
 
     # Compute MEP
-    sm.compute_mep(begin=[-4, 0], end=[4, 0], npts=10)
+    sm.compute_mep(begin=[-4, 0], end=[4, 0], n_points=10)
 
     # Plot MEP energy profile
     fig, ax = sm.plot_mep_energy_profile()
@@ -61,7 +61,7 @@ def test_plot_string_evolution(fes):
     sm = StringMethod(fes)
 
     # Compute MEP
-    sm.compute_mep(begin=[-4, 0], end=[4, 0], npts=10)
+    sm.compute_mep(begin=[-4, 0], end=[4, 0], n_points=10)
 
     # Plot string evolution
     fig, ax = sm.plot_string_evolution()

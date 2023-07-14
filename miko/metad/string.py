@@ -12,7 +12,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scipy.interpolate import Rbf, griddata, interp1d
+from scipy.interpolate import Rbf, griddata, interp1d, RegularGridInterpolator
 from tqdm import trange
 from typing import Literal, List, Union, Tuple, Optional
 
@@ -85,13 +85,14 @@ class StringMethod:
         end: Union[np.ndarray, List[int], Tuple[int, int]],
         mid: List[Union[np.ndarray, List[int], Tuple[int, int]]] = [],
         function: str = 'linear',
-        npts: int = 100,
-        integrator: str = "forward_euler",
+        n_points: int = 100,
+        integrator: Literal["forward_euler", "rk4"] = "forward_euler",
         dt: float = 0.1,
         tol: Optional[float] = None,
-        maxsteps: int = 100,
-        traj_every: int = 10,
+        max_steps: int = 100,
+        traj_each: int = 10,
         flexible: bool = True,
+        grid_method: Literal["cubic", "linear"] = "linear"
     ):
         """
         Computes the minimum free energy path. The points `begin`
@@ -107,13 +108,13 @@ class StringMethod:
             mid: List of arrays of shape (2,) specifying points between `begin` and `end`
                 to use for generating an initial guess of the minimum energy path (default=[]).
             function: The radial basis function used for interpolation. (default='linear').
-            npts: Number of points between any two valuesalong the string (default=100).
+            n_points: Number of points between any two valuesalong the string (default=100).
             integrator: Integration scheme to use (default='forward_euler'). Options=['forward_euler'].
             dt: Integration timestep (default=0.1).
             tol: Convergence criterion; stop stepping if string has an RMSD < tol between
                 consecutive steps (default = max{npts^-4, 10^-10}).
-            maxsteps: Maximum number of steps to take (default=100).
-            traj_every: Interval to store string trajectory (default=10).
+            max_steps: Maximum number of steps to take (default=100).
+            traj_each: Interval to store string trajectory (default=10).
             flexible: If False, the ends of the string are fixed (default=True).
 
         Returns:
@@ -121,18 +122,18 @@ class StringMethod:
         """
         # Calculate params
         if tol is None:
-            tol = max([npts**-4, 1e-10])
+            tol = max([n_points**-4, 1e-10])
 
         # Generate initial guess
         if len(mid) > 0:
-            string_x = np.linspace(begin[0], end[0], npts)
+            string_x = np.linspace(begin[0], end[0], n_points)
             xpts = [begin[0]] + [mpt[0] for mpt in mid] + [end[0]]
             ypts = [begin[1]] + [mpt[1] for mpt in mid] + [end[1]]
             spline = Rbf(xpts, ypts, function=function)
             string_y = spline(string_x)
         else:
-            string_x = np.linspace(begin[0], end[0], npts)
-            string_y = np.linspace(begin[1], end[1], npts)
+            string_x = np.linspace(begin[0], end[0], n_points)
+            string_y = np.linspace(begin[1], end[1], n_points)
 
         string = np.vstack([string_x, string_y]).T
 
@@ -143,26 +144,33 @@ class StringMethod:
         # Loop
         old_string = np.zeros_like(string)
 
-        for tstep in trange(1, maxsteps + 1):
+        for t_step in range(1, max_steps + 1):
             # Integrator step
             if integrator == "forward_euler":
                 old_string[:] = string
-                string = self.step_euler(string, dt, flexible=flexible)
+                string = self.step_euler(
+                    string, dt, flexible=flexible, grid_method=grid_method
+                )
+            elif integrator == "rk4":
+                old_string[:] = string
+                string = self.step_rk4(
+                    string, dt, flexible=flexible, grid_method=grid_method
+                )
             else:
                 raise ValueError("Invalid integrator")
 
             # Reparameterize string (equal arc length reparameterization)
-            arclength = np.hstack(
+            arc_length = np.hstack(
                 [0, np.cumsum(np.linalg.norm(string[1:] - string[:-1], axis=1))])
-            arclength /= arclength[-1]
-            reparam_x = interp1d(arclength, string[:, 0])
-            reparam_y = interp1d(arclength, string[:, 1])
-            gamma = np.linspace(0, 1, npts)
+            arc_length /= arc_length[-1]
+            reparam_x = interp1d(arc_length, string[:, 0], kind="cubic")
+            reparam_y = interp1d(arc_length, string[:, 1], kind="cubic")
+            gamma = np.linspace(0, 1, n_points)
             string = np.vstack([reparam_x(gamma), reparam_y(gamma)]).T
 
             # Store
             string_change = np.sqrt(np.mean((string - old_string) ** 2))
-            if tstep % traj_every == 0:
+            if t_step % traj_each == 0:
                 self.string_traj.append(string)
                 # Print convergence
                 logger.info(
@@ -172,7 +180,7 @@ class StringMethod:
             # Test for convergence
             if string_change < tol:
                 logger.info("Change in string lower than tolerance.")
-                logger.info(f"Converged in {tstep + 1} steps.")
+                logger.info(f"Converged in {t_step + 1} steps.")
                 break
 
         # Store minimum energy path
@@ -191,7 +199,7 @@ class StringMethod:
         self,
         begin_index: int,
         end_index: int,
-        mid_indices: List[int] = [],
+        mid_indices: Optional[List[int]] = None,
         *,
         nbins: int = 8,
         **kwargs
@@ -211,41 +219,42 @@ class StringMethod:
         if self.minima is None:
             self.load_minima(nbins)
 
-        minima_x = self.minima.filter(regex=r"^CV1\s+-\s+") # type: ignore
-        minima_y = self.minima.filter(regex=r"^CV2\s+-\s+") # type: ignore
+        minima_x = self.minima.filter(regex=r"^CV1\s+-\s+")  # type: ignore
+        minima_y = self.minima.filter(regex=r"^CV2\s+-\s+")  # type: ignore
         begin_x = minima_x.iloc[begin_index].values[0]
         begin_y = minima_y.iloc[begin_index].values[0]
         end_x = minima_x.iloc[end_index].values[0]
         end_y = minima_y.iloc[end_index].values[0]
-        if len(mid_indices) > 0:
+        if mid_indices is not None:
             mid = [[minima_x.iloc[i].values[0], minima_y.iloc[i].values[0]]
                    for i in mid_indices]
         else:
             mid = []
         self.compute_mep(
             begin=[begin_x, begin_y],
-            mid=mid, # type: ignore
+            mid=mid,  # type: ignore
             end=[end_x, end_y],
             **kwargs
         )
 
-    def step_euler(self, string, dt, flexible=True):
+    def step_euler(self, string, dt, flexible=True, grid_method="linear"):
         """
-        Evolves string images in time in response to forces calculated from the energy landscape.
+        Evolves string images in time in response to forces calculated from the energy landscape using the forward Euler method.
 
         Args:
             string: Array of shape (npts, 2) specifying string images at the previous timestep.
             dt: Timestep.
             flexible: If False, the ends of the string are fixed (default=True).
+            grid_method: Method used to interpolate the gradient (default="linear").
 
         Returns:
             newstring: Array of shape (npts, 2) specifying string images after a timestep.
         """
         # Compute gradients at string points
         string_grad_x = griddata(
-            self.grid, self.gradX.ravel(), string, method="linear")
+            self.grid, self.gradX.ravel(), string, method=grid_method)
         string_grad_y = griddata(
-            self.grid, self.gradY.ravel(), string, method="linear")
+            self.grid, self.gradY.ravel(), string, method=grid_method)
         h = np.max(np.sqrt(string_grad_x**2 + string_grad_y**2))
 
         # Euler step
@@ -258,6 +267,57 @@ class StringMethod:
                 np.vstack([string_grad_x, string_grad_y]).T[1:-1] / h
             )
 
+        return string
+
+    def step_rk4(self, string, dt, flexible=True, grid_method="linear"):
+        """
+        Evolves string images in time in response to forces calculated from the energy landscape using the fourth-order Runge-Kutta method.
+
+        Args:
+            string: Array of shape (npts, 2) specifying string images at the previous timestep.
+            dt: Timestep.
+            flexible: If False, the ends of the string are fixed (default=True).
+            grid_method: Method used to interpolate the gradient (default="linear").
+
+        Returns:
+            string: Array of shape (npts, 2) specifying string images after a timestep.
+        """
+
+        string_grad_x = griddata(
+            self.grid, self.gradX.ravel(), string, method=grid_method)
+        string_grad_y = griddata(
+            self.grid, self.gradY.ravel(), string, method=grid_method)
+        h = np.max(np.sqrt(string_grad_x**2 + string_grad_y**2))
+
+        k1 = dt * np.vstack([string_grad_x, string_grad_y]).T / h
+
+        string_grad_x_1 = griddata(
+            self.grid, self.gradX.ravel(), string + k1/2, method=grid_method)
+        string_grad_y_1 = griddata(
+            self.grid, self.gradY.ravel(), string + k1/2, method=grid_method)
+        h1 = np.max(np.sqrt(string_grad_x_1**2 + string_grad_y_1**2))
+        k2 = dt * np.vstack([string_grad_x_1, string_grad_y_1]).T / h1
+
+        string_grad_x_2 = griddata(
+            self.grid, self.gradX.ravel(), string + k2/2, method=grid_method)
+        string_grad_y_2 = griddata(
+            self.grid, self.gradY.ravel(), string + k2/2, method=grid_method)
+        h2 = np.max(np.sqrt(string_grad_x_2**2 + string_grad_y_2**2))
+        k3 = dt * np.vstack([string_grad_x_2, string_grad_y_2]).T / h2
+
+        string_grad_x_3 = griddata(
+            self.grid, self.gradX.ravel(), string + k3, method=grid_method)
+        string_grad_y_3 = griddata(
+            self.grid, self.gradY.ravel(), string + k3, method=grid_method)
+        h3 = np.max(np.sqrt(string_grad_x_3**2 + string_grad_y_3**2))
+        k4 = dt * np.vstack([string_grad_x_3, string_grad_y_3]).T / h3
+
+        if flexible:
+            string = string - (k1 + 2*k2 + 2*k3 + k4) / 6
+        else:
+            string[1:-1] = \
+                string[1:-1] - (k1[1:-1] + 2*k2[1:-1] +
+                                2*k3[1:-1] + k4[1:-1]) / 6
         return string
 
     def get_mep_energy_profile(self):
@@ -274,7 +334,7 @@ class StringMethod:
         """
         fes = self.fes
         fig, ax = fes.plot(**kwargs)
-        
+
         if self.mep is None:
             raise ValueError("No MEP found. Please run `compute_mep` first.")
 
@@ -306,7 +366,7 @@ class StringMethod:
         fig, ax = self.fes.plot(**kwargs)
         if self.mep is None:
             raise ValueError("No MEP found. Please run `compute_mep` first.")
-        
+
         colors = string_cmap(np.linspace(0, 1, len(self.string_traj)))
         for sidx, string in enumerate(self.string_traj):
             ax.plot(string[:, 0], string[:, 1], "--", color=colors[sidx])
