@@ -60,6 +60,7 @@ class PMFFlowConfig(BaseModel):
     t_step: float = 100.
     n_temps: int = 5
     lindemann_n_last_frames: int = 20000
+    melting_test: bool = True
     temperatures: Optional[List[float]]
     t_min: Optional[float]
     t_max: Optional[float]
@@ -181,12 +182,16 @@ async def flow_pmf_calculation(
     ))
 
     # determine the temperature range of the PMF calculation
-    if flow_output.temperature_range:
-        pass
+    if not flow_input.flow_config.melting_test and flow_input.flow_config.temperatures:
+        # skip melting test if `melting_test` is set to False and `temperatures` is given
+        flow_output.temperature_range = flow_input.flow_config.temperatures
     else:
-        temperature_range = \
-            await subflow_pmf_temperature_range(flow_input, pmf_task_outputs)
-        flow_output.temperature_range = temperature_range
+        if flow_output.temperature_range:
+            pass
+        else:
+            temperature_range = \
+                await subflow_pmf_temperature_range(flow_input, pmf_task_outputs)
+            flow_output.temperature_range = temperature_range
 
     # define PMF workflow at each temperature
     pmf_tasks = []
