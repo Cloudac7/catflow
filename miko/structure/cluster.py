@@ -1,9 +1,14 @@
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
+from typing import Optional
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
 from MDAnalysis import Universe
+
+
+from miko.structure.lindemann_index import LindemannIndex
 
 
 class Cluster(object):
@@ -19,7 +24,7 @@ class Cluster(object):
 
         Args:
             u (Universe): Trajectory instance.
-        
+
         Returns:
             Cluster: Cluster instance.
         """
@@ -36,7 +41,7 @@ class Cluster(object):
         if kwargs.get("topology_format", None) is None:
             kwargs["topology_format"] = "XYZ"
         return Universe(self.path, **kwargs)
-    
+
     def distance_to_com(self, selection_cluster: str):
         """Analyze cluster atoms by calculating distance to center of mass.
 
@@ -56,67 +61,17 @@ class Cluster(object):
                 dis = distance.euclidean(t, cg)
                 distances[q, p] = dis
         return distances
-    
-    def lindemann_per_frames(self, selection_cluster: str) -> np.ndarray:
-        """Calculate the lindemann index for each atom AND FRAME
 
-        Warning this can produce extremly large ndarrays in memory
-        depending on the size of the cluster and the ammount of frames.
-
-        Args:
-            u (Universe): MDA trajectory instance.
-            selection_cluster (str): Selection language to select atoms in cluster.
-
-        Returns:
-            np.ndarray: An ndarray of shape (len_frames, natoms)
-
-        References:
-            https://github.com/ybyygu/lindemann-index/blob/master/src/lindemann.pyx
-            http://math.stackexchange.com/a/116344
-        """
+    def lindemann_per_frames(self,
+                             selection_cluster: str,
+                             box: Optional[npt.NDArray] = None) -> np.ndarray:
         u = self.universe
-        sele_ori = u.select_atoms(selection_cluster)
-        natoms = len(sele_ori)
-        nframes = len(u.trajectory)
-        len_frames = len(u.trajectory)
-        array_mean = np.zeros((natoms, natoms))
-        array_var = np.zeros((natoms, natoms))
-        # array_distance = np.zeros((natoms, natoms))
-        iframe = 1
-        lindex_array = np.zeros((len_frames, natoms, natoms))
-        cluster = u.select_atoms(selection_cluster, updating=True)
-        for q, ts in enumerate(u.trajectory):
-            # print(ts)
-            coords = cluster.positions
-            n, p = coords.shape
-            array_distance = distance.cdist(coords, coords)
-            
-            # update mean and var arrays based on Welford algorithm (1962)
-            for i in range(natoms):
-                for j in range(i + 1, natoms):
-                    xn = array_distance[i, j]
-                    mean = array_mean[i, j]
-                    var = array_var[i, j]
-                    delta = xn - mean
-                    # update mean
-                    array_mean[i, j] = mean + delta / iframe
-                    # update variance
-                    array_var[i, j] = var + delta * (xn - array_mean[i, j])
-            iframe += 1
-            if iframe > nframes + 1:
-                break
+        ag = u.select_atoms(selection_cluster)
+        li = LindemannIndex(ag, box=box)
+        li.run()
 
-            for i in range(natoms):
-                for j in range(i + 1, natoms):
-                    array_mean[j, i] = array_mean[i, j]
-                    array_var[j, i] = array_var[i, j]
-
-            lindemann_indices = np.divide(
-                np.sqrt(np.divide(array_var, iframe - 1)), array_mean
-            )
-            lindex_array[q] = lindemann_indices
-
-        return np.array([np.nanmean(i, axis=1) for i in lindex_array])
+        lindex_array = np.array(li.results.lindemann_index)
+        return lindex_array
 
 
 def distance_to_cnt(u: Universe, selection_cluster: str, cnt_direction: str):
@@ -129,7 +84,7 @@ def distance_to_cnt(u: Universe, selection_cluster: str, cnt_direction: str):
     Returns:
         _type_: _description_
     """
-    cnt = u.select_atoms('name C', updating=True) # C for carbon
+    cnt = u.select_atoms('name C', updating=True)  # C for carbon
     cluster = u.select_atoms(selection_cluster, updating=True)
     distances = np.zeros((len(u.trajectory), len(cluster)))
     for q, ts in enumerate(u.trajectory):
