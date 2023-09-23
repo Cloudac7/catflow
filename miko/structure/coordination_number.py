@@ -40,6 +40,7 @@ class CoordinationNumber(AnalysisBase):
                  m: int = 12,
                  box: Optional[NDArray] = None,
                  switch_function: Optional[Callable] = None,
+                 mean: bool = True,
                  **kwargs):
         super(CoordinationNumber, self).__init__(
             g1.universe.trajectory,
@@ -53,6 +54,7 @@ class CoordinationNumber(AnalysisBase):
         self.m = m
         self.box = box
         self.switch_function = switch_function
+        self.mean = mean
         
 
     def _prepare(self):
@@ -71,6 +73,7 @@ class CoordinationNumber(AnalysisBase):
                 n=self.n,
                 m=self.m,
                 box=self.box,
-                switch_function=self.switch_function
+                switch_function=self.switch_function,
+                mean=self.mean
             )
         )
