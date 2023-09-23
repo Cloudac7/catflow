@@ -15,7 +15,8 @@ def coordination_number_calculation(
     n: int = 6, 
     m: int = 12,
     box: Optional[NDArray] = None,
-    switch_function: Optional[Callable] = None
+    switch_function: Optional[Callable] = None,
+    mean: bool = True
 ):
     d = distance_array(ag1, ag2, box)
     d = d[d != 0.].reshape((len(ag1), -1))
@@ -23,7 +24,10 @@ def coordination_number_calculation(
         cn = switch_function(d, r0, d0, n, m) # ignore: type
     else:
         cn = (1 - ((d - d0) / r0) ** n) / (1 - ((d - d0) / r0) ** m)
-    return np.mean(np.sum(cn, axis=1))
+    if mean:
+        return np.mean(np.sum(cn, axis=1))
+    else:
+        return np.sum(cn, axis=1)
 
 
 class CoordinationNumber(AnalysisBase):
