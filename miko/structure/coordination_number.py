@@ -8,20 +8,24 @@ from MDAnalysis.analysis.distances import distance_array
 
 
 def coordination_number_calculation(
-    ag1: AtomGroup, 
+    ag1: AtomGroup,
     ag2: AtomGroup,
-    r0: float, 
-    d0: float = 0.0, 
-    n: int = 6, 
+    r0: float,
+    d0: float = 0.0,
+    n: int = 6,
     m: int = 12,
     box: Optional[NDArray] = None,
     switch_function: Optional[Callable] = None,
     mean: bool = True
 ):
     d = distance_array(ag1, ag2, box)
-    d = d[d != 0.].reshape((len(ag1), -1))
+    if len(ag1) > 0:
+        d = d[d != 0.].reshape((len(ag1), -1))
+    else:
+        return 0.
+
     if switch_function:
-        cn = switch_function(d, r0, d0, n, m) # ignore: type
+        cn = switch_function(d, r0, d0, n, m)
     else:
         cn = (1 - ((d - d0) / r0) ** n) / (1 - ((d - d0) / r0) ** m)
     if mean:
@@ -31,12 +35,12 @@ def coordination_number_calculation(
 
 
 class CoordinationNumber(AnalysisBase):
-    def __init__(self, 
-                 g1: AtomGroup, 
-                 g2: AtomGroup, 
-                 r0: float, 
-                 d0: float = 0.0, 
-                 n: int = 6, 
+    def __init__(self,
+                 g1: AtomGroup,
+                 g2: AtomGroup,
+                 r0: float,
+                 d0: float = 0.0,
+                 n: int = 6,
                  m: int = 12,
                  box: Optional[NDArray] = None,
                  switch_function: Optional[Callable] = None,
@@ -55,7 +59,6 @@ class CoordinationNumber(AnalysisBase):
         self.box = box
         self.switch_function = switch_function
         self.mean = mean
-        
 
     def _prepare(self):
         self.results.coordination_number = []
