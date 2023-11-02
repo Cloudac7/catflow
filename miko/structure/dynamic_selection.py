@@ -55,46 +55,140 @@ class EqualAroundIndex(AnalysisBase):
         )
 
     def _prepare(self):
+        self.results.atom_groups = []
         self.results.indices = []
         ref_size = len(self.reference)
 
         if not self.size:
             # loop to find minimum size
-            for ts in self.universe.trajectory:
+            for _ in self.universe.trajectory:
                 if len(self.environment) == 0:
-                    raise ValueError("Environment should not be empty through the trajectory.")
+                    raise ValueError(
+                        "Environment should not be empty through the trajectory.")
                 if not self.size:
                     self.size = len(self.environment) + ref_size
                 elif len(self.environment) + ref_size < self.size:
                     self.size = len(self.environment) + ref_size
 
     def _single_frame(self):
-        array_distance = distance_array(self.reference, self.environment, box=self.box)
+        array_distance = distance_array(
+            self.reference, self.environment, box=self.box)
         min_distances = np.min(array_distance, axis=0)
         if self.size is not None:
             clip = self.size - len(self.reference)
         else:
             clip = None
-        new_ag = self.reference | self.environment[np.argsort(min_distances)[:clip]]
+        new_ag = self.reference | self.environment[np.argsort(min_distances)[
+            :clip]]
         self.atom_groups.append(new_ag)
+        self.results.atom_groups.append(new_ag)
         self.results.indices.append(new_ag.indices)
-    
-    def _conclude(self):
-        self.results.universe = mda.Merge(self.atom_groups)
 
 
-class EqualAxisIndex(AnalysisBase):
+class AxisMaxDistance(AnalysisBase):
+    """Calculates the maximum distance between two groups of atoms along a given axis.
+
+    Args:
+        ag1 (mda.AtomGroup): The first group of atoms.
+        ag2 (mda.AtomGroup): The second group of atoms.
+        universe (MDAnalysis.core.universe.Universe): The MDAnalysis universe containing the atoms.
+        axis (str): The axis along which to calculate the maximum distance.
+        box (numpy.ndarray or None): The dimensions of the simulation box, 
+            or None if periodic boundary conditions are not used.
+        **kwargs: Additional keyword arguments to be passed to the parent class.
+
+    Return:
+        results (MDAnalysis.analysis.base.AnalysisResults): The results of the analysis.
+
+    Raises:
+        ValueError: If `axis` is not "x", "y", or "z".
+
+    Notes:
+        This class is a subclass of `MDAnalysis.analysis.base.AnalysisBase`.
+
+    Examples:
+        >>> import MDAnalysis as mda
+        >>> from miko.structure.dynamic_selection import AxisMaxDistance
+        >>> u = mda.Universe("system.gro", "system.trr")
+        >>> ag1 = u.select_atoms("protein")
+        >>> ag2 = u.select_atoms("resname LIG")
+        >>> analysis = AxisMaxDistance(ag1, ag2, axis="x", box=u.dimensions)
+        >>> analysis.run()
+        >>> max_distances = analysis.results.distances
+    """
 
     def __init__(self,
                  ag1: mda.AtomGroup,
                  ag2: mda.AtomGroup,
+                 axis: str = "z",
+                 box=None,
+                 **kwargs):
+        self.ag1 = ag1
+        self.ag2 = ag2
+        self.universe = ag1.universe
+        self.axis = axis
+        self.box = box
+        if box and self.universe.dimensions is None:
+            self.universe.dimensions = box
+        super(AxisMaxDistance, self).__init__(
+            ag1.universe.trajectory,
+            **kwargs
+        )
+
+    def _prepare(self):
+        self.results.distances = []
+
+    def _single_frame(self):
+        reference = self.ag1.center_of_geometry()
+        temp_distances = self.ag2.positions[:]
+        axis_indices = {"x": (1, 2), "y": (0, 2), "z": (0, 1)}
+        if self.axis not in axis_indices:
+            raise ValueError("axis must be x, y or z")
+        reference[axis_indices[self.axis]] = 0.
+        temp_distances[:, axis_indices[self.axis][0]] = 0.
+        temp_distances[:, axis_indices[self.axis][1]] = 0.
+        self_distances = distance_array(
+            temp_distances, reference, box=self.box)
+        max_distances = np.max(self_distances, axis=1)
+        self.results.distances.append(max_distances)
+
+
+class EqualAxisIndex(AnalysisBase):
+    """Selects atoms from a given AtomGroup based on their distance along a specified axis.
+
+    Args:
+        ag1 (mda.AtomGroup): The reference AtomGroup.
+        ag2 (mda.AtomGroup): The AtomGroup to select atoms from.
+        axis (str): The axis along which to measure distances. Must be "x", "y", or "z".
+        box (mda.Box): The simulation box. Required if periodic boundary conditions are used.
+        size (int): The number of atoms to select. If None, selects all atoms in ag2.
+        **kwargs: Additional keyword arguments to pass to AnalysisBase.
+
+    Raises:
+        ValueError: If axis is not "x", "y", or "z".
+
+    Attributes:
+        ag1 (mda.AtomGroup): The reference AtomGroup.
+        ag2 (mda.AtomGroup): The AtomGroup to select atoms from.
+        universe (mda.Universe): The simulation universe.
+        axis (str): The axis along which to measure distances.
+        size (int): The number of atoms to select.
+        box (mda.Box): The simulation box.
+        results (AnalysisResults): The results of the analysis.
+
+    """
+
+    def __init__(self,
+                 ag1: mda.AtomGroup,
+                 ag2: mda.AtomGroup,
+                 axis: str = "z",
                  box=None,
                  size=None,
                  **kwargs):
         self.ag1 = ag1
         self.ag2 = ag2
         self.universe = ag1.universe
-        self.ag_union = self.ag1 | self.ag2
+        self.axis = axis
         if size:
             self.size = size
         else:
@@ -103,30 +197,34 @@ class EqualAxisIndex(AnalysisBase):
         if box and self.universe.dimensions is None:
             self.universe.dimensions = box
         super(EqualAxisIndex, self).__init__(
-            ag1.universe.trajectory, 
+            ag1.universe.trajectory,
             **kwargs
         )
 
     def _prepare(self):
-        self.results.new_ag = []
-        self.results.indexes = []
+        """Prepares the analysis."""
+        self.results.atom_groups = []
+        self.results.indices = []
         if self.size is None:
-            for ts in self.universe.trajectory:
+            for _ in self.universe.trajectory:
                 if self.size is None:
                     self.size = len(self.ag2)
                 if len(self.ag2) < self.size:
                     self.size = len(self.ag2)
 
     def _single_frame(self):
+        """Performs the analysis on a single frame."""
         reference = self.ag1.center_of_geometry()
-        reference[0] = 0.
-        reference[1] = 0.
         temp_distances = self.ag2.positions[:]
-        temp_distances[:, 0] = 0.
-        temp_distances[:, 1] = 0.
+        axis_indices = {"x": (1, 2), "y": (0, 2), "z": (0, 1)}
+        if self.axis not in axis_indices:
+            raise ValueError("axis must be x, y or z")
+        reference[axis_indices[self.axis]] = 0.
+        temp_distances[:, axis_indices[self.axis][0]] = 0.
+        temp_distances[:, axis_indices[self.axis][1]] = 0.
         self_distances = distance_array(
-            temp_distances, reference, box=self.box
-        )
-        new_ag = self.ag1 | self.ag2[np.argsort(self_distances.flatten())[:self.size]]
-        self.results.new_ag.append(new_ag)
-        self.results.indexes.append(new_ag.indices)
+            temp_distances, reference, box=self.box)
+        new_ag = self.ag1 | self.ag2[np.argsort(
+            self_distances.flatten())[:self.size]]
+        self.results.atom_groups.append(new_ag)
+        self.results.indices.append(new_ag.indices)

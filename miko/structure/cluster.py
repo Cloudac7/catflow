@@ -64,11 +64,12 @@ class Cluster(object):
 
     def lindemann_per_frames(self,
                              selection_cluster: str,
-                             box: Optional[npt.NDArray] = None) -> np.ndarray:
+                             box: Optional[npt.NDArray] = None,
+                             **run_parameters) -> np.ndarray:
         u = self.universe
         ag = u.select_atoms(selection_cluster)
         li = LindemannIndex(ag, box=box)
-        li.run()
+        li.run(**run_parameters)
 
         lindex_array = np.array(li.results.lindemann_index)
         return lindex_array
