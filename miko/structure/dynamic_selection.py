@@ -228,3 +228,56 @@ class EqualAxisIndex(AnalysisBase):
             self_distances.flatten())[:self.size]]
         self.results.atom_groups.append(new_ag)
         self.results.indices.append(new_ag.indices)
+
+
+class GroupsDistanceIndex(AnalysisBase):
+
+    def __init__(self,
+                 ag,
+                 sliced_ags,
+                 limitation: int = 1, 
+                 box=None,
+                 zone=None,
+                 **kwargs):
+        self.ag = ag
+        self.sliced_ags = sliced_ags
+        self.limitation = limitation
+        self.universe = ag.universe
+        self.box = box
+        self.zone = zone
+        if box and self.universe.dimensions is None:
+            self.universe.dimensions = box
+        super(GroupsDistanceIndex, self).__init__(
+            ag.universe.trajectory, 
+            **kwargs
+        )
+
+    def _prepare(self):
+        self.results.atom_groups = []
+        self.results.indices = []
+
+    def _single_frame(self):
+        import heapq as hq
+        new_ag = self.ag
+        
+        reference = self.ag.center_of_geometry()
+        reference[0] = 0.
+        reference[1] = 0.
+        
+        min_queue = []
+        
+        for i, sl in enumerate(self.sliced_ags):
+            temp_distances = sl.positions[:]
+            temp_distances[:, 0] = 0.
+            temp_distances[:, 1] = 0.
+            self_distance = np.mean(distance_array(
+                temp_distances, reference, box=self.box
+            ))
+            min_queue.append(self_distance)
+        
+        for i, j in hq.nsmallest(
+            self.limitation, enumerate(min_queue), key=lambda x: x[1]
+        ):
+            new_ag = new_ag | self.sliced_ags[i]
+        self.results.atom_groups.append(new_ag)
+        self.results.indices.append(new_ag.indices)
