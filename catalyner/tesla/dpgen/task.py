@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from miko.tesla.base.task import BaseTask, BaseAnalyzer
+from catalyner.tesla.base.task import BaseTask, BaseAnalyzer
 
 
 class DPTask(BaseTask):

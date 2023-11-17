@@ -8,7 +8,7 @@ from scipy.optimize import curve_fit
 from MDAnalysis import Universe
 
 
-from miko.structure.lindemann_index import LindemannIndex
+from catalyner.structure.lindemann_index import LindemannIndex
 
 
 class Cluster(object):

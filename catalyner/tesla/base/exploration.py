@@ -11,9 +11,9 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from miko.utils.log_factory import logger
-from miko.graph.plotting import canvas_style, square_grid
-from miko.tesla.base.task import BaseAnalyzer
+from catalyner.utils.log_factory import logger
+from catalyner.graph.plotting import canvas_style, square_grid
+from catalyner.tesla.base.task import BaseAnalyzer
 
 
 def read_model_deviation(model_devi_path: Path):
@@ -251,7 +251,7 @@ class ExplorationAnalyzer(BaseAnalyzer):
             kwargs (_type_, optional): Additional keyword arguments. Include other params, such as:
                 `temps`: please use the value of `group_by`, whose default input is `"temps"`.
                 `label_unit`: the unit of `select_value`, such as 'Å'.
-                Parameters of `canvas_style`: please refer to `miko.graph.plotting.canvas_style`.
+                Parameters of `canvas_style`: please refer to `catalyner.graph.plotting.canvas_style`.
 
         Returns:
             Figure: A plot for different desired values.

@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from miko.metad.fes import FreeEnergySurface
-from miko.metad.string import StringMethod
+from catalyner.metad.fes import FreeEnergySurface
+from catalyner.metad.string import StringMethod
 
 @pytest.fixture
 def fes():

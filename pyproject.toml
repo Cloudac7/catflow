@@ -1,12 +1,12 @@
 [tool.poetry]
-name = "miko-analyzer"
-version = "0.3.3"
+name = "catalyner"
+version = "0.4.0"
 description = "Analyzing tool for deep learning based chemical research."
 authors = ["Cloudac7 <scottryuu@outlook.com>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/cloudac7/miko-analysis"
-packages = [{include = "miko"}]
+repository = "https://github.com/cloudac7/catalyner"
+packages = [{include = "catalyner"}]
 
 [tool.poetry.dependencies]
 python = "<3.12,>=3.8"
@@ -39,7 +39,7 @@ mkdocs-section-index = "*"
 mkdocs-jupyter = "^0.24.2"
 
 [tool.poetry.scripts]
-miko = 'miko.cmdline.base:cli'
+catalyner = 'catalyner.cmdline.base:cli'
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]

@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 
-from miko.utils import logger
-from miko.graph.plotting import canvas_style
-from miko.tesla.base.task import BaseAnalyzer, BaseTask
+from catalyner.utils import logger
+from catalyner.graph.plotting import canvas_style
+from catalyner.tesla.base.task import BaseAnalyzer, BaseTask
 
 
 class TrainingAnalyzer(BaseAnalyzer):

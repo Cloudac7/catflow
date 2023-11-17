@@ -8,7 +8,7 @@ from ai2_kit.core.util import load_yaml_files
 from ai2_kit.core.checkpoint import set_checkpoint_file
 from ai2_kit.workflow.cll_mlp import CllWorkflowConfig
 
-from miko.tesla.base.task import BaseTask, BaseAnalyzer
+from catalyner.tesla.base.task import BaseTask, BaseAnalyzer
 
 
 class CllTask(BaseTask):

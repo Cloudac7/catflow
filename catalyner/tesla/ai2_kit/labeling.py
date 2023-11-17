@@ -1,8 +1,8 @@
 import re
 
-from miko.tesla.base.labeling import LabelingAnalyzer
-from miko.tesla.ai2_kit.task import CllAnalyzer
-from miko.graph.plotting import canvas_style
+from catalyner.tesla.base.labeling import LabelingAnalyzer
+from catalyner.tesla.ai2_kit.task import CllAnalyzer
+from catalyner.graph.plotting import canvas_style
 
 
 class CllLabelingAnalyzer(LabelingAnalyzer, CllAnalyzer):

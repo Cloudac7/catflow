@@ -9,9 +9,9 @@ from itertools import product
 from numpy.typing import ArrayLike
 from matplotlib.colors import Colormap
 
-from miko.metad.hills import Hills
-from miko.graph.plotting import canvas_style
-from miko.utils.log_factory import logger
+from catalyner.metad.hills import Hills
+from catalyner.graph.plotting import canvas_style
+from catalyner.utils.log_factory import logger
 
 
 class FreeEnergySurface:
@@ -20,7 +20,7 @@ class FreeEnergySurface:
 
     Usage:
     ```python
-    from miko.metad.fes import FreeEnergySurface
+    from catalyner.metad.fes import FreeEnergySurface
     fes = FreeEnergySurface(hills)
     ```
 

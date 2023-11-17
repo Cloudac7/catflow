@@ -6,14 +6,14 @@ on:
       - 'master'
       - 'dev'
     paths:
-      - miko/**
+      - catalyner/**
       - tests/**
       - .github/workflows/ci.yml
       - pyproject.toml
       - poetry.lock
   pull_request:
     paths:
-      - miko/**
+      - catalyner/**
       - tests/**
       - .github/workflows/ci.yml
       - pyproject.toml
@@ -52,6 +52,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          poetry run coverage run --source=./miko -m pytest -v tests/
+          poetry run coverage run --source=./catalyner -m pytest -v tests/
           poetry run coverage report
           poetry run coveralls --service=github

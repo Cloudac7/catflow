@@ -1,25 +1,25 @@
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
 
-from miko.utils import logger
-from miko.graph.plotting import canvas_style
-from miko.tesla.base.training import TrainingAnalyzer
-from miko.tesla.ai2_kit.task import CllAnalyzer, CllTask
+from catalyner.utils import logger
+from catalyner.graph.plotting import canvas_style
+from catalyner.tesla.base.training import TrainingAnalyzer
+from catalyner.tesla.dpgen.task import DPAnalyzer
 
-
-class CllTrainingAnalyzer(TrainingAnalyzer, CllAnalyzer):
+class DPTrainingAnalyzer(TrainingAnalyzer, DPAnalyzer):
     """Analyzer for training tasks.
     """
 
     def get_lcurve_path(self, iteration: int, model=0) -> Path:
         _iteration_dir = self._iteration_dir(iteration=iteration)
         lcurve_path = self.dp_task.path / _iteration_dir / \
-            f'train-deepmd/tasks/{str(model).zfill(3)}/lcurve.out'
+            f'00.train/{str(model).zfill(3)}/lcurve.out'
         return lcurve_path
-
-    def load_lcurve(self, iteration=None, model=0):
+    
+    def load_lcurve(self, iteration: int, model=0):
         lcurve_path = self.get_lcurve_path(iteration=iteration, model=model)
 
         if self.validation is True:
@@ -36,3 +36,22 @@ class CllTrainingAnalyzer(TrainingAnalyzer, CllAnalyzer):
                 'energy_train': np.loadtxt(lcurve_path, usecols=2),
                 'force_train': np.loadtxt(lcurve_path, usecols=3)
             }
+
+    def plot_lcurve(self, iteration: Optional[int] = None, model=0, **kwargs):
+        """plot learning curve of the training task
+
+        Args:
+            iteration (int): Iteration of the training task
+            model (int, optional): Index of trained model. Defaults to 0.
+
+        Returns:
+            fig: plt.figure
+        """
+        if iteration is None:
+            iteration = self._iteration_control_code(
+                control_step=2, iteration=self.dp_task.iteration
+            )
+
+        fig = super().plot_lcurve(iteration=iteration, model=model, **kwargs)
+
+        return fig

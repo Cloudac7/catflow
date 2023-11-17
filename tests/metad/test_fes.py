@@ -2,9 +2,9 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from miko.metad.hills import Hills
-from miko.metad.fes import FreeEnergySurface
-from miko.metad.profile import FreeEnergyProfile
+from catalyner.metad.hills import Hills
+from catalyner.metad.fes import FreeEnergySurface
+from catalyner.metad.profile import FreeEnergyProfile
 
 def read_hills(name, periodic, cv_per):
     return Hills(name, periodic=periodic, cv_per=cv_per)

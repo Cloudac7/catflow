@@ -15,8 +15,8 @@ import numpy as np
 from scipy.interpolate import Rbf, griddata, interp1d, RegularGridInterpolator
 from typing import Literal, List, Union, Tuple, Optional
 
-from miko.utils import logger
-from miko.metad.fes import FreeEnergySurface
+from catalyner.utils import logger
+from catalyner.metad.fes import FreeEnergySurface
 
 
 class StringMethod:

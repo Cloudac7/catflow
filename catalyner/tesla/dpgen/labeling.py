@@ -1,7 +1,7 @@
 from typing import Optional
 
-from miko.tesla.base.labeling import LabelingAnalyzer
-from miko.tesla.dpgen.task import DPTask, DPAnalyzer
+from catalyner.tesla.base.labeling import LabelingAnalyzer
+from catalyner.tesla.dpgen.task import DPTask, DPAnalyzer
 
 
 class DPLabelingAnalyzer(LabelingAnalyzer, DPAnalyzer):
