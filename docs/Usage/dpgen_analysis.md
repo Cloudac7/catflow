@@ -5,7 +5,7 @@
 首先，导入环境：
 
 ```python
-from catflow.tesla.dpgen import DPTask
+from catflow.analyzer.tesla.dpgen import DPTask
 ```
 
 加载DP-GEN工作目录：
@@ -26,7 +26,7 @@ t = DPTask(
 导入分析器（`DPAnalyzer`），这里我们选择训练，即：
 
 ```python
-from catflow.tesla.dpgen.training import DPTrainingAnalyzer
+from catflow.analyzer.tesla.dpgen.training import DPTrainingAnalyzer
 ```
 
 从任务初始化分析器实例：
@@ -51,7 +51,7 @@ fig.set_size_inches((12,12))
 类似地，我们也可以对模型的model deviation分布进行分析：
 
 ```python
-from catflow.tesla.dpgen.exploration import DPExplorationAnalyzer
+from catflow.analyzer.tesla.dpgen.exploration import DPExplorationAnalyzer
 ana = DPExplorationAnalyzer(t)
 ```
 
