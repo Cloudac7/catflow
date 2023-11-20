@@ -2,7 +2,7 @@ import click
 import time
 import json
 
-from miko.tesla.dpgen import DPTask
+from miko.tesla.dpgen.task import DPTask
 from miko.utils.log_factory import logger
 from miko_tasker.calculation.dpgen import DPCheck
 from miko_tasker.utils.messager import dingtalk_reminder
