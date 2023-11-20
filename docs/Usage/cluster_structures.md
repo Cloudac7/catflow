@@ -6,7 +6,7 @@
 其他的参数请以可选参数形式传入。
 
 ```python
-from catalyner.structure.cluster import Cluster
+from catflow.structure.cluster import Cluster
 
 trajfile = "./dump.lammpstrj"
 c = Cluster(trajfile, topology_format="LAMMPSDUMP", dt=0.0005)

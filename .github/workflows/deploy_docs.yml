@@ -7,7 +7,7 @@ on:
       - docs/**
       - README.md
       - mkdocs.yml
-      - catalyner/**
+      - catflow/**
       - .github/workflows/deploy_docs.yml
 jobs:
   deploy:

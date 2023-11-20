@@ -1,6 +1,6 @@
 import numpy as np
-from catalyner.atomic.atomic_energy import atomic_ener_model_devi_atomic
-from catalyner.atomic.atomic_energy import atomic_ener_model_devi
+from catflow.atomic.atomic_energy import atomic_ener_model_devi_atomic
+from catflow.atomic.atomic_energy import atomic_ener_model_devi
 
 
 def test_atomic_ener_model_devi_atomic(tmpdir):

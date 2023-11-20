@@ -8,10 +8,10 @@ from matplotlib.figure import Figure
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catalyner.utils.log_factory import logger
-from catalyner.graph.plotting import canvas_style, square_grid
-from catalyner.tesla.base.exploration import ExplorationAnalyzer, PlottingExploartion
-from catalyner.tesla.dpgen.task import DPAnalyzer
+from catflow.utils.log_factory import logger
+from catflow.graph.plotting import canvas_style, square_grid
+from catflow.tesla.base.exploration import ExplorationAnalyzer, PlottingExploartion
+from catflow.tesla.dpgen.task import DPAnalyzer
 
 
 class DPExplorationAnalyzer(ExplorationAnalyzer, DPAnalyzer):
@@ -95,7 +95,7 @@ class DPExplorationAnalyzer(ExplorationAnalyzer, DPAnalyzer):
             kwargs (_type_, optional): Additional keyword arguments. Include other params, such as:
                 `temps`: please use the value of `group_by`, whose default input is `"temps"`.
                 `label_unit`: the unit of `select_value`, such as 'Å'.
-                Parameters of `canvas_style`: please refer to `catalyner.graph.plotting.canvas_style`.
+                Parameters of `canvas_style`: please refer to `catflow.graph.plotting.canvas_style`.
 
         Returns:
             Figure: A plot for different desired values.

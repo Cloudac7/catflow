@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from MDAnalysis import Universe
-from catalyner.structure.cluster import Cluster
+from catflow.structure.cluster import Cluster
 
 @pytest.fixture
 def cluster(shared_datadir):

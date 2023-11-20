@@ -1,4 +1,4 @@
-from catalyner.tesla.dpgen.task import DPTask
+from catflow.tesla.dpgen.task import DPTask
 
 
 def _inner_test_dp_task(t: DPTask):

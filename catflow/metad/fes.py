@@ -9,9 +9,9 @@ from itertools import product
 from numpy.typing import ArrayLike
 from matplotlib.colors import Colormap
 
-from catalyner.metad.hills import Hills
-from catalyner.graph.plotting import canvas_style
-from catalyner.utils.log_factory import logger
+from catflow.metad.hills import Hills
+from catflow.graph.plotting import canvas_style
+from catflow.utils.log_factory import logger
 
 
 class FreeEnergySurface:
@@ -20,7 +20,7 @@ class FreeEnergySurface:
 
     Usage:
     ```python
-    from catalyner.metad.fes import FreeEnergySurface
+    from catflow.metad.fes import FreeEnergySurface
     fes = FreeEnergySurface(hills)
     ```
 

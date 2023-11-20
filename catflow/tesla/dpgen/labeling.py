@@ -1,7 +1,7 @@
 from typing import Optional
 
-from catalyner.tesla.base.labeling import LabelingAnalyzer
-from catalyner.tesla.dpgen.task import DPTask, DPAnalyzer
+from catflow.tesla.base.labeling import LabelingAnalyzer
+from catflow.tesla.dpgen.task import DPTask, DPAnalyzer
 
 
 class DPLabelingAnalyzer(LabelingAnalyzer, DPAnalyzer):

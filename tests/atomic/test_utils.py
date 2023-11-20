@@ -1,5 +1,5 @@
 import numpy as np
-from catalyner.atomic.utils import load_reader
+from catflow.atomic.utils import load_reader
 
 
 def test_read_atomic_property(tmpdir):

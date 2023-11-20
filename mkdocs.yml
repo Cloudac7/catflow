@@ -1,7 +1,7 @@
-site_name: Catalyner
-site_url: https://cloudac7.github.io/catalyner
-repo_name: cloudac7/catalyner
-repo_url: https://github.com/cloudac7/catalyner
+site_name: catflow
+site_url: https://cloudac7.github.io/catflow
+repo_name: cloudac7/catflow
+repo_url: https://github.com/cloudac7/catflow
 
 nav:
 - Welcome: index.md

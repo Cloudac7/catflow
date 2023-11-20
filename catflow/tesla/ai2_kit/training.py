@@ -3,10 +3,10 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catalyner.utils import logger
-from catalyner.graph.plotting import canvas_style
-from catalyner.tesla.base.training import TrainingAnalyzer
-from catalyner.tesla.ai2_kit.task import CllAnalyzer, CllTask
+from catflow.utils import logger
+from catflow.graph.plotting import canvas_style
+from catflow.tesla.base.training import TrainingAnalyzer
+from catflow.tesla.ai2_kit.task import CllAnalyzer, CllTask
 
 
 class CllTrainingAnalyzer(TrainingAnalyzer, CllAnalyzer):

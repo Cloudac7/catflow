@@ -4,10 +4,10 @@ from typing import Optional
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catalyner.utils import logger
-from catalyner.graph.plotting import canvas_style
-from catalyner.tesla.base.training import TrainingAnalyzer
-from catalyner.tesla.dpgen.task import DPAnalyzer
+from catflow.utils import logger
+from catflow.graph.plotting import canvas_style
+from catflow.tesla.base.training import TrainingAnalyzer
+from catflow.tesla.dpgen.task import DPAnalyzer
 
 class DPTrainingAnalyzer(TrainingAnalyzer, DPAnalyzer):
     """Analyzer for training tasks.

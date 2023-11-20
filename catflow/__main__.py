@@ -1,5 +1,5 @@
 import sys
 
 if __name__ == '__main__':
-    from catalyner.cmdline.base import cli
+    from catflow.cmdline.base import cli
     sys.exit(cli())

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from catalyner.tesla.dpgen.exploration import DPExplorationAnalyzer
+from catflow.tesla.dpgen.exploration import DPExplorationAnalyzer
 from matplotlib.testing.decorators import image_comparison
 import matplotlib.pyplot as plt
 

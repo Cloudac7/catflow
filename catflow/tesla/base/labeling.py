@@ -7,10 +7,10 @@ from typing import List, Literal
 from ase.io import read
 from matplotlib import pyplot as plt
 
-from catalyner.utils.log_factory import logger
-from catalyner.utils.log_factory import LogFactory
-from catalyner.tesla.base.task import BaseTask, BaseAnalyzer
-from catalyner.graph.plotting import canvas_style
+from catflow.utils.log_factory import logger
+from catflow.utils.log_factory import LogFactory
+from catflow.tesla.base.task import BaseTask, BaseAnalyzer
+from catflow.graph.plotting import canvas_style
 
 
 

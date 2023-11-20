@@ -1,8 +1,8 @@
 import re
 
-from catalyner.tesla.base.labeling import LabelingAnalyzer
-from catalyner.tesla.ai2_kit.task import CllAnalyzer
-from catalyner.graph.plotting import canvas_style
+from catflow.tesla.base.labeling import LabelingAnalyzer
+from catflow.tesla.ai2_kit.task import CllAnalyzer
+from catflow.graph.plotting import canvas_style
 
 
 class CllLabelingAnalyzer(LabelingAnalyzer, CllAnalyzer):

@@ -1,4 +1,4 @@
-from catalyner.tesla.dpgen.training import DPTrainingAnalyzer
+from catflow.tesla.dpgen.training import DPTrainingAnalyzer
 
 
 def test_load_curve(shared_datadir):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from MDAnalysis import Universe
-from catalyner.structure.coordination_number import CoordinationNumber
+from catflow.structure.coordination_number import CoordinationNumber
 
 def test_coordination(shared_datadir):
     u = Universe(shared_datadir / 'test_case_O2Pt36.xyz')

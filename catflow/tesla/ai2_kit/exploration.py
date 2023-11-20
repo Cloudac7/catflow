@@ -4,10 +4,10 @@ from typing import List
 
 import numpy as np
 
-from catalyner.utils.log_factory import logger
-from catalyner.utils.lammps import lammps_variable_parser
-from catalyner.tesla.base.exploration import ExplorationAnalyzer
-from catalyner.tesla.ai2_kit.task import CllAnalyzer
+from catflow.utils.log_factory import logger
+from catflow.utils.lammps import lammps_variable_parser
+from catflow.tesla.base.exploration import ExplorationAnalyzer
+from catflow.tesla.ai2_kit.task import CllAnalyzer
 
 
 def read_model_deviation(model_devi_path: Path):

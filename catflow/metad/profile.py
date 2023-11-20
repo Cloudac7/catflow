@@ -5,9 +5,9 @@ from itertools import product
 from typing import List, Optional, Union
 from matplotlib.colors import Colormap
 
-from catalyner.graph.plotting import canvas_style
-from catalyner.metad.fes import FreeEnergySurface
-from catalyner.metad.hills import Hills
+from catflow.graph.plotting import canvas_style
+from catflow.metad.fes import FreeEnergySurface
+from catflow.metad.hills import Hills
 
 
 class FreeEnergyProfile:

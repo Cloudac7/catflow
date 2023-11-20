@@ -1,12 +1,12 @@
 # Catlyner
 
-[![Python package](https://github.com/Cloudac7/catalyner/actions/workflows/ci.yml/badge.svg)](https://github.com/Cloudac7/catalyner/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/Cloudac7/catalyner/badge.svg?branch=master)](https://coveralls.io/github/Cloudac7/catalyner?branch=master)
+[![Python package](https://github.com/Cloudac7/catflow/actions/workflows/ci.yml/badge.svg)](https://github.com/Cloudac7/catflow/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/Cloudac7/catflow/badge.svg?branch=master)](https://coveralls.io/github/Cloudac7/catflow?branch=master)
 
 
 Machine learning aided catalysis reaction free energy calculation and post-analysis workflow, thus, analyzer for catalysis.
 
-Mainly developed on MacOS Catalina.
+As is known to all, cat is fluid and thus cat flows. 🐱
 
 > Former Miko-Analyzer
 
@@ -15,13 +15,13 @@ Mainly developed on MacOS Catalina.
 To install, clone the repository:
 
 ```
-git clone https://github.com/cloudac7/catalyner.git
+git clone https://github.com/cloudac7/catflow.git
 ```
 
 and then install with `pip`:
 
 ```
-cd catalyner
+cd catflow
 pip install .
 ```
 

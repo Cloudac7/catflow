@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catalyner.utils import logger
-from catalyner.graph.plotting import canvas_style
-from catalyner.tesla.base.task import BaseAnalyzer, BaseTask
+from catflow.utils import logger
+from catflow.graph.plotting import canvas_style
+from catflow.tesla.base.task import BaseAnalyzer, BaseTask
 
 
 class TrainingAnalyzer(BaseAnalyzer):

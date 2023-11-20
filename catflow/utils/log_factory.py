@@ -6,7 +6,7 @@ class LogFactory(object):
     """
     For logging
     """
-    def __init__(self, logger=None, log_dir=None, log_name="catalyner.log"):
+    def __init__(self, logger=None, log_dir=None, log_name="catflow.log"):
         self.log_path = Path.cwd() if log_dir is None else Path(log_dir)
         self.logger = logging.getLogger(logger)
         self.logger.setLevel(logging.DEBUG)

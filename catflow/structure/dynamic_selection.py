@@ -108,7 +108,7 @@ class AxisMaxDistance(AnalysisBase):
 
     Examples:
         >>> import MDAnalysis as mda
-        >>> from catalyner.structure.dynamic_selection import AxisMaxDistance
+        >>> from catflow.structure.dynamic_selection import AxisMaxDistance
         >>> u = mda.Universe("system.gro", "system.trr")
         >>> ag1 = u.select_atoms("protein")
         >>> ag2 = u.select_atoms("resname LIG")
