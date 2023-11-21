@@ -61,7 +61,7 @@ Also for a quick start, just configure your machine and write the Python script,
 ```python
 from multiprocessing import Pool
 from ase.io import read
-from miko_tasker.workflow.pmf import DPPMFCalculation
+from catflow.tasker.workflow.pmf import DPPMFCalculation
 import numpy as np
 
 
