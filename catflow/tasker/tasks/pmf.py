@@ -4,7 +4,7 @@ import numpy as np
 
 from collections import deque, defaultdict
 from pathlib import Path
-from yaml import load, SafeLoader
+from ruamel.yaml import YAML
 from typing import Union, List, Optional, Dict, Iterable
 
 from ase import Atoms

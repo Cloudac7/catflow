@@ -1,5 +1,5 @@
 import os
-import yaml
+from ruamel.yaml import YAML
 from abc import ABCMeta, abstractmethod
 
 
@@ -26,8 +26,9 @@ class TemplateRender(BaseRender):
         self.template = env.get_template('demo.html')
 
     def load_render_dict(self, render_config):
+        yaml = YAML(typ='safe')
         with open(os.path.abspath(render_config)) as f:
-            self.render_dict = yaml.safe_load(f)
+            self.render_dict = yaml.load(f)
 
     def render_template(self):
         pass

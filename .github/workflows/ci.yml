@@ -54,4 +54,3 @@ jobs:
         run: |
           poetry run coverage run --source=./catflow -m pytest -v tests/
           poetry run coverage report
-          poetry run coveralls --service=github

@@ -1,4 +1,4 @@
-def pmf(configure, output):
+def pmf(configure, output=None):
     """Run potential of mean force calculation.
 
     Args:

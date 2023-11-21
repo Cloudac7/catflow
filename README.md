@@ -9,6 +9,8 @@ Machine learning aided catalysis reaction free energy calculation and post-analy
 As is known to all, cat is fluid and thus cat flows. 🐱
 
 > Former Miko-Analyzer and Miko-Tasker
+> This repository is a temporary branch of original CatFlow.
+> It would be merged into main repo after active refactor.
 
 ## Analyzer
 
@@ -17,7 +19,7 @@ As is known to all, cat is fluid and thus cat flows. 🐱
 To install, clone the repository:
 
 ```
-git clone https://github.com/cloudac7/catflow.git
+git clone https://github.com/cloudac7/catflow-premium.git
 ```
 
 and then install with `pip`:
@@ -46,154 +48,56 @@ A simple workflow designed for free energy calculation from Potential of Mean Fo
 
 #### Commandline
 
-First, prepare a json file containing a dict including CP2K input and a json file containing machine configuration, a yaml file for workflow settings in detial.
+First, prepare a yaml file for workflow settings in detial. For example, `config.yaml`.
+
+
+```yaml
+job_config:
+  work_path: "/some/place"
+  machine_name: "machine_name"
+  resources:
+    number_node: 1
+    cpu_per_node: 1
+    gpu_per_node: 1
+    queue_name: gpu
+    group_size: 1
+    module_list:
+      - ...
+    envs:
+      ...
+  command: "cp2k.ssmp -i input.inp"
+
+  reaction_pair: [0, 1] # select indexes of atoms who would be constrained
+  steps: 10000000 # MD steps
+  timestep: 0.5 # unit: fs
+  restart_steps: 10000000 # extra steps run in each restart
+  dump_freq: 100 # dump frequency
+  cell: [24.0, 24.0, 24.0] # set box size for initial structure
+  type_map: # should be unified with DeePMD potential
+    O: 0
+    Pt: 1
+  model_path: "/place/of/your/graph.pb"
+  backward_files:
+    - ...
+
+flow_config:
+  coordinates: ... # a list of coordinations to be constrained at
+  t_min: 300.0 # under limit of simulation temperature
+  cluster_component:
+    - Pt # select elements of cluster
+  lindemann_n_last_frames: 20000 # use last 20000 steps to judge convergence by calculate Lindemann index
+  init_artifact:
+    - coordinate: 1.4
+      structure_path: "/place/of/your/initial_structure.xyz"
+    - coordinate: 3.8
+      structure_path: "/place/of/your/initial_structure.cif"
+job_type: "dp_pmf" # dp_pmf when using DeePMD
+```
 
 Then, just type command like this:
 
 ```bash
-miko tasker pmf params.json machine.json workflow_settings.yml
+catflow tasker pmf config.yaml
 ```
 
-#### Script
-
-Also for a quick start, just configure your machine and write the Python script, naming as `run.py` for example, like below:
-
-```python
-from multiprocessing import Pool
-from ase.io import read
-from catflow.tasker.workflow.pmf import DPPMFCalculation
-import numpy as np
-
-
-resource_dict = {
-    "number_node": 1,
-    "cpu_per_node": 4,
-    "gpu_per_node": 1,
-    "kwargs": {
-      "gpu_usage": True,
-      "gpu_new_syntax": True,
-      "gpu_exclusive": True
-    },
-    "custom_flags": [
-      "#BSUB -J PMF",
-      "#BSUB -W 240:00",
-      "#BSUB -m mgt"
-    ],
-    "queue_name": "gpu",
-    "para_deg": 2,
-    "group_size": 2,
-    "module_list": ["deepmd/2.0"]
-}
-
-input_dict = {
-    "GLOBAL": {
-        "PROJECT": 'pmf',
-        "RUN_TYPE": "MD"
-    },
-    "FORCE_EVAL": {
-        "METHOD": "FIST",
-        "PRINT": {
-            "FORCES": {
-                "_": "ON",
-                "EACH": {}
-            }
-        },
-        "MM": {
-            "FORCEFIELD": {
-                "CHARGE": [],
-                "NONBONDED": {
-                    "DEEPMD": [
-                    ]
-                },
-                "IGNORE_MISSING_CRITICAL_PARAMS": True
-            },
-            "POISSON": {
-                "EWALD": {
-                    "EWALD_TYPE": "none"
-                }
-            }
-        },
-        "SUBSYS": {
-            "COLVAR": {
-                "DISTANCE": {
-                    "ATOMS": None
-                }
-            },
-            "CELL": {
-                "ABC": None
-            },
-            "TOPOLOGY": {}
-        }
-    },
-    "MOTION": {
-        "CONSTRAINT": {
-            "COLLECTIVE": {
-                "TARGET": None,
-                "INTERMOLECULAR": True,
-                "COLVAR": 1
-            },
-            "LAGRANGE_MULTIPLIERS": {
-                "_": "ON",
-                "COMMON_ITERATION_LEVELS": 8000000
-            }
-        },
-        "MD": {
-            "ENSEMBLE": "NVT",
-            "STEPS": 8000000,
-            "TIMESTEP": 0.5,
-            "TEMPERATURE": None,
-            "THERMOSTAT": {
-                "TYPE": "CSVR",
-                "CSVR": {
-                    "TIMECON": 1000,
-                }
-            }
-        },
-        "PRINT": {
-            "TRAJECTORY": {
-                "EACH": {
-                    "MD": 1
-                }
-            },
-            "FORCES": {
-                "EACH": {
-                    "MD": 1
-                }
-            },
-            "RESTART_HISTORY": {
-                "EACH": {
-                    "MD": 500000
-                }
-            }
-        }
-    }
-}
-temperatures = [500.0, 600.0, 700.0, 750.0, 800.0, 900.0, 1000.0]
-reaction_coords = [3.8, 3.7, 3.6, 3.4, 3.2, 3.0, 2.8, 2.6, 2.4, 2.2, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4]
-
-wf = DPPMFCalculation(
-    reaction_coords=reaction_coords,
-    temperatures=temperatures,
-    reaction_pair=(0, 1),
-    init_structure=read('POSCAR'),
-    work_base='3.8',
-    machine_name='ChenglabHPC',
-    resource_dict=resource_dict,
-    command='cp2k.sopt -i input.inp',
-    input_dict=input_dict,
-    model_name="graph.000.pb"
-)
-wf.type_map = {"O": 0, "Pt": 1}
-wf.run_workflow()
-```
-
-Here, `reaction_pair` means the index of the atoms pair that the reaction happens between and `init_structure` is a `ase.Atoms` instance. `input_dict` could be provided with some special parameters changed or even not given for workflow to pick it from default dict.
-
-With everything prepaired, we could just run:
-
-```bash
-python run.py
-```
-to start the workflow runs.
-
-Enjoy it!
+And enjoy it!
