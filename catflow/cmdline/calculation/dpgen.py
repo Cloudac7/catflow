@@ -3,9 +3,8 @@ import time
 import json
 
 from catflow.analyzer.tesla.dpgen.task import DPTask
-from catflow.analyzer.utils.log_factory import logger
+from catflow.utils.log_factory import logger
 from catflow.tasker.calculation.dpgen import DPCheck
-from catflow.tasker.utils.messager import dingtalk_reminder
 
 
 def read_params(task_path, param='param.json', machine='machine.json', record='record.tesla'):
@@ -27,13 +26,6 @@ def read_params(task_path, param='param.json', machine='machine.json', record='r
     return long_task_analyzer
 
 
-@click.command()
-@click.option('--input-settings', '-i', type=click.Path(exists=True), required=True,
-              help='A json containing input parameters of the simulation.')
-@click.argument('task_path', type=click.Path(exists=True), required=True)
-@click.argument('param', default='param.json')
-@click.argument('machine', default='machine.json')
-@click.argument('record', default='record.tesla')
 def simu(input_settings, task_path, param, machine, record):
     """
     Start a simulation with selected parameters \n
@@ -57,12 +49,4 @@ def simu(input_settings, task_path, param, machine, record):
         files=settings['input'],
         forward_files=settings['forward_files'],
         backward_files=settings['backward_files']
-    )
-    mes_text = "# 完成情况 \n\n"
-    mes_text += "您的长训练MD任务已经全部完成, 请登陆服务器查看\n\n"
-    mes_text += "时间：" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    dingtalk_reminder(
-        webhook=settings['webhook'],
-        secret=settings['secret'],
-        text=mes_text
     )

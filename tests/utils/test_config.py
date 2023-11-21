@@ -1,5 +1,5 @@
-from catflow.tasker.utils.config import load_yaml_config
-from catflow.tasker.utils.config import load_yaml_configs
+from catflow.utils.config import load_yaml_config
+from catflow.utils.config import load_yaml_configs
 
 def test_load_yaml_config(shared_datadir, tmp_path):
     config = load_yaml_config(shared_datadir / "first.yaml")

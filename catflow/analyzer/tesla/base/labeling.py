@@ -7,8 +7,8 @@ from typing import List, Literal
 from ase.io import read
 from matplotlib import pyplot as plt
 
-from catflow.analyzer.utils.log_factory import logger
-from catflow.analyzer.utils.log_factory import LogFactory
+from catflow.utils.log_factory import logger
+from catflow.utils.log_factory import LogFactory
 from catflow.analyzer.tesla.base.task import BaseTask, BaseAnalyzer
 from catflow.analyzer.graph.plotting import canvas_style
 

@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catflow.analyzer.utils import logger
+from catflow.utils import logger
 from catflow.analyzer.graph.plotting import canvas_style
 from catflow.analyzer.tesla.base.training import TrainingAnalyzer
 from catflow.analyzer.tesla.dpgen.task import DPAnalyzer

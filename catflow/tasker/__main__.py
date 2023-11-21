@@ -1,5 +1,5 @@
 import sys
-from catflow.tasker.cmdline.base import tasker_cli
+from catflow.cmdline.base import tasker_cli
 
 
 if __name__ == '__main__':

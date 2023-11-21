@@ -15,7 +15,7 @@ import numpy as np
 from scipy.interpolate import Rbf, griddata, interp1d, RegularGridInterpolator
 from typing import Literal, List, Union, Tuple, Optional
 
-from catflow.analyzer.utils import logger
+from catflow.utils import logger
 from catflow.analyzer.metad.fes import FreeEnergySurface
 
 

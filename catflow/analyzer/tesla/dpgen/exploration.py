@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catflow.analyzer.utils.log_factory import logger
+from catflow.utils.log_factory import logger
 from catflow.analyzer.graph.plotting import canvas_style, square_grid
 from catflow.analyzer.tesla.base.exploration import ExplorationAnalyzer, PlottingExploartion
 from catflow.analyzer.tesla.dpgen.task import DPAnalyzer

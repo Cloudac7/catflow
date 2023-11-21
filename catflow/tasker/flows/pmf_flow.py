@@ -9,10 +9,10 @@ from pathlib import Path
 from MDAnalysis import Universe
 from pydantic import BaseModel
 
-from catflow.analyzer.utils import logger
+from catflow.utils import logger
 from catflow.analyzer.structure.cluster import Cluster
 from catflow.tasker.tasks.pmf import PMFTask, DPPMFTask
-from catflow.tasker.utils.config import load_yaml_config, get_item_from_list
+from catflow.utils.config import load_yaml_config, get_item_from_list
 
 
 class JobConfig(BaseModel):
@@ -155,7 +155,7 @@ async def dump_pmf_output(
 ) -> PMFOutput:
     """Dump the PMF output to a file."""
 
-    from catflow.tasker.utils.config import dump_yaml_config
+    from catflow.utils.config import dump_yaml_config
 
     work_path = Path(flow_input.job_config.work_path).resolve()
     flow_output.pmf_tasks = await pmf_task_outputs.get_items()
@@ -338,8 +338,8 @@ def pmf_analyzer(
     task_path: Path,
     restart_time: int = 0
 ):
-    from catflow.tasker.utils.cp2k import lagrange_mult_log_parser
-    from catflow.tasker.utils.statistics import block_average
+    from catflow.utils.cp2k import lagrange_mult_log_parser
+    from catflow.utils.statistics import block_average
 
     logger.info(f"Calculating PMF for {coordinate} at {temperature} K.")
 

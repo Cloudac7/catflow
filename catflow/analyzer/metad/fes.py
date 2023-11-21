@@ -11,7 +11,7 @@ from matplotlib.colors import Colormap
 
 from catflow.analyzer.metad.hills import Hills
 from catflow.analyzer.graph.plotting import canvas_style
-from catflow.analyzer.utils.log_factory import logger
+from catflow.utils.log_factory import logger
 
 
 class FreeEnergySurface:

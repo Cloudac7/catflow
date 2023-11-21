@@ -12,8 +12,8 @@ import numpy as np
 
 from ase.io import read, write
 
-from catflow.analyzer.utils import logger
-from catflow.tasker.utils.file import count_lines
+from catflow.utils import logger
+from catflow.utils.file import count_lines
 
 class TeslaWorkStep(object):
     def __init__(self, params, step_code, machine):

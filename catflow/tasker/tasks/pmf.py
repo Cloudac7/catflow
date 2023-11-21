@@ -13,10 +13,10 @@ from dpdata.unit import LengthConversion
 from pymatgen.core.periodic_table import Element
 from pydantic import BaseModel
 
-from catflow.analyzer.utils import logger
+from catflow.utils import logger
 from catflow.tasker.resources.submit import JobFactory
-from catflow.tasker.utils.file import tail
-from catflow.tasker.utils.cp2k import Cp2kInput, Cp2kInputToDict
+from catflow.utils.file import tail
+from catflow.utils.cp2k import Cp2kInput, Cp2kInputToDict
 
 
 class PMFTask(object):

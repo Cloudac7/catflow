@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 
-from catflow.analyzer.utils import logger
+from catflow.utils import logger
 from catflow.analyzer.graph.plotting import canvas_style
 from catflow.analyzer.tesla.base.task import BaseAnalyzer, BaseTask
 

@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from catflow.analyzer.utils.log_factory import logger
+from catflow.utils.log_factory import logger
 from catflow.analyzer.graph.plotting import canvas_style, square_grid
 from catflow.analyzer.tesla.base.task import BaseAnalyzer
 

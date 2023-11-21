@@ -4,8 +4,8 @@ from typing import List
 
 import numpy as np
 
-from catflow.analyzer.utils.log_factory import logger
-from catflow.analyzer.utils.lammps import lammps_variable_parser
+from catflow.utils.log_factory import logger
+from catflow.utils.lammps import lammps_variable_parser
 from catflow.analyzer.tesla.base.exploration import ExplorationAnalyzer
 from catflow.analyzer.tesla.ai2_kit.task import CllAnalyzer
 

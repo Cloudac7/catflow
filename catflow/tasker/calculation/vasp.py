@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-from catflow.analyzer.utils.log_factory import logger
+from catflow.utils.log_factory import logger
 from catflow.tasker.resources.submit import JobFactory
 
 

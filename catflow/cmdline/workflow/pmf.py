@@ -1,9 +1,3 @@
-import click
-
-
-@click.command()
-@click.argument('configure', type=click.Path(exists=True), required=True)
-@click.argument('output', type=click.Path(exists=True), required=False)
 def pmf(configure, output):
     """Run potential of mean force calculation.
 
@@ -12,7 +6,7 @@ def pmf(configure, output):
         output (Path): Output files containing the output parameters to be reused.
     """
     import asyncio
-    from catflow.tasker.utils.config import load_yaml_configs
+    from catflow.utils.config import load_yaml_configs
     from catflow.tasker.flows.pmf_flow import PMFInput, PMFOutput
     from catflow.tasker.flows.pmf_flow import flow_pmf_calculation
 

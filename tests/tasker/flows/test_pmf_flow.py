@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 import pytest
-from catflow.tasker.utils.config import load_yaml_configs
+from catflow.utils.config import load_yaml_configs
 from catflow.tasker.flows.pmf_flow import SafeList
 from catflow.tasker.flows.pmf_flow import PMFInput, PMFOutput, PMFTaskOutput
 from catflow.tasker.flows.pmf_flow import melting_test_temperatures
@@ -26,7 +26,7 @@ def test_pmf_config(shared_datadir):
     assert config.job_config.command == "dummy_command"
     assert type(config.job_config.resources) == dict
     assert config.job_config.job_name == "PMF"
-    #assert config.init_structure_path == "last_frame.xyz"
+    #assert config.init_structure_path == "test_last_frame.xyz"
     assert config.job_config.reaction_pair == [0, 1]
     assert config.flow_config.cluster_component == ["Pt"]
 
@@ -46,7 +46,7 @@ def pmf_output():
             coordinate=1.4,
             temperature=300.,
             task_path=".",
-            last_frame_path="last_frame.xyz",
+            last_frame_path="test_last_frame.xyz",
             restart_time=0,
             convergence=True,
             lindemann_index=0.05
@@ -55,7 +55,7 @@ def pmf_output():
             coordinate=1.4,
             temperature=400.,
             task_path=".",
-            last_frame_path="last_frame.xyz",
+            last_frame_path="test_last_frame.xyz",
             restart_time=0,
             convergence=True,
             lindemann_index=0.05
@@ -64,7 +64,7 @@ def pmf_output():
             coordinate=1.4,
             temperature=600.,
             task_path=".",
-            last_frame_path="last_frame.xyz",
+            last_frame_path="test_last_frame.xyz",
             restart_time=0,
             convergence=True,
             lindemann_index=0.3
@@ -73,7 +73,7 @@ def pmf_output():
             coordinate=1.4,
             temperature=700.,
             task_path=".",
-            last_frame_path="last_frame.xyz",
+            last_frame_path="test_last_frame.xyz",
             restart_time=0,
             convergence=False
         ),
@@ -123,7 +123,7 @@ async def mock_task_pmf_calculation(
         coordinate=coordinate,
         temperature=temperature,
         task_path=".",
-        last_frame_path="last_frame.xyz",
+        last_frame_path="test_last_frame.xyz",
         restart_time=0
     )
     await pmf_task_outputs.add_item(task_output)
@@ -357,7 +357,7 @@ async def mock_convergence_test_lagrange_multiplier(
 ):
     import asyncio
     import random
-    from catflow.tasker.utils.statistics import block_average
+    from catflow.utils.statistics import block_average
 
     np.random.seed(114514)
     fluctuation = (np.random.rand(40000) - 0.5) * 1e-3

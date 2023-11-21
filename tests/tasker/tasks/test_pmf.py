@@ -5,8 +5,8 @@ import math
 import numpy as np
 from pathlib import Path
 
-from catflow.tasker.utils.config import load_yaml_configs
-from catflow.tasker.utils.cp2k import Cp2kInputToDict
+from catflow.utils.config import load_yaml_configs
+from catflow.utils.cp2k import Cp2kInputToDict
 from catflow.tasker.tasks.pmf import PMFTask, DPPMFTask
 from dpdispatcher.submission import Submission, Task, Resources
 from dpdispatcher.machine import Machine
@@ -21,7 +21,7 @@ def pmf_datadir(shared_datadir):
 def pmf_task(pmf_datadir, tmp_path):
     config = load_yaml_configs(pmf_datadir / "workflow_settings.yml")
     config["work_path"] = str(tmp_path)
-    config["init_structure_path"] = str(pmf_datadir / "init.xyz")
+    config["init_structure_path"] = str(pmf_datadir / "test_init.xyz")
     return PMFTask(**config)
 
 class MockJobFactory(object):

@@ -7,10 +7,10 @@ import dpdata
 import numpy as np
 import matplotlib.pyplot as plt
 from ase.io import read, write
-from catflow.analyzer.utils.log_factory import logger
-from catflow.analyzer.tesla.dpgen.base import DPTask
+from catflow.utils.log_factory import logger
+from catflow.analyzer.tesla.dpgen.task import DPTask
 from catflow.tasker.resources.submit import JobFactory
-from catflow.tasker.utils.lammps import \
+from catflow.utils.lammps import \
     convert_init_structures, check_keywords, \
     parse_template, substitute_keywords
 
