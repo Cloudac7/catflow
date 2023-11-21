@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "catflow"
+name = "catflow-premium"
 version = "0.4.0"
 description = "Analyzing tool for deep learning based chemical research."
 authors = ["Cloudac7 <scottryuu@outlook.com>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/cloudac7/catflow"
+repository = "https://github.com/cloudac7/CatFlow-Premium"
 packages = [{include = "catflow"}]
 
 [tool.poetry.dependencies]
