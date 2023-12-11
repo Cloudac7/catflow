@@ -34,7 +34,7 @@ $$< q_i >_{atoms} = \frac{1}{N(N-1)} \frac{\sqrt{<r^2_{ij}> - <r_{ij}>^2}}{<r_{i
 这里参照 Welford 算法[[2]](#2)计算方差，简单实现了 Lindemann Index的计算方法，调用如下：
 
 ```python
-lpf = c.lindemann_per_frames(u, select_lang="name Pt")
+lpf = c.lindemann_per_frames(u, select_cluster="name Pt")
 ```
 
 即可得到关于整条轨迹Lindemann index的变化趋势，对 `lpf` 作图，可以帮助判断相变情况以及确定MD是否收敛。
