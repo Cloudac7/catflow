@@ -186,9 +186,10 @@ class FreeEnergySurface:
 
             local_fes = fes - np.min(fes)
             exp_local_fes = np.exp(-local_fes / (kb * temp))
+            exp_local_fes_bias = np.exp(-local_fes / (kb * temp * bias_factor))
 
             numerator = np.sum(exp_local_fes)
-            denominator = np.sum(exp_local_fes / bias_factor)
+            denominator = np.sum(exp_local_fes_bias)
             e_beta_c[line] = numerator / denominator
         if return_fes:
             fes -= np.min(fes)
