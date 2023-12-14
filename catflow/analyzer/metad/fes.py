@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from copy import deepcopy
 from joblib import Parallel, delayed
-from typing import Optional, List, Union, Dict, Any
+from typing import Optional, List, Tuple, Union, Dict, Any
 from itertools import product
 from numpy.typing import ArrayLike
 from matplotlib.colors import Colormap
@@ -196,6 +196,85 @@ class FreeEnergySurface:
             return e_beta_c, fes
         else:
             return e_beta_c
+        
+    def get_minima_profile(
+        self,
+        resolution: Optional[int] = None,
+        time_min: Optional[int] = None,
+        time_max: Optional[int] = None,
+        local_minima_mask: Optional[Union[slice, Tuple[slice]]] = None,
+        return_fes: bool = False
+    ):
+        """Function used internally for summing hills in Hills object with the fast Bias Sum Algorithm. 
+        From which could also be quick to get e_beta_c for reweighting.
+
+        Args:
+            resolution (int, optional): \
+                The resolution of the free energy surface. Defaults to 256.
+            time_min (int): The starting time step of simulation. Defaults to 0.
+            time_max (int, optional): The ending time step of simulation. Defaults to None.
+            reweighting (bool, optional): \
+                If True, the function of c(t) will be calculated and stored in `self.e_beta_c`.
+                Defaults to False.
+            kb (float, optional): The Boltzmann Constant in the energy unit. Defaults to 8.314e-3.
+            temp (float, optional): The temperature of the simulation in Kelvins. Defaults to 300.0.
+            bias_factor (float, optional): The bias factor used in the simulation. Defaults to 15.0.
+        """
+
+        if resolution is None:
+            resolution = self.res
+
+        if self.hills is None:
+            raise ValueError("Hills not loaded yet.")
+
+        if time_min is None:
+            time_min = 0
+
+        if time_max is None:
+            time_max = len(self.hills.cv[:, 0])
+
+        cvs = self.cvs
+
+        cv_min = self.cv_min
+        cv_max = self.cv_max
+        if self.cv_fes_range is None:
+            self.cv_fes_range = cv_max - cv_min
+        cv_fes_range = self.cv_fes_range
+
+        cv_bins = np.ceil(
+            (self.hills.cv[time_min:time_max, :cvs] -
+             cv_min) * resolution / cv_fes_range
+        ).T.astype(int)
+
+        sigma = self.hills.sigma[:cvs, 0]
+        sigma_res = (sigma * resolution) / (cv_max - cv_min)
+
+        gauss_res = (8 * sigma_res).astype(int)
+        for i, _ in enumerate(gauss_res):
+            if _ % 2 == 0:
+                gauss_res[i] += 1
+
+        gauss = self._gauss_kernel(gauss_res, sigma_res)
+        gauss_center = np.array(gauss.shape) // 2
+
+        fes = np.zeros([resolution] * cvs)
+        local_minima = np.zeros(len(cv_bins[0]))
+
+        for line in range(len(cv_bins[0])):
+            fes_index_to_edit, delta_fes = \
+                self._sum_bias(
+                    gauss_center, gauss, cv_bins, line, cvs, resolution
+                )
+            fes[fes_index_to_edit] += delta_fes
+
+            local_fes = fes - np.min(fes)
+            local_minima[line] = np.min(local_fes[local_minima_mask])
+
+        if return_fes:
+            fes -= np.min(fes)
+            return local_minima, fes
+        else:
+            return local_minima
 
     def _gauss_kernel(self, gauss_res, sigma_res):
 
@@ -243,7 +322,8 @@ class FreeEnergySurface:
         cv_indexes: Optional[List[int]] = None,
         resolution: int = 64,
         kb: float = 8.314e-3,
-        temp: float = 300.0
+        temp: float = 300.0,
+        bias_index: int = 2
     ):
         """
         Reweights the free energy surface based on the given collective variables.
@@ -273,7 +353,7 @@ class FreeEnergySurface:
         cv_range = np.max(cv_array)
         cv_array = np.floor((resolution - 1) * cv_array / cv_range).astype(int)
 
-        bias = colvar[:, 9]
+        bias = colvar[:, bias_index]
         probs = np.zeros([resolution] * cvs)
 
         e_beta_c = np.array(e_beta_c)
