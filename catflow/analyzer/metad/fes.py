@@ -51,7 +51,7 @@ class FreeEnergySurface:
 
     @classmethod
     def from_hills(
-        cls, 
+        cls,
         hills: Hills,
         resolution: int = 256
     ):
@@ -105,7 +105,7 @@ class FreeEnergySurface:
         fes.res = resolution
         fes.cvs = len(cv_name)
         return fes
-    
+
     def name_cv(self):
         if self.cv_name is None:
             self.cv_name = []
@@ -196,31 +196,31 @@ class FreeEnergySurface:
             return e_beta_c, fes
         else:
             return e_beta_c
-        
-    def get_minima_profile(
+
+    def get_fes_with_correction(
         self,
-        resolution: Optional[int] = None,
-        time_min: Optional[int] = None,
-        time_max: Optional[int] = None,
-        local_minima_mask: Optional[Union[slice, Tuple[slice]]] = None,
-        return_fes: bool = False
+        resolution=None,
+        time_min=None,
+        time_max=None,
+        kb: float = 8.314e-3,
+        temp: float = 300.0
     ):
-        """Function used internally for summing hills in Hills object with the fast Bias Sum Algorithm. 
-        From which could also be quick to get e_beta_c for reweighting.
+        """
+        Calculate the free energy surface (FES) with correction.
+        Using eq.12 of doi:10.1021/jp504920s to get FES with correction,
+        as error estimator of FES surface.
 
         Args:
-            resolution (int, optional): \
-                The resolution of the free energy surface. Defaults to 256.
-            time_min (int): The starting time step of simulation. Defaults to 0.
-            time_max (int, optional): The ending time step of simulation. Defaults to None.
-            reweighting (bool, optional): \
-                If True, the function of c(t) will be calculated and stored in `self.e_beta_c`.
-                Defaults to False.
-            kb (float, optional): The Boltzmann Constant in the energy unit. Defaults to 8.314e-3.
-            temp (float, optional): The temperature of the simulation in Kelvins. Defaults to 300.0.
-            bias_factor (float, optional): The bias factor used in the simulation. Defaults to 15.0.
-        """
+            resolution (int, optional): The resolution of the FES grid. Defaults to None.
+            time_min (int, optional): The minimum time index. Defaults to None.
+            time_max (int, optional): The maximum time index. Defaults to None.
+            kb (float, optional): The Boltzmann constant. Defaults to 8.314e-3.
+            temp (float, optional): The temperature. Defaults to 300.0.
+            return_fes (bool, optional): Whether to return the FES. Defaults to False.
 
+        Returns:
+            list: Returns a list containing the FES profile.
+        """
         if resolution is None:
             resolution = self.res
 
@@ -258,7 +258,8 @@ class FreeEnergySurface:
         gauss_center = np.array(gauss.shape) // 2
 
         fes = np.zeros([resolution] * cvs)
-        local_minima = np.zeros(len(cv_bins[0]))
+        fes_corrected = []
+        d_cv = np.prod(cv_fes_range / resolution)
 
         for line in range(len(cv_bins[0])):
             fes_index_to_edit, delta_fes = \
@@ -266,24 +267,22 @@ class FreeEnergySurface:
                     gauss_center, gauss, cv_bins, line, cvs, resolution
                 )
             fes[fes_index_to_edit] += delta_fes
+            correction = np.sum(np.exp(-fes)) * d_cv
 
-            local_fes = fes - np.min(fes)
-            local_minima[line] = np.min(local_fes[local_minima_mask])
+            fes_corrected.append(fes + kb * temp * np.log(correction))
 
-        if return_fes:
-            fes -= np.min(fes)
-            return local_minima, fes
-        else:
-            return local_minima
+        self.fes = fes_corrected[-1]
+        fes_corrected = np.array(fes_corrected)
+        return fes_corrected
 
     def _gauss_kernel(self, gauss_res, sigma_res):
 
         gauss_center = gauss_res // 2
         grids = np.indices(gauss_res)
-        
+
         grids_flatten = grids.reshape(gauss_res.shape[0], -1).T
         exponent = np.sum(
-            -(grids_flatten - gauss_center)**2 / (2 * sigma_res**2), 
+            -(grids_flatten - gauss_center)**2 / (2 * sigma_res**2),
             axis=1
         )
         gauss = -np.exp(exponent.T.reshape(gauss_res))
@@ -563,10 +562,11 @@ class FreeEnergySurface:
             logger.info(
                 f"Number of bins must be an integer, it will be set to {nbins}.")
         if self.res % nbins != 0:
-            raise ValueError("Resolution of FES must be divisible by number of bins.")
+            raise ValueError(
+                "Resolution of FES must be divisible by number of bins.")
         if nbins > self.res/2:
             raise ValueError("Number of bins is too high.")
-        
+
         bin_size = int(self.res/nbins)
 
         for index in np.ndindex(tuple([nbins] * self.cvs)):
@@ -624,7 +624,8 @@ class FreeEnergySurface:
                             converted_index)]
 
                 if (around > bin_min).all():
-                    min_cv = (((min_cv_b+0.5)/self.res) * (cv_max-cv_min))+cv_min
+                    min_cv = (((min_cv_b+0.5)/self.res)
+                              * (cv_max-cv_min))+cv_min
                     local_minima = np.concatenate([
                         [np.round(bin_min, 6)], min_cv_b, np.round(min_cv, 6)
                     ])
@@ -739,7 +740,7 @@ class FreeEnergySurface:
             fig.savefig(png_name)
 
         return fig, ax
-    
+
     def plot_minima(self, mark_color="white", png_name=None, **kwargs):
         fig, ax = PlottingFES.plot_minima(self, mark_color, **kwargs)
         if png_name is not None:
@@ -805,16 +806,17 @@ class PlottingFES:
 
             if xlabel == None:
                 ax.set_xlabel(
-                    f'CV1 - {fes.cv_name[0]}', size=label_size) # type: ignore
+                    f'CV1 - {fes.cv_name[0]}', size=label_size)  # type: ignore
             else:
                 ax.set_xlabel(xlabel, size=label_size)
             if ylabel == None:
                 ax.set_ylabel(
-                    f'CV2 - {fes.cv_name[1]}', size=label_size) # type: ignore
+                    f'CV2 - {fes.cv_name[1]}', size=label_size)  # type: ignore
             else:
                 ax.set_ylabel(ylabel, size=label_size)
             if zlabel == None:
-                ax.set_zlabel(f'Free energy ({energy_unit})', size=label_size) # type: ignore
+                # type: ignore
+                ax.set_zlabel(f'Free energy ({energy_unit})', size=label_size)
             else:
                 ax.set_zlabel(zlabel, size=label_size)  # type: ignore
         else:
@@ -842,7 +844,7 @@ class PlottingFES:
         ax.plot(X, fes.fes)
         if xlabel == None:
             ax.set_xlabel(
-                f'CV1 - {fes.cv_name[0]}') # type: ignore
+                f'CV1 - {fes.cv_name[0]}')  # type: ignore
         else:
             ax.set_xlabel(xlabel)
         if ylabel == None:
@@ -923,7 +925,7 @@ class PlottingFES:
         """
         if fes_obj.minima is None:
             raise ValueError("No minima found.")
-        
+
         fig, ax = fes_obj.plot(**kwargs)
 
         free_energy_range = fes_obj.fes.max() - fes_obj.fes.min()
@@ -931,10 +933,10 @@ class PlottingFES:
         if fes_obj.cvs == 1:
             for m in range(len(fes_obj.minima.index)):
                 ax.text(
-                    float(fes_obj.minima.iloc[m, 3]), 
-                    float(fes_obj.minima.iloc[m, 1])+free_energy_range*0.05, 
+                    float(fes_obj.minima.iloc[m, 3]),
+                    float(fes_obj.minima.iloc[m, 1])+free_energy_range*0.05,
                     fes_obj.minima.iloc[m, 0],
-                    horizontalalignment='center', 
+                    horizontalalignment='center',
                     c=mark_color,
                     verticalalignment='bottom'
                 )
@@ -942,11 +944,11 @@ class PlottingFES:
         elif fes_obj.cvs == 2:
             for m in range(len(fes_obj.minima.index)):
                 ax.text(
-                    float(fes_obj.minima.iloc[m, 4]), 
-                    float(fes_obj.minima.iloc[m, 5]), 
+                    float(fes_obj.minima.iloc[m, 4]),
+                    float(fes_obj.minima.iloc[m, 5]),
                     fes_obj.minima.iloc[m, 0],
                     horizontalalignment='center',
-                    verticalalignment='center', 
+                    verticalalignment='center',
                     c=mark_color
                 )
         return fig, ax
