@@ -267,7 +267,7 @@ class FreeEnergySurface:
                     gauss_center, gauss, cv_bins, line, cvs, resolution
                 )
             fes[fes_index_to_edit] += delta_fes
-            correction = np.sum(np.exp(-fes)) * d_cv
+            correction = np.sum(np.exp(- fes / kb / temp)) * d_cv
 
             fes_corrected.append(fes + kb * temp * np.log(correction))
 
