@@ -197,13 +197,14 @@ class FreeEnergySurface:
         else:
             return e_beta_c
 
-    def get_fes_with_correction(
+    def save_fes_with_correction(
         self,
         resolution=None,
         time_min=None,
         time_max=None,
         kb: float = 8.314e-3,
-        temp: float = 300.0
+        temp: float = 300.0,
+        filename: Optional[str] = "fes_profile.hdf5"
     ):
         """
         Calculate the free energy surface (FES) with correction.
@@ -221,6 +222,8 @@ class FreeEnergySurface:
         Returns:
             list: Returns a list containing the FES profile.
         """
+        import h5py
+
         if resolution is None:
             resolution = self.res
 
@@ -258,22 +261,34 @@ class FreeEnergySurface:
         gauss_center = np.array(gauss.shape) // 2
 
         fes = np.zeros([resolution] * cvs)
-        fes_corrected = []
         d_cv = np.prod(cv_fes_range / resolution)
+        fes_corrected = fes
 
-        for line in range(len(cv_bins[0])):
-            fes_index_to_edit, delta_fes = \
-                self._sum_bias(
-                    gauss_center, gauss, cv_bins, line, cvs, resolution
+        with h5py.File(filename, "w") as f:
+            for line in range(len(cv_bins[0])):
+                fes_index_to_edit, delta_fes = \
+                    self._sum_bias(
+                        gauss_center, gauss, cv_bins, line, cvs, resolution
+                    )
+                fes[fes_index_to_edit] += delta_fes
+                correction = np.sum(np.exp(- fes / kb / temp)) * d_cv
+                fes_corrected = fes + kb * temp * np.log(correction)
+                f.create_dataset(
+                    f"{line}", data=fes_corrected, compression="gzip"
                 )
-            fes[fes_index_to_edit] += delta_fes
-            correction = np.sum(np.exp(- fes / kb / temp)) * d_cv
 
-            fes_corrected.append(fes + kb * temp * np.log(correction))
-
-        self.fes = fes_corrected[-1]
-        fes_corrected = np.array(fes_corrected)
+        self.fes = fes_corrected
         return fes_corrected
+    
+    def load_fes_with_correction(self, filename: str):
+        import h5py
+
+        fes_data = []
+        with h5py.File(filename, 'r') as f:
+            for dataset_name in f.keys():
+                dataset = f[dataset_name]
+                fes_data.append(dataset[:]) # type: ignore
+        return fes_data
 
     def _gauss_kernel(self, gauss_res, sigma_res):
 
