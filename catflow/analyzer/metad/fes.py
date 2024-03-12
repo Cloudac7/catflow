@@ -11,6 +11,7 @@ from matplotlib.colors import Colormap
 
 from catflow.analyzer.metad.hills import Hills
 from catflow.analyzer.graph.plotting import canvas_style
+from catflow.utils.config import parse_slice_string
 from catflow.utils.log_factory import logger
 
 
@@ -166,10 +167,8 @@ class FreeEnergySurface:
         sigma = self.hills.sigma[:cvs, 0]
         sigma_res = (sigma * resolution) / (cv_max - cv_min)
 
-        gauss_res = (8 * sigma_res).astype(int)
-        for i, _ in enumerate(gauss_res):
-            if _ % 2 == 0:
-                gauss_res[i] += 1
+        gauss_res = np.ceil(8 * sigma_res).astype(int)
+        gauss_res[gauss_res % 2 == 0] += 1
 
         gauss = self._gauss_kernel(gauss_res, sigma_res)
         gauss_center = np.array(gauss.shape) // 2
@@ -223,6 +222,7 @@ class FreeEnergySurface:
             list: Returns a list containing the FES profile.
         """
         import h5py
+        from tqdm import trange
 
         if resolution is None:
             resolution = self.res
@@ -252,20 +252,23 @@ class FreeEnergySurface:
         sigma = self.hills.sigma[:cvs, 0]
         sigma_res = (sigma * resolution) / (cv_max - cv_min)
 
-        gauss_res = (8 * sigma_res).astype(int)
-        for i, _ in enumerate(gauss_res):
-            if _ % 2 == 0:
-                gauss_res[i] += 1
+        gauss_res = np.ceil(8 * sigma_res).astype(int)
+        gauss_res[gauss_res % 2 == 0] += 1
 
         gauss = self._gauss_kernel(gauss_res, sigma_res)
         gauss_center = np.array(gauss.shape) // 2
 
         fes = np.zeros([resolution] * cvs)
         d_cv = np.prod(cv_fes_range / resolution)
-        fes_corrected = fes
 
         with h5py.File(filename, "w") as f:
-            for line in range(len(cv_bins[0])):
+            fes_data = f.create_dataset(
+                "fes_data", 
+                shape=(len(cv_bins[0]), *fes.shape), 
+                dtype=np.float64, 
+                chunks=(1, *fes.shape)
+            )
+            for line in trange(len(cv_bins[0])):
                 fes_index_to_edit, delta_fes = \
                     self._sum_bias(
                         gauss_center, gauss, cv_bins, line, cvs, resolution
@@ -273,22 +276,23 @@ class FreeEnergySurface:
                 fes[fes_index_to_edit] += delta_fes
                 correction = np.sum(np.exp(- fes / kb / temp)) * d_cv
                 fes_corrected = fes + kb * temp * np.log(correction)
-                f.create_dataset(
-                    f"{line}", data=fes_corrected, compression="gzip"
-                )
+                fes_data[line] = fes_corrected
+        del fes, d_cv, fes_corrected
 
-        self.fes = fes_corrected
-        return fes_corrected
-    
-    def load_fes_with_correction(self, filename: str):
+    def load_fes_with_correction(
+        self, 
+        filename: str,
+        slice_string: Optional[str] = None
+    ):
         import h5py
 
-        fes_data = []
         with h5py.File(filename, 'r') as f:
-            for dataset_name in f.keys():
-                dataset = f[dataset_name]
-                fes_data.append(dataset[:]) # type: ignore
-        return fes_data
+            dataset = f["fes_data"]
+            if slice_string:
+                data_slice = parse_slice_string(slice_string)
+                return dataset[data_slice] # type: ignore
+            else:
+                return dataset[:] # type: ignore
 
     def _gauss_kernel(self, gauss_res, sigma_res):
 

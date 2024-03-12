@@ -27,3 +27,10 @@ def dump_yaml_config(path: Path, config: BaseModel):
     data = yaml.load(config.json())
     with open(path, 'w') as f:
         yaml.dump(data, f)
+
+def parse_slice_string(slice_string: str) -> slice:
+    parts = slice_string.split(":")
+    start = int(parts[0]) if parts[0] else None
+    stop = int(parts[1]) if parts[1] else None
+    step = int(parts[2]) if parts[2] else None
+    return slice(start, stop, step)
