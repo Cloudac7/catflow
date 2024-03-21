@@ -14,6 +14,8 @@ from catflow.analyzer.graph.plotting import canvas_style
 from catflow.utils.config import parse_slice_string
 from catflow.utils.log_factory import logger
 
+dp2_cutoff_a = 1.0/(1.0 - np.exp(-6.25))
+dp2_cutoff_b = - np.exp(-6.25)/(1.0 - np.exp(-6.25))
 
 class FreeEnergySurface:
     """
@@ -445,8 +447,7 @@ class FreeEnergySurface:
 
             tmp = np.zeros(time_limit)
             tmp[dp2 < 6.25] = self.hills.heights[dp2 < 6.25] * \
-                (np.exp(-dp2[dp2 < 6.25]) *
-                 1.00193418799744762399 - 0.00193418799744762399)
+                (np.exp(-dp2[dp2 < 6.25]) * dp2_cutoff_a + dp2_cutoff_b)
             return index, -tmp.sum()
 
         indices = list(np.ndindex(fes.shape))
@@ -749,7 +750,8 @@ class FreeEnergySurface:
             fig, ax = PlottingFES._plot2d(
                 self,
                 levels=levels, cmap=cmap, image_size=image_size, dpi=dpi,
-                xlabel=xlabel, ylabel=ylabel, **kwargs
+                xlabel=xlabel, ylabel=ylabel, 
+                energy_unit=energy_unit, **kwargs
             )
 
         else:
