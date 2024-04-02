@@ -386,26 +386,18 @@ class FreeEnergySurface:
 
         return reweighted_fes
 
-    def _calculate_dp2(self, index, time_min, time_max):
-        if self.hills is None:
-            raise ValueError("Hills not loaded yet.")
+    def _calculate_dp2(self, index, cv, sigma, cv_min, cv_fes_range):
 
-        cv_min = self.cv_min
-        if self.cv_fes_range is None:
-            self.cv_fes_range = self.cv_max - self.cv_min
-        cv_fes_range = self.cv_fes_range
-        cvs = self.cvs
-
-        dp2 = np.zeros(time_max - time_min)
-        for i, cv_idx in enumerate(range(cvs)):
+        dp2 = np.zeros(cv.shape[0])
+        for cv_idx in range(cv.shape[1]):
             dist_cv = \
-                self.hills.cv[time_min:time_max, cv_idx] - \
-                (cv_min[i] + index[i] * cv_fes_range[i] / self.res)
+                cv[:, cv_idx] - \
+                (cv_min[cv_idx] + index[cv_idx] * cv_fes_range[cv_idx] / self.res)
             if self.periodic[cv_idx]:
-                dist_cv[dist_cv < -0.5*cv_fes_range[i]] += cv_fes_range[i]
-                dist_cv[dist_cv > +0.5*cv_fes_range[i]] -= cv_fes_range[i]
+                dist_cv[dist_cv < -0.5*cv_fes_range[cv_idx]] += cv_fes_range[cv_idx]
+                dist_cv[dist_cv > +0.5*cv_fes_range[cv_idx]] -= cv_fes_range[cv_idx]
             dp2_local = dist_cv ** 2 / \
-                (2 * self.hills.sigma[cv_idx][0] ** 2)
+                (2 * sigma[:, cv_idx] ** 2)
             dp2 += dp2_local
 
         return dp2
@@ -415,7 +407,7 @@ class FreeEnergySurface:
         resolution: Optional[int],
         time_min: Optional[int] = None,
         time_max: Optional[int] = None,
-        n_workers: int = 2
+        n_workers: int = -1
     ):
         """
         Function internally used to sum Hills in the same way as Plumed `sum_hills`. 
@@ -442,17 +434,30 @@ class FreeEnergySurface:
             time_max = len(self.hills.cv[:, 0])
         time_limit = time_max - time_min
 
-        def calculate_fes(index):
-            dp2 = self._calculate_dp2(index, time_min, time_max)
+        if self.hills is None:
+            raise ValueError("Hills not loaded yet.")
+
+        cv_min = self.cv_min
+        if self.cv_fes_range is None:
+            self.cv_fes_range = self.cv_max - self.cv_min
+        cv_fes_range = self.cv_fes_range
+        cvs = self.cvs
+        cv = self.hills.cv[time_min:time_max, :]
+        sigma = self.hills.sigma[time_min:time_max, :]
+        heights = self.hills.heights
+
+        def calculate_fes(index, cv, sigma, cv_min, cv_fes_range, heights):
+            dp2 = self._calculate_dp2(index, cv, sigma, cv_min, cv_fes_range)
 
             tmp = np.zeros(time_limit)
-            tmp[dp2 < 6.25] = self.hills.heights[dp2 < 6.25] * \
+            tmp[dp2 < 6.25] = heights[dp2 < 6.25] * \
                 (np.exp(-dp2[dp2 < 6.25]) * dp2_cutoff_a + dp2_cutoff_b)
             return index, -tmp.sum()
 
-        indices = list(np.ndindex(fes.shape))
         results = Parallel(n_jobs=n_workers)(
-            delayed(calculate_fes)(index) for index in indices
+            delayed(calculate_fes)(
+                index, cv, sigma, cv_min, cv_fes_range, heights
+            ) for index in np.ndindex(fes.shape)
         )
         if results is not None:
             for index, value in results:

@@ -28,7 +28,7 @@ class CllTask(BaseTask):
         """
         super().__init__(path)
         config_data = load_yaml_files(*config_files)
-        self.config = CllWorkflowConfig.parse_obj(config_data)   
+        self.config = CllWorkflowConfig.model_validate(config_data)   
 
     @classmethod
     def from_dict(cls, dp_task_dict: dict):
