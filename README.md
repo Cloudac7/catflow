@@ -19,7 +19,7 @@ As is known to all, cat is fluid and thus cat flows. 🐱
 To install, clone the repository:
 
 ```
-git clone https://github.com/cloudac7/catflow-premium.git
+git clone https://github.com/cloudac7/catflow.git
 ```
 
 and then install with `pip`:
