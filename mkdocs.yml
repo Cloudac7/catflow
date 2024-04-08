@@ -1,7 +1,7 @@
 site_name: catflow
-site_url: https://cloudac7.github.io/catflow
-repo_name: cloudac7/catflow
-repo_url: https://github.com/cloudac7/catflow
+site_url: https://wiki.cheng-group.net/catflow
+repo_name: chenggroup/catflow
+repo_url: https://github.com/chenggroup/catflow
 
 nav:
 - Welcome: index.md
