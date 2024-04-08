@@ -1,6 +1,6 @@
 # CatFlow
 
-> Part of Analyzer is published here and Tasker is to be open.
+> Parts of the code to be open source.
 
 [![Python package](https://github.com/Cloudac7/CatFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Cloudac7/CatFlow/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/Cloudac7/CatFlow/badge.svg?branch=master)](https://coveralls.io/github/Cloudac7/CatFlow?branch=master)
@@ -21,7 +21,7 @@ As is known to all, cat is fluid and thus cat flows. 🐱
 To install, clone the repository:
 
 ```
-git clone https://github.com/cloudac7/catflow.git
+git clone https://github.com/chenggroup/catflow.git
 ```
 
 and then install with `pip`:
