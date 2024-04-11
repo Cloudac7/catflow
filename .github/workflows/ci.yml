@@ -54,3 +54,8 @@ jobs:
         run: |
           poetry run coverage run --source=./catflow -m pytest -v tests/
           poetry run coverage report
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: chenggroup/catflow
