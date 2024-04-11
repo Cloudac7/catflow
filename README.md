@@ -2,8 +2,8 @@
 
 > Parts of the code to be open source.
 
-[![Python package](https://github.com/Cloudac7/CatFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Cloudac7/CatFlow/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/Cloudac7/CatFlow/badge.svg?branch=master)](https://coveralls.io/github/Cloudac7/CatFlow?branch=master)
+[![Python package](https://github.com/chenggroup/catflow/actions/workflows/ci.yml/badge.svg)](https://github.com/chenggroup/catflow/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/chenggroup/catflow/graph/badge.svg?token=NGFDZX7WDO)](https://codecov.io/gh/chenggroup/catflow)
 
 
 Machine learning aided catalysis reaction free energy calculation and post-analysis workflow, thus, analyzer for catalysis.
