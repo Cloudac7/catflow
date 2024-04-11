@@ -4,9 +4,11 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
-def block_average(data: ArrayLike, block_size: int, axis: int = 0) -> Tuple[float, float]:
+def block_average(data: ArrayLike, block_size: int, axis: int = 0):
+    reshape_flag = False
     data = np.array(data)
     if data.ndim == 1:
+        reshape_flag = True
         data = np.reshape(data, (-1, 1))  # Reshape data into a 2D array
     N_b = data.shape[axis] // block_size
     if N_b == 0:
@@ -21,6 +23,9 @@ def block_average(data: ArrayLike, block_size: int, axis: int = 0) -> Tuple[floa
     blocked_data = np.mean(reshaped_data, axis=axis+1)
     mean = np.mean(blocked_data, axis=axis)
     var = np.std(blocked_data, ddof=1, axis=axis) / np.sqrt(N_b)
+    if reshape_flag:
+        mean = mean[0]
+        var = var[0]
     return mean, var
 
 
