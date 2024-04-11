@@ -9,7 +9,7 @@ repository = "https://github.com/chenggroup/CatFlow"
 packages = [{include = "catflow"}]
 
 [tool.poetry.dependencies]
-python = "<3.12,>=3.8"
+python = "^3.9"
 ase = "^3.21.1"
 click = "*"
 dpdata = "*"
@@ -21,7 +21,7 @@ numpy = "<1.24,>=1.18"
 pandas = "^1.3.3"
 dscribe = "^1.2.2"
 mdanalysis = "^2.2"
-scipy = "^1.10.1"
+scipy = "^1.10"
 seaborn = "^0.12.2"
 pymatgen = "^2023.5.10"
 ai2-kit = ">=0.9.0"
