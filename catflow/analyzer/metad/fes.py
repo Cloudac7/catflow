@@ -10,12 +10,14 @@ from numpy.typing import ArrayLike
 from matplotlib.colors import Colormap
 
 from catflow.analyzer.metad.hills import Hills
+from catflow.analyzer.metad.colvar import Colvar
 from catflow.analyzer.graph.plotting import canvas_style
 from catflow.utils.config import parse_slice_string
 from catflow.utils.log_factory import logger
 
 dp2_cutoff_a = 1.0/(1.0 - np.exp(-6.25))
 dp2_cutoff_b = - np.exp(-6.25)/(1.0 - np.exp(-6.25))
+
 
 class FreeEnergySurface:
     """
@@ -30,7 +32,7 @@ class FreeEnergySurface:
     Args:
         hills (Hills): The Hills object used for computing the free energy surface.
         resolution (int, optional): \
-            The resolution of the free energy surface. Defaults to 256.
+            The resolution of the free energy surface. Defaults to 128.
         time_min (int): The starting time step of simulation. Defaults to 0.
         time_max (int, optional): The ending time step of simulation. Defaults to None.
     """
@@ -40,15 +42,16 @@ class FreeEnergySurface:
     cv_min: np.ndarray
     cv_max: np.ndarray
     periodic: np.ndarray
-    resolution: int = 256
+    resolution: int = 128
     hills: Optional[Hills] = None
+    colvar: Optional[Colvar] = None
     cv_fes_range: Optional[np.ndarray] = None
     cv_name: Optional[List[str]] = None
     minima: Optional[pd.DataFrame] = None
 
     def __init__(
         self,
-        resolution: int = 256
+        resolution: int = 128
     ):
         self.res = resolution
 
@@ -56,37 +59,86 @@ class FreeEnergySurface:
     def from_hills(
         cls,
         hills: Hills,
-        resolution: int = 256
+        resolution: int = 128
     ):
         """Generate a FES object from a Hills object."""
         fes = cls(resolution=resolution)
-
         fes.cvs = hills.cvs
-
         fes.hills = hills
         fes.periodic = hills.periodic
         fes.cv_name = hills.cv_name
-
-        fes.generate_cv_map()
+        fes.generate_cv_map(typ="hills")
 
         return fes
 
-    def generate_cv_map(self):
+    @classmethod
+    def from_colvar(
+        cls,
+        colvar: Colvar,
+        cv_name: Union[str, List[str]],
+        periodic: Union[bool, List[bool]] = False,
+        cv_per: Optional[List[List[float]]] = None,
+        resolution: int = 128
+    ):
+        fes = cls(resolution=resolution)
+        if isinstance(cv_name, str):
+            cv_name = [cv_name]
+        fes.cvs = len(cv_name)
+        fes.cv_name = cv_name
+        fes.colvar = colvar
+        fes.cv_min = np.min(colvar.colvars[cv_name].to_numpy(), axis=0)
+        fes.cv_max = np.max(colvar.colvars[cv_name].to_numpy(), axis=0)
+        if isinstance(periodic, bool):
+            fes.periodic = np.array([periodic] * fes.cvs, dtype=bool)
+        else:
+            fes.periodic = np.array(periodic[:fes.cvs], dtype=bool)
+
+        for i in range(fes.cvs):
+            if fes.periodic[i]:
+                if cv_per == None:
+                    raise ValueError(
+                        "cv_per has to be provided for each periodic CV"
+                    )
+                try:
+                    if cv_per[i][0] <= cv_per[i][1]:
+                        fes.cv_min[i] = cv_per[i][0]
+                        fes.cv_max[i] = cv_per[i][1]
+                except IndexError:
+                    raise ValueError(
+                        "cv_per has to be provided for each periodic CV"
+                    )
+
+        fes.generate_cv_map(typ="colvar")
+
+        return fes
+
+    def generate_cv_map(self, typ="hills"):
         """generate CV map"""
-        if self.hills is not None:
-            cv_min = deepcopy(self.hills.cv_min)
-            cv_max = deepcopy(self.hills.cv_max)
-            cv_range = cv_max - cv_min
-            self.cv_range = cv_range
+        if typ == "hills":
+            if self.hills is None:
+                raise ValueError("Hills not loaded yet.")
+            else:
+                cv_min = self.hills.cv_min
+                cv_max = self.hills.cv_max
+        elif typ == "colvar":
+            if self.colvar is None:
+                raise ValueError("Colvar not loaded yet.")
+            else:
+                cv_min = self.cv_min
+                cv_max = self.cv_max
+        else:
+            raise ValueError("Invalid type.")
+        cv_range = cv_max - cv_min
+        self.cv_range = cv_range
 
-            cv_min[~self.periodic] -= cv_range[~self.periodic] * 0.15
-            cv_max[~self.periodic] += cv_range[~self.periodic] * 0.15
-            cv_fes_range = np.abs(cv_max - cv_min)
+        cv_min[~self.periodic] -= cv_range[~self.periodic] * 0.15
+        cv_max[~self.periodic] += cv_range[~self.periodic] * 0.15
+        cv_fes_range = np.abs(cv_max - cv_min)
 
-            # generate remapped cv_min and cv_max
-            self.cv_min = cv_min
-            self.cv_max = cv_max
-            self.cv_fes_range = cv_fes_range
+        # generate remapped cv_min and cv_max
+        self.cv_min = cv_min
+        self.cv_max = cv_max
+        self.cv_fes_range = cv_fes_range
 
     @classmethod
     def from_array(
@@ -96,7 +148,8 @@ class FreeEnergySurface:
         cv_max: ArrayLike,
         periodic: ArrayLike,
         cv_name: List[str],
-        resolution: int = 256
+        cv_per: Optional[List[List[float]]] = None,
+        resolution: int = 128
     ):
         fes = cls(resolution=resolution)
         fes.fes = np.array(fes_array)
@@ -107,6 +160,22 @@ class FreeEnergySurface:
         fes.cv_name = cv_name
         fes.res = resolution
         fes.cvs = len(cv_name)
+
+        for i in range(fes.cvs):
+            if fes.periodic[i]:
+                if cv_per == None:
+                    raise ValueError(
+                        "cv_per has to be provided for each periodic CV"
+                    )
+                try:
+                    if cv_per[i][0] <= cv_per[i][1]:
+                        fes.cv_min[i] = cv_per[i][0]
+                        fes.cv_max[i] = cv_per[i][1]
+                except IndexError:
+                    raise ValueError(
+                        "cv_per has to be provided for each periodic CV"
+                    )
+
         return fes
 
     def name_cv(self):
@@ -130,7 +199,7 @@ class FreeEnergySurface:
 
         Args:
             resolution (int, optional): \
-                The resolution of the free energy surface. Defaults to 256.
+                The resolution of the free energy surface. Defaults to 128.
             time_min (int): The starting time step of simulation. Defaults to 0.
             time_max (int, optional): The ending time step of simulation. Defaults to None.
             reweighting (bool, optional): \
@@ -265,9 +334,9 @@ class FreeEnergySurface:
 
         with h5py.File(filename, "w") as f:
             fes_data = f.create_dataset(
-                "fes_data", 
-                shape=(len(cv_bins[0]), *fes.shape), 
-                dtype=np.float64, 
+                "fes_data",
+                shape=(len(cv_bins[0]), *fes.shape),
+                dtype=np.float64,
                 chunks=(1, *fes.shape)
             )
             for line in trange(len(cv_bins[0])):
@@ -282,7 +351,7 @@ class FreeEnergySurface:
         del fes, d_cv, fes_corrected
 
     def load_fes_with_correction(
-        self, 
+        self,
         filename: str,
         slice_string: Optional[str] = None
     ):
@@ -292,9 +361,9 @@ class FreeEnergySurface:
             dataset = f["fes_data"]
             if slice_string:
                 data_slice = parse_slice_string(slice_string)
-                return dataset[data_slice] # type: ignore
+                return dataset[data_slice]  # type: ignore
             else:
-                return dataset[:] # type: ignore
+                return dataset[:]  # type: ignore
 
     def _gauss_kernel(self, gauss_res, sigma_res):
 
@@ -392,10 +461,13 @@ class FreeEnergySurface:
         for cv_idx in range(cv.shape[1]):
             dist_cv = \
                 cv[:, cv_idx] - \
-                (cv_min[cv_idx] + index[cv_idx] * cv_fes_range[cv_idx] / self.res)
+                (cv_min[cv_idx] + index[cv_idx] *
+                 cv_fes_range[cv_idx] / self.res)
             if self.periodic[cv_idx]:
-                dist_cv[dist_cv < -0.5*cv_fes_range[cv_idx]] += cv_fes_range[cv_idx]
-                dist_cv[dist_cv > +0.5*cv_fes_range[cv_idx]] -= cv_fes_range[cv_idx]
+                dist_cv[dist_cv < -0.5*cv_fes_range[cv_idx]
+                        ] += cv_fes_range[cv_idx]
+                dist_cv[dist_cv > +0.5*cv_fes_range[cv_idx]
+                        ] -= cv_fes_range[cv_idx]
             dp2_local = dist_cv ** 2 / \
                 (2 * sigma[:, cv_idx] ** 2)
             dp2 += dp2_local
@@ -414,7 +486,7 @@ class FreeEnergySurface:
 
         Args:
             resolution (int, optional): \
-                The resolution of the free energy surface. Defaults to 256.
+                The resolution of the free energy surface. Defaults to 128.
             time_min (int): The starting time step of simulation. Defaults to 0.
             time_max (int, optional): The ending time step of simulation. Defaults to None.
             n_workers (int, optional): Number of workers for parallelization. Defaults to 2.
@@ -463,6 +535,56 @@ class FreeEnergySurface:
             for index, value in results:
                 fes[index] = value
             fes -= np.min(fes)
+        self.fes = fes
+        return fes
+
+    def make_fes_reweighting(
+        self,
+        resolution: int = 128,
+        kb: float = 8.314e-3,
+        temp: float = 300.0,
+        weight_factor: float = 1.0,
+        time_min: Optional[int] = None,
+        time_max: Optional[int] = None,
+        cv_used_names: Optional[List[str]] = None
+    ):
+        from scipy.stats import gaussian_kde
+
+        kbt = kb * temp
+        beta = 1 / kbt
+        if not self.colvar:
+            raise ValueError("Colvar not loaded yet."
+                             "Please use fes.colvar = Colvar(file, bias_name) to load colvar.")
+        bias = self.colvar.colvars[self.colvar.bias_key].to_numpy(dtype=np.float64)[
+            time_min:time_max]
+        if cv_used_names:
+            if len(cv_used_names) > 2:
+                raise ValueError("Only 2 CVs are supported for reweighting.")
+            elif len(cv_used_names) == 1:
+                idx0 = self.cv_name.index(cv_used_names[0]) # type: ignore
+                grid_points = np.linspace(
+                    self.cv_min[idx0], self.cv_max[idx0], resolution) # type: ignore
+            elif len(cv_used_names) == 2:
+                idx0, idx1 = self.cv_name.index( # type: ignore
+                    cv_used_names[0]), self.cv_name.index(cv_used_names[1]) # type: ignore
+                grid_points = np.meshgrid(
+                    np.linspace(self.cv_min[idx0], # type: ignore
+                                self.cv_max[idx0], resolution), # type: ignore
+                    np.linspace(self.cv_min[idx1], # type: ignore
+                                self.cv_max[idx1], resolution) # type: ignore
+                )
+            else:
+                cv_used_names = self.cv_name[:1]  # type: ignore
+        else:
+            cv_used_names = self.cv_name[:1]  # type: ignore
+        cv = self.colvar.colvars[cv_used_names].to_numpy(dtype=np.float64)[time_min:time_max]
+        if len(cv_used_names) == 1:
+            kde = gaussian_kde(cv.flatten(), weights=weight_factor*np.exp(beta*bias))
+        elif len(cv_used_names) == 2:
+            kde = gaussian_kde(cv.T, weights=weight_factor*np.exp(beta*bias))
+        dens = kde.evaluate(grid_points)
+        fes = -kbt * np.log(dens)
+        fes -= np.min(fes)
         self.fes = fes
         return fes
 
@@ -755,7 +877,7 @@ class FreeEnergySurface:
             fig, ax = PlottingFES._plot2d(
                 self,
                 levels=levels, cmap=cmap, image_size=image_size, dpi=dpi,
-                xlabel=xlabel, ylabel=ylabel, 
+                xlabel=xlabel, ylabel=ylabel,
                 energy_unit=energy_unit, **kwargs
             )
 
