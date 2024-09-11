@@ -243,7 +243,7 @@ async def task_pmf_calculation(
             coordinate=coordinate,
             temperature=temperature,
             init_structure_path=_init_structure_path,
-            restart_time=restart_time,
+            restart_count=restart_time,
             **pmf_job_config
         )
     elif flow_input.job_type == "dp_pmf":
@@ -251,7 +251,7 @@ async def task_pmf_calculation(
             coordinate=coordinate,
             temperature=temperature,
             init_structure_path=_init_structure_path,
-            restart_time=restart_time,
+            restart_count=restart_time,
             **pmf_job_config
         )
     else:
@@ -272,21 +272,14 @@ async def task_pmf_calculation(
     await pmf_task_outputs.add_item(task_output)
 
     # check if the task is finished
-    task_finished_tag = task_run.task_path / "task_finished.tag"
-    if task_finished_tag.exists():
-        logger.info(f"Task {task_run.task_path} finished, skipped.")
-    else:
-        with ProcessPoolExecutor() as executor:
-            task_instance = task_run.generate_submission()
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                executor, task_instance.run_submission
-            )
-            logger.info(f"Task {task_run.task_path} finished.")
-            task_finished_tag.touch()
+    job = task_run.task_generate()
+
+    outputs = job.run()
 
     # last frame_path
-    last_frame_path = str(task_run.get_last_frame())
+    output = outputs[0]
+    last_frame_path = output["last_frame"]
+    
     task_output.last_frame_path = last_frame_path
     await pmf_task_outputs.add_item(task_output)
 

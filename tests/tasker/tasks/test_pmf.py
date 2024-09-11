@@ -5,6 +5,8 @@ import math
 import numpy as np
 from pathlib import Path
 
+from ai2_kit.core.executor import HpcExecutor
+
 from catflow.utils.config import load_yaml_configs
 from catflow.utils.cp2k import Cp2kInputToDict
 from catflow.tasker.tasks.pmf import PMFTask, DPPMFTask
@@ -20,56 +22,54 @@ def pmf_datadir(shared_datadir):
 @pytest.fixture
 def pmf_task(pmf_datadir, tmp_path):
     config = load_yaml_configs(pmf_datadir / "workflow_settings.yml")
+    config["command"] = "sleep 1"
     config["work_path"] = str(tmp_path)
     config["init_structure_path"] = str(pmf_datadir / "test_init.xyz")
+    config["executor"] = {
+            'queue_system': {
+                'slurm': {}  # Specify queue system
+            },
+            'work_dir': str(tmp_path),  # Specify working directory
+            'python_cmd': 'python',  # Specify python command
+        }
     return PMFTask(**config)
 
-class MockJobFactory(object):
-    def __init__(self, task_list, submission_dict, machine_name, resource_dict, **kwargs):
-        work_base = submission_dict.get('work_base', os.getcwd())
-        if 'work_base' in submission_dict:
-            submission_dict.pop('work_base', None)
-        if isinstance(task_list, list):
-            task_list = [Task(**task_dict) for task_dict in task_list]
-        elif isinstance(task_list, Task):
-            task_list = task_list
-        elif isinstance(task_list, dict):
-            task_list = Task(**task_list)
-        else:
-            raise ValueError("Task list must be a Task, task_dict or list of task_dict")
-
-        machine_dict = {
-            "batch_type": "Slurm",
-            "context_type": "LocalContext",
-            "local_root": ".",
-            "remote_root": "."
-        }
-        machine = Machine.load_from_dict(machine_dict)
-        resources = Resources.load_from_dict(resource_dict)
-
-        self.submission = Submission(
-            work_base=work_base,
-            machine=machine,
-            resources=resources,
-            task_list=task_list,
-            **submission_dict
-        )
 
 @pytest.fixture(autouse=True, scope="class")
 def randint_mock(class_mocker):
     return class_mocker.patch("random.randint", lambda x, y: 5)
 
+def process_input(self, base_dir: Path, inputs):
+    from catflow.utils.cp2k import Cp2kInput
 
-def test_pmf_task_generation(mocker, tmp_path, pmf_task: PMFTask):
+    restart_count = inputs.get('restart_count', 0)
+    task_dir = base_dir / \
+        f"task-{restart_count}-{inputs['coordinate']}-{inputs['temperature']}"
+    task_dir.mkdir(exist_ok=True)
+
+    if restart_count == 0:
+        # create new task
+        # write init.xyz
+        structure = inputs["structure"]
+        structure.write(task_dir / 'init.xyz')
+
+        # write input.inp
+        with open(task_dir / 'input.inp', 'w') as f:
+            output = Cp2kInput(params=inputs['input_dict']).render()
+            f.write(output)
+
+
+@pytest.mark.asyncio
+async def test_pmf_task_generation(mocker, tmp_path, pmf_task: PMFTask):
     from dpdata.unit import LengthConversion
-
+    mocker.patch("catflow.tasker.resources.submit.HpcExecutor.mkdir", return_value=None)
     mocker.patch(
-        "catflow.tasker.tasks.pmf.JobFactory",
-        MockJobFactory
+        "catflow.tasker.resources.submit.HpcExecutor.run_python_fn", 
+        process_input
     )
 
-    submission = pmf_task.generate_submission()
-    task_path = tmp_path / "task.1.4_700.0"
+    submission = await pmf_task.task_generate()
+    task_path = tmp_path / "pmf/task-0-1.4-700.0"
     assert task_path.exists()
     assert (task_path / "init.xyz").exists()
     new_input_dict = Cp2kInputToDict(task_path / "input.inp").get_tree()

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import numpy as np
@@ -12,12 +13,122 @@ from ase.io import read, write
 from dpdata.unit import LengthConversion
 from pymatgen.core.periodic_table import Element
 from pydantic import BaseModel
+from ai2_kit.core.executor import HpcExecutor
 
 from catflow.utils import logger
 from catflow.tasker.resources.submit import JobFactory
 from catflow.utils.file import tail
 from catflow.utils.cp2k import Cp2kInput, Cp2kInputToDict
 
+
+def pmf_analyzer(
+    task_path: Path,
+    restart_count: int = 0
+):
+    from catflow.utils.cp2k import lagrange_mult_log_parser
+    from catflow.utils.statistics import block_average
+
+    coordinate = task_path.name.split('-')[2]
+    temperature = task_path.name.split('-')[3]
+    lagrange_mults = []
+    
+    if restart_count > 0:
+        for i in range(restart_count):
+            _task_path = \
+                task_path.parent / f"task-{str(i).zfill(3)}-{coordinate}-{temperature}"
+            lagrange_mult_log_path = _task_path / "pmf.LagrangeMultLog"
+            new_lagrange_mults = lagrange_mult_log_parser(lagrange_mult_log_path)
+            lagrange_mults += new_lagrange_mults
+    
+    mean, var = block_average(
+        lagrange_mults[1:], int(len(lagrange_mults[1:])/5)
+    )
+    return mean, var
+
+
+class PMFJobFactory(JobFactory):
+
+    def process_input(self, base_dir: Path, **inputs) -> List[Path]:
+        restart_count = inputs.get('restart_count', 0)
+        task_dir = base_dir / \
+            f"task-{restart_count}-{inputs['coordinate']}-{inputs['temperature']}"
+        task_dir.mkdir(exist_ok=True)
+
+        if restart_count == 0:
+            # create new task
+            # write init.xyz
+            structure = inputs["structure"]
+            structure.write(task_dir / 'init.xyz')
+            logger.info(f"Writing init.xyz to {task_dir}")
+
+            # write input.inp
+            with open(task_dir / 'input.inp', 'w') as f:
+                output = Cp2kInput(params=inputs['input_dict']).render()
+                f.write(output)
+        else:
+            import shutil
+
+            # restart from previous task
+            restart_file_list = ['init.xyz', 'pmf-1.restart']
+            last_task_path = \
+                base_dir / f"task-{restart_count - 1}-{inputs['coordinate']}-{inputs['temperature']}"
+            for file_name in restart_file_list:
+                shutil.copy(last_task_path / file_name, task_dir / file_name)
+            restart_file = task_dir / 'pmf-1.restart'
+            restart_file.rename(task_dir / 'pmf-1.original.restart')
+            logger.info("Copyed files from previous task")
+
+            input_dict = inputs['input_dict']
+
+            input_dict["MOTION"]["MD"]["STEPS"] = inputs.get(
+                'restart_steps', 10000000)
+            if input_dict.get("EXT_RESTART"):
+                input_dict["EXT_RESTART"]["RESTART_FILE_NAME"] = 'pmf-1.original.restart'
+            else:
+                input_dict["EXT_RESTART"] = {
+                    "RESTART_FILE_NAME": 'pmf-1.original.restart'
+                }
+            with open(task_dir / 'input.inp', 'w') as f:
+                output = Cp2kInput(params=input_dict).render()
+                f.write(output)
+        logger.info(f"Writing input.inp to {task_dir}")
+
+        if inputs.get('common_files'):
+            common_files = inputs['common_files']
+            for file in common_files:
+                shutil.copy(file, task_dir)
+                logger.info(f"Copying {file} to {task_dir}")
+
+        return [task_dir]
+
+    def process_output(self, task_dirs: List[Path], **inputs):
+        results = []
+        for task_dir in task_dirs:
+            result = {}
+            result['task_dir'] = task_dir
+
+            self.get_last_frame(task_dir)
+            result['last_frame'] = task_dir / 'last.xyz'
+
+            # parse pmf.LagrangeMultLog
+            mean, var = pmf_analyzer(task_dir, restart_count=inputs.get('restart_count', 0))
+            result['mean'] = mean
+            result['var'] = var
+
+            results.append(result)
+        return results
+
+    @staticmethod
+    def get_last_frame(task_dir: Path):
+        init_structure = read(task_dir / 'init.xyz')
+        num_atoms = init_structure.get_number_of_atoms() # type: ignore
+        logger.info('Reading end of file')
+        with open(task_dir / 'pmf-pos-1.xyz', 'rb') as f:
+            last = tail(f, num_atoms + 2)
+        last_path = task_dir / 'last.xyz'
+        logger.info(f'Writing last frame to {last_path}')
+        with open(last_path, 'wb') as output:
+            output.write(last)
 
 class PMFTask(object):
     """
@@ -31,11 +142,13 @@ class PMFTask(object):
             init_structure_path: str,
             reaction_pair: Union[list, tuple],
             work_path: str,
-            machine_name: str,
-            resources: dict,
+            executor: Dict,
             command: str,
             input_dict=None,
-            restart_time: int = 0,
+            script_header: str = "",
+            restart_count: int = 0,
+            task_prefix: str = 'pmf',
+            concurrency: int = 1,
             **kwargs
     ):
         self.coordinate = coordinate
@@ -46,8 +159,7 @@ class PMFTask(object):
         self.work_path = Path(work_path).resolve()
         if not self.work_path.exists():
             os.makedirs(self.work_path)
-        self.machine_name = machine_name
-        self.resource_dict = resources
+        self.executor = executor
         self.command = command
         if kwargs:
             self.kwargs = kwargs
@@ -57,15 +169,10 @@ class PMFTask(object):
             from .defaults.pmf import _default_input_dict
             input_dict = _default_input_dict
         self.input_dict = input_dict
-        self.restart_time = restart_time
-        if self.restart_time > 0:
-            self.task_name = f'restart.{restart_time - 1}.{coordinate}_{temperature}'
-        elif self.restart_time == 0:
-            self.task_name = f'task.{coordinate}_{temperature}'
-        else:
-            raise ValueError(
-                'Restart time should be an integer greater than 0.')
-        self.task_path = self.work_path / self.task_name
+        self.script_header = script_header
+        self.restart_count = restart_count
+        self.task_prefix = task_prefix
+        self.concurrency = concurrency
 
     @property
     def cell(self):
@@ -92,51 +199,14 @@ class PMFTask(object):
                 'Cell should be defined with x, y, z (and alpha, beta, gamma).')
         return cell
 
-    def generate_submission(self):
-        # pass necessary parameters to task
+    def task_generate(self):
         structure = self.init_structure
         coordinate = self.coordinate
         temperature = self.temperature
-
-        if self.restart_time > 0:
-            self._task_restart()
-        else:
-            self._task_preprocess()
-            self._task_generate()
-        self._task_postprocess()
-        task_dict = self._get_task_generated(self.task_name)
-        job = self.job_generator([task_dict])
-        return job
-
-    def get_last_frame(self):
-        num_atoms = len(self.init_structure)
-        logger.info('Reading end of file')
-        with open(self.task_path / 'pmf-pos-1.xyz', 'rb') as f:
-            last = tail(f, num_atoms + 2)
-        last_path = self.task_path / 'last.xyz'
-        logger.info(f'Writing last frame to {last_path}')
-        with open(last_path, 'wb') as output:
-            output.write(last)
-        return last_path
-
-    def _task_preprocess(self):
-        pass
-
-    def _task_generate(self):
-        structure = self.init_structure
-        coordinate = self.coordinate
-        temperature = self.temperature
-
-        os.makedirs(self.task_path, exist_ok=True)
-        write(self.task_path / 'init.xyz', structure)
-        logger.info(f"Writing init.xyz to {self.task_path}")
-
         input_dict = self._generate_input(coordinate, temperature)
 
-        with open(self.task_path / 'input.inp', 'w') as f:
-            output = Cp2kInput(params=input_dict).render()
-            f.write(output)
-        logger.info(f"Writing input.inp to {self.task_path}")
+        job = PMFJobFactory(executor=HpcExecutor.from_config(self.executor))
+        return job
 
     def _generate_input(self, coordinate, temperature):
         conv = LengthConversion("angstrom", "bohr")
@@ -169,104 +239,19 @@ class PMFTask(object):
             input_dict["MOTION"]["CONSTRAINT"]["LAGRANGE_MULTIPLIERS"][
                 "COMMON_ITERATION_LEVELS"] = steps
         if timestep:
-            input_dict["MOTION"]["MD"]["TIMESTEP"] = timestep # unit: fs
+            input_dict["MOTION"]["MD"]["TIMESTEP"] = timestep  # unit: fs
 
         dump_freq = self.kwargs.get('dump_freq')
         if dump_freq:
-            md_print = input_dict.setdefault("MOTION", {}).setdefault("PRINT", {})
-            md_print.setdefault("TRAJECTORY", {}).setdefault("EACH", {}).setdefault("MD", dump_freq)
-            md_print.setdefault("FORCES", {}).setdefault("EACH", {}).setdefault("MD", dump_freq)
+            md_print = input_dict.setdefault(
+                "MOTION", {}).setdefault("PRINT", {})
+            md_print.setdefault("TRAJECTORY", {}).setdefault(
+                "EACH", {}).setdefault("MD", dump_freq)
+            md_print.setdefault("FORCES", {}).setdefault(
+                "EACH", {}).setdefault("MD", dump_freq)
             input_dict["MOTION"]["PRINT"]["TRAJECTORY"]["EACH"]["MD"] = dump_freq
             input_dict["MOTION"]["PRINT"]["FORCES"]["EACH"]["MD"] = dump_freq
         return input_dict
-
-    def _task_restart(self):
-        import shutil
-
-        os.makedirs(self.task_path, exist_ok=True)
-        logger.info("Copying files from previous task")
-        restart_file_list = ['init.xyz', 'pmf-1.restart']
-        if self.restart_time < 2:
-            # if restart_time is 1, copy from original task
-            last_task_path = \
-                self.task_path.parent / f'task.{self.coordinate}_{self.temperature}'
-        else:
-            # if restart_time is larger than 1, copy from previous restart task
-            last_task_path = \
-                self.task_path.parent / f'restart.{self.restart_time - 2}.{self.coordinate}_{self.temperature}'
-        for file_name in restart_file_list:
-            shutil.copy(last_task_path / file_name,self.task_path / file_name)
-        restart_file = self.task_path / 'pmf-1.restart'
-        restart_file.rename(self.task_path / 'pmf-1.original.restart')
-
-        _restart_input = Cp2kInputToDict(
-            self.task_path.parent /
-            f'task.{self.coordinate}_{self.temperature}/input.inp')
-        input_dict = _restart_input.get_tree()
-
-        input_dict["MOTION"]["MD"]["STEPS"] = self.kwargs.get(
-            'restart_steps', 10000000)
-        if input_dict.get("EXT_RESTART"):
-            input_dict["EXT_RESTART"]["RESTART_FILE_NAME"] = \
-                'pmf-1.original.restart'
-        else:
-            input_dict["EXT_RESTART"] = {
-                "RESTART_FILE_NAME": 'pmf-1.original.restart'
-            }
-        with open(self.task_path / 'input.inp', 'w') as f:
-            output = Cp2kInput(params=input_dict).render()
-            f.write(output)
-
-    def _get_task_generated(self, task_name):
-        forward_files = self.kwargs.get('forward_files', [])
-        if forward_files is None:
-            forward_files = ['input.inp', 'init.xyz']
-        else:
-            forward_files += ['input.inp', 'init.xyz']
-        if self.restart_time > 0:
-            forward_files += ['pmf-1.original.restart']
-        backward_files = self.kwargs.get('backward_files')
-        if backward_files is None:
-            backward_files = ['pmf-1.ener', 'pmf.LagrangeMultLog',
-             'pmf-pos-1.xyz', 'pmf-frc-1.xyz', 'output',
-             'pmf-1.restart']
-        outlog = self.kwargs.get('outlog')
-        if outlog is None:
-            outlog = 'output'
-
-        errlog = self.kwargs.get('errlog')
-        if errlog is None:
-            errlog = 'err.log'
-
-        task_dict = {
-            "command": self.command,
-            "task_work_path": task_name,
-            "forward_files": forward_files,
-            "backward_files": backward_files,
-            "outlog": outlog,
-            "errlog": errlog,
-        }
-        logger.info(f"{task_name} generating")
-        return task_dict
-
-    def _task_postprocess(self):
-        pass
-
-    def job_generator(self, task_dict_list):
-        forward_common_files = self.kwargs.get('forward_common_files')
-        if forward_common_files is None:
-            forward_common_files = []
-        backward_common_files = self.kwargs.get('backward_common_files')
-        if backward_common_files is None:
-            backward_common_files = []
-        submission_dict = {
-            "work_base": str(self.work_path),
-            "forward_common_files": forward_common_files,
-            "backward_common_files": backward_common_files
-        }
-        job = JobFactory(task_dict_list, submission_dict,
-                         self.machine_name, self.resource_dict)
-        return job.submission
 
     def check_point(self):
         pass
@@ -288,7 +273,8 @@ class DPPMFTask(PMFTask):
         else:
             structure = self.init_structure
             if isinstance(structure, list):
-                raise TypeError("Initial structure should be an Atoms instance")
+                raise TypeError(
+                    "Initial structure should be an Atoms instance")
             element_set = set(structure.symbols)
             type_map = {}
             for i, element in enumerate(element_set):
@@ -341,6 +327,6 @@ class DPPMFTask(PMFTask):
         structure = self.init_structure
         self._make_charge_dict(structure)
         self._make_deepmd_dict(structure)
-    
+
     def _task_postprocess(self):
         self._link_model(self.kwargs.get('model_path'))
