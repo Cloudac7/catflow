@@ -1,5 +1,7 @@
 from typing import Tuple
 
+from statsmodels.tsa.stattools import acf
+
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -29,12 +31,9 @@ def block_average(data: ArrayLike, block_size: int, axis: int = 0):
     return mean, var
 
 
-def auto_correlation(data, tau_max):
-    mean = np.mean(data)
-    var = np.var(data)
-    tau_array = np.arange(1, tau_max + 1)
-    r_tau = np.array([[np.mean([(data[i] - mean) * (data[i + tau] - mean)
-                     for i in np.arange(len(data) - tau)])] for tau in tau_array]) / var
+def auto_correlation(data: ArrayLike, tau_max: int):
+    tau_array = np.arange(tau_max + 1)
+    r_tau = acf(data, nlags=tau_max)
     return tau_array, r_tau
 
 

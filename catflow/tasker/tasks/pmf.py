@@ -21,6 +21,24 @@ from catflow.utils.file import tail
 from catflow.utils.cp2k import Cp2kInput, Cp2kInputToDict
 
 
+class PMFTaskInput(BaseModel):
+    coordinate: float
+    temperature: float
+    init_structure_path: str
+    reaction_pair: Union[list, tuple]
+    work_path: str
+    executor: HpcExecutor
+    command: str
+    input_dict: Optional[Dict] = None
+    script_header: str = ""
+    restart_count: int = 0
+    task_prefix: str = 'pmf'
+    concurrency: int = 1
+    flexible_arguments: Dict = {}
+    class Config:
+        arbitrary_types_allowed = True
+
+
 def pmf_analyzer(
     task_path: Path,
     restart_count: int = 0
@@ -47,6 +65,9 @@ def pmf_analyzer(
 
 
 class PMFJobFactory(JobFactory):
+    @property
+    def job_name(self):
+        return "pmf-job"
 
     def process_input(self, base_dir: Path, **inputs) -> List[Path]:
         restart_count = inputs.get('restart_count', 0)
@@ -130,49 +151,31 @@ class PMFJobFactory(JobFactory):
         with open(last_path, 'wb') as output:
             output.write(last)
 
+
 class PMFTask(object):
     """
     Workflow for potential of mean force calculation.
     """
 
-    def __init__(
-            self,
-            coordinate,
-            temperature,
-            init_structure_path: str,
-            reaction_pair: Union[list, tuple],
-            work_path: str,
-            executor: Dict,
-            command: str,
-            input_dict=None,
-            script_header: str = "",
-            restart_count: int = 0,
-            task_prefix: str = 'pmf',
-            concurrency: int = 1,
-            **kwargs
-    ):
-        self.coordinate = coordinate
-        self.temperature = temperature
-        self.reaction_pair = reaction_pair
-        self.init_structure_path = Path(init_structure_path).resolve()
+    def __init__(self, input_data: PMFTaskInput):
+        from .defaults.pmf import _default_input_dict
+
+        self.coordinate = input_data.coordinate
+        self.temperature = input_data.temperature
+        self.reaction_pair = input_data.reaction_pair
+        self.init_structure_path = Path(input_data.init_structure_path).resolve()
         self.init_structure = read(self.init_structure_path)
-        self.work_path = Path(work_path).resolve()
+        self.work_path = Path(input_data.work_path).resolve()
         if not self.work_path.exists():
-            os.makedirs(self.work_path)
-        self.executor = executor
-        self.command = command
-        if kwargs:
-            self.kwargs = kwargs
-        else:
-            self.kwargs = {}
-        if input_dict is None:
-            from .defaults.pmf import _default_input_dict
-            input_dict = _default_input_dict
-        self.input_dict = input_dict
-        self.script_header = script_header
-        self.restart_count = restart_count
-        self.task_prefix = task_prefix
-        self.concurrency = concurrency
+            self.work_path.mkdir(parents=True)
+        self.executor = input_data.executor
+        self.command = input_data.command
+        self.flexible_arguments = input_data.flexible_arguments
+        self.input_dict = input_data.input_dict or _default_input_dict
+        self.script_header = input_data.script_header
+        self.restart_count = input_data.restart_count
+        self.task_prefix = input_data.task_prefix
+        self.concurrency = input_data.concurrency
 
     @property
     def cell(self):
@@ -180,10 +183,10 @@ class PMFTask(object):
         if isinstance(init_structure, list):
             raise TypeError("Initial structure should be an Atoms instance")
         # define cell with x, y, z and alpha, beta, gamma
-        if self.kwargs.get('cell') is None:
+        if self.flexible_arguments.get('cell') is None:
             cell = init_structure.cell.cellpar()
         else:
-            cell = self.kwargs.get('cell')
+            cell = self.flexible_arguments.get('cell')
             cell = np.array(cell)
         if cell.shape == (6,):
             pass
@@ -205,7 +208,7 @@ class PMFTask(object):
         temperature = self.temperature
         input_dict = self._generate_input(coordinate, temperature)
 
-        job = PMFJobFactory(executor=HpcExecutor.from_config(self.executor))
+        job = PMFJobFactory(executor=self.executor)
         return job
 
     def _generate_input(self, coordinate, temperature):
@@ -232,8 +235,8 @@ class PMFTask(object):
             "COORD_FILE_FORMAT": "XYZ",
             "COORD_FILE_NAME": "init.xyz"
         }
-        steps = self.kwargs.get('steps')
-        timestep = self.kwargs.get('timestep')
+        steps = self.flexible_arguments.get('steps')
+        timestep = self.flexible_arguments.get('timestep')
         if steps:
             input_dict["MOTION"]["MD"]["STEPS"] = steps
             input_dict["MOTION"]["CONSTRAINT"]["LAGRANGE_MULTIPLIERS"][
@@ -241,7 +244,7 @@ class PMFTask(object):
         if timestep:
             input_dict["MOTION"]["MD"]["TIMESTEP"] = timestep  # unit: fs
 
-        dump_freq = self.kwargs.get('dump_freq')
+        dump_freq = self.flexible_arguments.get('dump_freq')
         if dump_freq:
             md_print = input_dict.setdefault(
                 "MOTION", {}).setdefault("PRINT", {})
@@ -267,7 +270,7 @@ class DPPMFTask(PMFTask):
     """
 
     def type_map(self) -> dict:
-        type_map = self.kwargs.get("type_map")
+        type_map = self.flexible_arguments.get("type_map")
         if isinstance(type_map, dict):
             return type_map
         else:
@@ -288,11 +291,11 @@ class DPPMFTask(PMFTask):
             graph_file.symlink_to(model_abs_path)
         else:
             logger.info("model symlink exists")
-        fwd_files_flag = self.kwargs.get("forward_common_files")
+        fwd_files_flag = self.flexible_arguments.get("forward_common_files")
         if fwd_files_flag:
-            self.kwargs["forward_common_files"] += ['graph.pb']
+            self.flexible_arguments["forward_common_files"] += ['graph.pb']
         else:
-            self.kwargs["forward_common_files"] = ['graph.pb']
+            self.flexible_arguments["forward_common_files"] = ['graph.pb']
 
     def _make_charge_dict(self, structure):
         element_set = set(structure.symbols)
@@ -329,4 +332,4 @@ class DPPMFTask(PMFTask):
         self._make_deepmd_dict(structure)
 
     def _task_postprocess(self):
-        self._link_model(self.kwargs.get('model_path'))
+        self._link_model(self.flexible_arguments.get('model_path'))
