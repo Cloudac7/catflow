@@ -1,0 +1,982 @@
+{
+  "type_map": [
+    "O",
+    "Pt"
+  ],
+  "mass_map": [
+    16.00,
+    195.00
+  ],
+  "init_data_prefix": "/data/ypliu/project/Pt/cluster_with_o2/",
+  "init_data_sys": [
+    "15/673/1.35/dpmd_npy",
+    "15/673/1.43/dpmd_npy",
+    "15/673/1.53/dpmd_npy",
+    "15/673/1.63/dpmd_npy",
+    "15/673/1.83/dpmd_npy",
+    "15/673/2.03/dpmd_npy",
+    "15/673/2.33/dpmd_npy",
+    "15/673/2.63/dpmd_npy",
+    "15/673/2.93/dpmd_npy",
+    "15/673/3.23/dpmd_npy",
+    "15/673/3.53/dpmd_npy",
+    "15/673/3.83/dpmd_npy",
+    "15/673/4.13/dpmd_npy",
+    "15/673/4.43/dpmd_npy",
+    "15/673/4.73/dpmd_npy",
+    "15/673/5.03/dpmd_npy",
+    "15/673/5.33/dpmd_npy",
+    "15/673/5.63/dpmd_npy",
+    "15/673/6.03/dpmd_npy",
+    "15/673/6.33/dpmd_npy",
+    "15/973/1.35/dpmd_npy",
+    "15/973/1.43/dpmd_npy",
+    "15/973/1.53/dpmd_npy",
+    "15/973/1.63/dpmd_npy",
+    "15/973/1.83/dpmd_npy",
+    "15/973/2.03/dpmd_npy",
+    "15/973/2.33/dpmd_npy",
+    "15/973/2.63/dpmd_npy",
+    "15/973/2.93/dpmd_npy",
+    "15/973/3.23/dpmd_npy",
+    "15/973/3.53/dpmd_npy",
+    "15/973/3.73/dpmd_npy",
+    "15/973/3.83/dpmd_npy",
+    "15/1273/1.35/dpmd_npy",
+    "15/1273/1.43/dpmd_npy",
+    "15/1273/1.53/dpmd_npy",
+    "15/1273/1.63/dpmd_npy",
+    "15/1273/1.83/dpmd_npy",
+    "15/1273/2.03/dpmd_npy",
+    "15/1273/2.33/dpmd_npy",
+    "15/1273/2.63/dpmd_npy",
+    "15/1273/2.93/dpmd_npy",
+    "15/1273/3.23/dpmd_npy",
+    "15/1273/3.53/dpmd_npy",
+    "15/1273/3.83/dpmd_npy",
+    "15/1273/4.13/dpmd_npy",
+    "15/1273/4.43/dpmd_npy",
+    "15/1273/4.73/dpmd_npy",
+    "15/1273/5.03/dpmd_npy",
+    "15/1273/5.33/dpmd_npy",
+    "15/1273/5.63/dpmd_npy",
+    "15/iter36/O2Pt15",
+    "15/iter37/O2Pt15",
+    "15/iter38/O2Pt15",
+    "15/iter39/O2Pt15",
+    "15/iter40/O2Pt15",
+    "15/iter41/O2Pt15",
+    "15/iter42/O2Pt15",
+    "15/iter43/O2Pt15",
+    "15/iter44/O2Pt15",
+    "15/iter.000000/data.all",
+    "15/iter.000001/data.all",
+    "15/iter.000002/data.all",
+    "15/iter.000003/data.all",
+    "15/iter.000004/data.all",
+    "15/iter.000005/data.all",
+    "15/iter.000006/data.all",
+    "15/iter.000007/data.all",
+    "15/iter.000008/data.all",
+    "15/iter.000009/data.all",
+    "15/iter.0000010/data.all",
+    "15/iter.0000011/data.all",
+    "15/iter.0000012/data.all",
+    "27/02.deepmd/Pt27O2",
+    "36/01.static_opt/IS/deepmd/O2Pt36",
+    "36/01.static_opt/FS_deepmd/deepmd/O2Pt36"
+  ],
+  "init_batch_size": [
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto"
+  ],
+  "sys_configs_prefix": "/data/ypliu/project/Pt/cluster_with_o2/",
+  "sys_configs": [
+    ["22/init/IS/*/POSCAR"],
+    ["22/init/TS/*/POSCAR"],
+    ["22/init/FS/*/POSCAR"],
+    ["dpgen.0/iter.000000/02.fp/task.002.000003/POSCAR"],
+    ["dpgen.0/iter.000000/02.fp/task.000.000000/POSCAR"],
+    ["dpgen.0/iter.000000/02.fp/task.001.0000[0-1]0/POSCAR"],
+    ["dpgen.0/iter.000001/02.fp/task.001.000005/POSCAR", "dpgen.0/iter.000001/02.fp/task.005.000011/POSCAR"],
+    ["dpgen.0/iter.000001/02.fp/task.003.000007/POSCAR"], 
+    ["dpgen.0/iter.000001/02.fp/task.001.000016/POSCAR"],
+    ["dpgen.0/iter.000001/02.fp/task.001.000018/POSCAR"],
+    ["dpgen.0/iter.000001/02.fp/task.003.000002/POSCAR"],
+    ["dpgen.0/iter.000002/02.fp/task.002.000018/POSCAR"],
+    ["dpgen.0/iter.000002/02.fp/task.006.000002/POSCAR"],
+    ["dpgen.0/iter.000002/02.fp/task.006.000006/POSCAR"],
+    ["dpgen.0/iter.000001/02.fp/task.001.000007/POSCAR"],
+    ["dpgen.0/iter.000003/02.fp/task.012.000004/POSCAR"],
+    ["dpgen.0/iter.000003/02.fp/task.011.000001/POSCAR"],
+    ["dpgen.0/iter.000003/02.fp/task.011.000000/POSCAR"],
+    ["dpgen.0/iter.000003/02.fp/task.006.000003/POSCAR"],
+    ["dpgen.0/iter.000004/02.fp/task.015.000006/POSCAR"],
+    ["dpgen.0/iter.000003/02.fp/task.002.000005/POSCAR"],
+    ["dpgen.0/iter.000005/02.fp/task.017.000010/POSCAR"],
+    ["dpgen.0/iter.000005/02.fp/task.015.000000/POSCAR", "dpgen.0/iter.000005/02.fp/task.018.000000/POSCAR"],
+    ["dpgen.0/iter.000004/02.fp/task.016.000000/POSCAR"],
+    ["dpgen.0/iter.000005/02.fp/task.016.000000/POSCAR"],
+    ["dpgen.0/iter.000006/02.fp/task.021.000010/POSCAR"],
+    ["dpgen.0/iter.000005/02.fp/task.017.000002/POSCAR"],
+    ["dpgen.0/iter.000000/02.fp/task.002.000014/POSCAR"],
+    ["27/01.static_opt/IS/000/POSCAR.final"],
+    ["27/01.static_opt/FS/004/POSCAR.final"],
+    ["dpgen.27/iter.000009/02.fp/task.028.000001/POSCAR"],
+    ["dpgen.27/iter.000009/02.fp/task.029.000010/POSCAR"],
+    ["dpgen.27/iter.000009/02.fp/task.029.000008/POSCAR"],
+    ["dpgen.27/iter.000010/02.fp/task.030.000007/POSCAR"],
+    ["dpgen.27/iter.000010/02.fp/task.031.000004/POSCAR"],
+    ["dpgen.27/iter.000010/02.fp/task.030.000000/POSCAR"],
+    ["dpgen.27/iter.000010/02.fp/task.031.000003/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.033.000006/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.033.000007/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.034.000018/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.034.000012/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.033.000001/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.033.000016/POSCAR"],
+    ["dpgen.27/iter.000011/02.fp/task.034.000012/POSCAR"],
+    ["dpgen.27/iter.000012/02.fp/task.039.000002/POSCAR"],
+    ["dpgen.27/iter.000013/02.fp/task.038.000004/POSCAR"],
+    ["dpgen.27/iter.000013/02.fp/task.041.000007/POSCAR"],
+    ["dpgen.27/iter.000013/02.fp/task.043.000006/POSCAR"],
+    ["dpgen.27/iter.000013/02.fp/task.043.000007/POSCAR"],
+    ["dpgen.27/iter.000013/02.fp/task.042.000004/POSCAR"],
+    ["dpgen.27/iter.000014/02.fp/task.045.000002/POSCAR"],
+    ["dpgen.27/iter.000014/02.fp/task.047.000001/POSCAR"],
+    ["dpgen.27/iter.000014/02.fp/task.046.000003/POSCAR"],
+    ["36/01.static_opt/IS/task.002/POSCAR.final"],
+    ["36/01.static_opt/FS_deepmd/task.021/POSCAR.final"]
+  ],
+  "sys_batch_size": [
+    "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto",
+    "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto",
+    "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", 
+    "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto",
+    "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto",
+    "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto"
+  ],
+  "_comment": " that's all ",
+  "numb_models": 4,
+  "train_param": "input.json",
+  "default_training_param": {
+    "model": {
+      "descriptor": {
+        "type": "se_e2_a",
+        "sel": [
+          3,
+          26
+        ],
+        "rcut_smth": 0.50,
+        "rcut": 7.00,
+        "neuron": [
+          25,
+          50,
+          100
+        ],
+        "resnet_dt": false,
+        "axis_neuron": 16,
+        "type_one_side": true
+      },
+      "fitting_net": {
+        "neuron": [
+          240,
+          240,
+          240
+        ],
+        "resnet_dt": true,
+        "type": "ener"
+      }
+    },
+    "learning_rate": {
+      "type": "exp",
+      "start_lr": 0.001,
+      "decay_steps": 2000
+    },
+    "loss": {
+      "start_pref_e": 0.1,
+      "limit_pref_e": 1,
+      "start_pref_f": 200,
+      "limit_pref_f": 1,
+      "start_pref_v": 0,
+      "limit_pref_v": 0
+    },
+    "training": {
+      "numb_steps": 400000,
+      "disp_file": "lcurve.out",
+      "disp_freq": 2000,
+      "numb_test": 4,
+      "save_freq": 2000,
+      "save_ckpt": "model.ckpt"
+    }
+  },
+  "_comment": " 01.model_devi ",
+  "_comment": "model_devi_skip: the first x frames of the recorded frames",
+  "model_devi_dt": 0.0005,
+  "model_devi_skip": 1,
+  "model_devi_f_trust_lo": 0.2,
+  "model_devi_f_trust_hi": 1.0,
+  "_comment": "modify according to the error distribution of system",
+  "model_devi_e_trust_lo": 1e10,
+  "model_devi_e_trust_hi": 1e10,
+  "model_devi_clean_traj": false,
+  "model_devi_plumed": true,
+  "model_devi_jobs": [
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2],
+      "traj_freq": 600,
+      "_idx": 0,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.6, 2.0], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [3.8], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5],
+      "traj_freq": 600,
+      "_idx": 1,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.6, 2.0], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      "traj_freq": 600,
+      "_idx": 2,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+      "traj_freq": 600,
+      "_idx": 3,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "9": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "10": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "11": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "12": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "13": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "14": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ,17],
+      "traj_freq": 600,
+      "_idx": 4,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8, 3.6], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5, 1.7], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "9": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "10": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "11": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "12": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "13": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "14": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "15": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "16": {"lmp": {"V_DIS1": [3.35], "V_DIS2": [3.15], "V_FORCE": [10]}},
+        "17": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [2.9], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "traj_freq": 600,
+      "_idx": 5,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "9": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "10": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "11": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4, 3.2], "V_FORCE": [10]}},
+        "12": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.3, 2.5], "V_FORCE": [10]}},
+        "13": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "14": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "15": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "16": {"lmp": {"V_DIS1": [3.35], "V_DIS2": [3.15], "V_FORCE": [10]}},
+        "17": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "18": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.6], "V_FORCE": [10]}},
+        "19": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "20": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5, 3.3], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23],
+      "traj_freq": 600,
+      "_idx": 6,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5, 1.7], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6, 3.4], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "9": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "10": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7, 3.5], "V_FORCE": [10]}},
+        "11": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4, 3.6], "V_FORCE": [10]}},
+        "12": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "13": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "14": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "15": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.5, 2.7], "V_FORCE": [10]}},
+        "17": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [3.1, 2.9], "V_FORCE": [10]}},
+        "18": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.4, 2.6], "V_FORCE": [10]}},
+        "19": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.5, 2.9], "V_FORCE": [10]}},
+        "20": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5, 3.3], "V_FORCE": [10]}},
+        "21": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.7, 3.1], "V_FORCE": [10]}},
+        "22": {"lmp": {"V_DIS1": [2.6], "V_DIS2": [2.8, 2.4], "V_FORCE": [10]}},
+        "23": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.3, 3.5], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 
+                  10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 
+                  21, 22, 23, 24, 25, 26, 27],
+      "traj_freq": 600,
+      "_idx": 7,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "9": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "10": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "11": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "12": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "13": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "14": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "15": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "17": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [3.1], "V_FORCE": [10]}},
+        "18": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "19": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "20": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "21": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "22": {"lmp": {"V_DIS1": [2.6], "V_DIS2": [2.6], "V_FORCE": [10]}},
+        "23": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "24": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "25": {"lmp": {"V_DIS1": [2.8], "V_DIS2": [2.8], "V_FORCE": [10]}},
+        "26": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "27": {"lmp": {"V_DIS1": [3.9], "V_DIS2": [3.9], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 
+                  10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 
+                  21, 22, 23, 24, 25, 26, 27],
+      "traj_freq": 1200,
+      "_idx": 8,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [60000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "0": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "1": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "2": {"lmp": {"V_DIS1": [4.0], "V_DIS2": [4.0], "V_FORCE": [10]}},
+        "3": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "4": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "5": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "6": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "7": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "8": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "9": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "10": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "11": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "12": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "13": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "14": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "15": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "17": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [3.1], "V_FORCE": [10]}},
+        "18": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "19": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "20": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "21": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "22": {"lmp": {"V_DIS1": [2.6], "V_DIS2": [2.6], "V_FORCE": [10]}},
+        "23": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "24": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "25": {"lmp": {"V_DIS1": [2.8], "V_DIS2": [2.8], "V_FORCE": [10]}},
+        "26": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "27": {"lmp": {"V_DIS1": [3.9], "V_DIS2": [3.9], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [28, 29],
+      "traj_freq": 600,
+      "_idx": 9,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.6], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [28, 29, 30, 31, 32],
+      "traj_freq": 600,
+      "_idx": 10,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.5], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [28, 29, 30, 31, 32, 33, 34, 35, 36],
+      "traj_freq": 600,
+      "_idx": 11,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.3], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+      "traj_freq": 600,
+      "_idx": 12,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "37": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "38": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "39": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "40": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.1], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44],
+      "traj_freq": 600,
+      "_idx": 13,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "37": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "38": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "39": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "40": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.1], "V_FORCE": [10]}},
+        "41": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "42": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "43": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "44": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [2.8], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+      "traj_freq": 600,
+      "_idx": 14,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "37": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "38": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "39": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "40": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.1], "V_FORCE": [10]}},
+        "41": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "42": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "43": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "44": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [2.8], "V_FORCE": [10]}},
+        "45": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "46": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "47": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "48": {"lmp": {"V_DIS1": [2.8], "V_DIS2": [2.6], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [
+          28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 
+          38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 
+          48, 49, 50, 51, 52
+      ],
+      "traj_freq": 600,
+      "_idx": 15,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "37": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "38": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "39": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "40": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "41": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "42": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "43": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "44": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [2.8], "V_FORCE": [10]}},
+        "45": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "46": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "47": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "48": {"lmp": {"V_DIS1": [2.8], "V_DIS2": [2.6], "V_FORCE": [10]}},
+        "49": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.6], "V_FORCE": [10]}},
+        "50": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "51": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "52": {"lmp": {"V_DIS1": [2.6], "V_DIS2": [2.4], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [
+          28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 
+          38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 
+          48, 49, 50, 51, 52
+      ],
+      "traj_freq": 600,
+      "_idx": 16,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [30000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "37": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "38": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "39": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "40": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "41": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "42": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "43": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [3.1], "V_FORCE": [10]}},
+        "44": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "45": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "46": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "47": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "48": {"lmp": {"V_DIS1": [2.8], "V_DIS2": [2.8], "V_FORCE": [10]}},
+        "49": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "50": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "51": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "52": {"lmp": {"V_DIS1": [2.6], "V_DIS2": [2.6], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [
+          28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 
+          38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 
+          48, 49, 50, 51, 52
+      ],
+      "traj_freq": 1200,
+      "_idx": 17,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [60000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {
+        "28": {"lmp": {"V_DIS1": [1.4], "V_DIS2": [1.4], "V_FORCE": [10]}},
+        "29": {"lmp": {"V_DIS1": [3.8], "V_DIS2": [3.8], "V_FORCE": [10]}},
+        "30": {"lmp": {"V_DIS1": [1.5], "V_DIS2": [1.5], "V_FORCE": [10]}},
+        "31": {"lmp": {"V_DIS1": [3.6], "V_DIS2": [3.6], "V_FORCE": [10]}},
+        "32": {"lmp": {"V_DIS1": [3.7], "V_DIS2": [3.7], "V_FORCE": [10]}},
+        "33": {"lmp": {"V_DIS1": [1.7], "V_DIS2": [1.7], "V_FORCE": [10]}},
+        "34": {"lmp": {"V_DIS1": [3.4], "V_DIS2": [3.4], "V_FORCE": [10]}},
+        "35": {"lmp": {"V_DIS1": [1.6], "V_DIS2": [1.6], "V_FORCE": [10]}},
+        "36": {"lmp": {"V_DIS1": [3.5], "V_DIS2": [3.5], "V_FORCE": [10]}},
+        "37": {"lmp": {"V_DIS1": [1.8], "V_DIS2": [1.8], "V_FORCE": [10]}},
+        "38": {"lmp": {"V_DIS1": [1.9], "V_DIS2": [1.9], "V_FORCE": [10]}},
+        "39": {"lmp": {"V_DIS1": [3.2], "V_DIS2": [3.2], "V_FORCE": [10]}},
+        "40": {"lmp": {"V_DIS1": [3.3], "V_DIS2": [3.3], "V_FORCE": [10]}},
+        "41": {"lmp": {"V_DIS1": [2.0], "V_DIS2": [2.0], "V_FORCE": [10]}},
+        "42": {"lmp": {"V_DIS1": [2.1], "V_DIS2": [2.1], "V_FORCE": [10]}},
+        "43": {"lmp": {"V_DIS1": [3.1], "V_DIS2": [3.1], "V_FORCE": [10]}},
+        "44": {"lmp": {"V_DIS1": [3.0], "V_DIS2": [3.0], "V_FORCE": [10]}},
+        "45": {"lmp": {"V_DIS1": [2.2], "V_DIS2": [2.2], "V_FORCE": [10]}},
+        "46": {"lmp": {"V_DIS1": [2.3], "V_DIS2": [2.3], "V_FORCE": [10]}},
+        "47": {"lmp": {"V_DIS1": [2.9], "V_DIS2": [2.9], "V_FORCE": [10]}},
+        "48": {"lmp": {"V_DIS1": [2.8], "V_DIS2": [2.8], "V_FORCE": [10]}},
+        "49": {"lmp": {"V_DIS1": [2.4], "V_DIS2": [2.4], "V_FORCE": [10]}},
+        "50": {"lmp": {"V_DIS1": [2.5], "V_DIS2": [2.5], "V_FORCE": [10]}},
+        "51": {"lmp": {"V_DIS1": [2.7], "V_DIS2": [2.7], "V_FORCE": [10]}},
+        "52": {"lmp": {"V_DIS1": [2.6], "V_DIS2": [2.6], "V_FORCE": [10]}}
+      }
+    },
+    {
+      "template": {
+        "lmp": "lmp/input-restrain.lammps",
+        "plm": "lmp/input.plumed"
+      },
+      "sys_idx": [
+      ],
+      "traj_freq": 1200,
+      "_idx": 18,
+      "rev_mat": {
+        "lmp": {
+          "V_NSTEPS": [60000],
+          "V_TEMP": [
+            200, 400, 600, 800, 1000, 1200, 1400
+          ]
+        }
+      },
+      "sys_rev_mat": {}
+    }
+  ],
+  "_comment": " 02.fp ",
+  "fp_style": "vasp",
+  "shuffle_poscar": false,
+  "fp_task_max": 20,
+  "_comment": "the maximum number of stcs to calc.",
+  "fp_task_min": 0,
+  "fp_pp_path": "/data/ypliu/project/Pt/pot",
+  "ratio_failed": 0.25,
+  "fp_pp_files": [
+    "POTCAR_O",
+    "POTCAR_Pt"
+  ],
+  "fp_incar": "/data/ypliu/project/Pt/cluster_with_o2/dpgen/INCAR",
+  "_comment": " that's all "
+}

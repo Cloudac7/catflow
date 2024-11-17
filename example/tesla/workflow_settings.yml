@@ -1,0 +1,4 @@
+IS: {coordination: 1.4, sys_idx: 53}
+FS: {coordination: 3.8, sys_idx: 54}
+reaction_atoms_pair: [0, 1]
+start_from_iter: 19

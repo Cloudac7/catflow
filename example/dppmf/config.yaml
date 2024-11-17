@@ -1,0 +1,48 @@
+job_config: 
+  work_path: "/data/home/ypliu/data/project/Pt/cluster_with_o2/44/04.pmf_miko/pmf_task_runs"
+  machine_name: "chenglab191"
+  resources:
+    number_node: 1
+    cpu_per_node: 2
+    gpu_per_node: 1
+    queue_name: gpu2
+    group_size: 1
+    custom_flags:
+      - "#SBATCH --gres=gpu:1g.10gb:1"
+    module_list:
+      - "deepmd/2.1"
+    envs:
+      OMP_NUM_THREADS: 2
+      TF_INTRA_OP_PARALLELISM_THREADS: 2
+      TF_INTER_OP_PARALLELISM_THREADS: 1
+  command: "cp2k.ssmp -i input.inp"
+
+  reaction_pair: [0, 1]
+  steps: 10000000
+  timestep: 0.5
+  restart_steps: 10000000
+  dump_freq: 100
+  cell: [24.0, 24.0, 24.0]
+  type_map:
+    O: 0
+    Pt: 1
+  model_path: "/data/home/ypliu/data/project/Pt/cluster_with_o2/44/03.pmf/test_conv/graph.pb"
+  backward_files: 
+    - 'pmf-1.ener'
+    - 'pmf.LagrangeMultLog'
+    - 'pmf-pos-1.xyz'
+    - 'pmf-frc-1.xyz'
+    - 'pmf-1.restart'
+
+flow_config:
+  coordinates: [1.4, 1.5, 1.6, 1.7, 1.75, 1.8, 1.9, 2.0, 2.2, 2.4, 2.8, 3.2, 3.6, 3.8]
+  t_min: 300.
+  cluster_component: 
+    - Pt
+  lindemann_n_last_frames: 20000
+  init_artifact:
+    - coordinate: 1.4
+      structure_path: "/data/home/ypliu/data/project/Pt/cluster_with_o2/44/01.static_opt/IS/task.001/POSCAR.final"
+    - coordinate: 3.8
+      structure_path: "/data/home/ypliu/data/project/Pt/cluster_with_o2/44/01.static_opt/FS/task.004/POSCAR.final"
+job_type: "dp_pmf"

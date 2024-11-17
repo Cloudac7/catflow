@@ -1,0 +1,96 @@
+{
+  "api_version": "1.0",
+  "train": [
+    {
+      "command": "dp",
+      "machine": {
+        "batch_type": "LSF",
+        "context_type": "LocalContext",
+        "local_root": "./",
+        "remote_root": "/data/ypliu/dprun/train"
+      },
+      "resources": {
+        "number_node": 1,
+        "cpu_per_node": 1,
+        "gpu_per_node": 2,
+        "queue_name": "gpu2",
+        "group_size": 1,
+        "kwargs": {
+          "gpu_usage": true,
+          "gpu_new_syntax": true, 
+          "gpu_exclusive": false
+        },
+        "custom_flags": [
+          "#BSUB -J training",
+          "#BSUB -W 24:00"
+        ],
+        "strategy": {"if_cuda_multi_devices": false},
+        "module_list": ["deepmd/2.0-cuda11.3"],
+        "envs": {"CUDA_VISIBLE_DEVICES": "`/data/share/base/tools/mig_check.py`"},
+        "wait_time": 50
+      }
+    }
+  ],
+  "model_devi":[
+    {
+      "command": "lmp_mpi",
+      "machine":{
+        "batch_type": "LSF",
+        "context_type": "LocalContext",
+        "local_root": "./",
+        "remote_root": "/data/ypliu/dprun/md"
+      },
+      "resources": {
+        "number_node": 1,
+        "cpu_per_node": 1,
+        "gpu_per_node": 2,
+        "queue_name": "gpu2",
+        "group_size": 30,
+        "kwargs": {
+          "gpu_usage": true,
+          "gpu_new_syntax": true,
+          "gpu_exclusive": false
+        },
+        "custom_flags": [
+          "#BSUB -J exploration",
+          "#BSUB -W 24:00"
+        ],
+        "strategy": {"if_cuda_multi_devices": false},
+        "module_list": ["deepmd/2.0-cuda11.3"],
+        "envs": {"CUDA_VISIBLE_DEVICES": "`/data/share/base/tools/mig_check.py`"},
+        "wait_time": 50
+      }
+    }
+  ],
+  "fp":[
+    {
+      "command": "mpirun -np 1 vasp_gam",
+      "machine":{
+        "batch_type": "LSF",
+        "context_type": "LocalContext",
+        "local_root": "./",
+        "remote_root": "/data/ypliu/dprun/fp"
+      },
+      "resources": {
+        "number_node": 1,
+        "cpu_per_node": 4,
+        "gpu_per_node": 1,
+        "queue_name": "gpu3",
+        "kwargs": {
+          "gpu_usage": true,
+          "gpu_new_syntax": true,
+          "gpu_exclusive": true
+        },
+        "custom_flags": [
+          "#BSUB -J labeling",
+          "#BSUB -W 12:00",
+          "#BSUB -R affinity[core(1,exclusive=(core,alljobs))]"
+        ],
+        "group_size": 30,
+        "module_list": [
+          "vasp/6.2.1-openacc"
+        ]
+      }
+    }
+  ]
+}
